@@ -20,6 +20,6 @@ jobs:
       working-directory: .
       python-version: ${{ matrix.python-version }}
       module-name: safeds_runner
-      coverage: ${{ matrix.python-version == '3.10' }}
+      coverage: ${{ matrix.python-version == '3.11' }}
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
