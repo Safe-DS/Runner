@@ -2,7 +2,7 @@
 
 [![Main](https://github.com/Safe-DS/Runner/actions/workflows/main.yml/badge.svg)](https://github.com/Safe-DS/Runner/actions/workflows/main.yml)
 [![codecov](https://codecov.io/gh/Safe-DS/Runner/branch/main/graph/badge.svg?token=ma0ytglhO1)](https://codecov.io/gh/Safe-DS/Runner)
-[![Documentation Status](https://readthedocs.org/projects/safe-ds-runner/badge/?version=latest)](https://runner.safeds.com)
+[![Documentation Status](https://readthedocs.org/projects/safe-ds-runner/badge/?version=stable)](https://runner.safeds.com)
 
 Execute Safe-DS programs that were compiled to Python.
 
