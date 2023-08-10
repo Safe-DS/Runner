@@ -1,0 +1,13 @@
+{
+    "ignorePatterns": [
+        {
+            "pattern": "^(http|https)://localhost"
+        },
+        {
+            "pattern": "^#"
+        },
+        {
+            "pattern": "^https://github.com/Safe-DS/Runner/blob/main"
+        }
+    ]
+}
