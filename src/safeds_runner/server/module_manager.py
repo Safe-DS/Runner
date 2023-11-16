@@ -1,4 +1,5 @@
 import importlib.abc
+import typing
 from abc import ABC
 from importlib.machinery import ModuleSpec
 import sys
@@ -6,6 +7,8 @@ import importlib.util
 import types
 import runpy
 import logging
+
+import stack_data
 
 
 class InMemoryLoader(importlib.abc.SourceLoader, ABC):
@@ -75,8 +78,12 @@ def _execute_pipeline(code: dict[str, dict[str, str]], sdspackage: str, sdsmodul
     pipeline_finder = InMemoryFinder(code)
     pipeline_finder.attach()
     main_module = f"gen_{sdsmodule}_{sdspipeline}"
-    runpy.run_module(main_module, run_name="__main__")  # TODO Is the Safe-DS-Package relevant here?
-    pipeline_finder.detach()
+    try:
+        runpy.run_module(main_module, run_name="__main__")  # TODO Is the Safe-DS-Package relevant here?
+    except BaseException:
+        raise  # This should keep the backtrace
+    finally:
+        pipeline_finder.detach()
 
 
 def execute_pipeline(code: dict[str, dict[str, str]], sdspackage: str, sdsmodule: str, sdspipeline: str,

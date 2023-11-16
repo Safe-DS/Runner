@@ -2,8 +2,10 @@ import argparse
 
 import json
 import logging
+import typing
 from typing import Any, Optional
 
+import stack_data
 from flask import Flask, request
 from flask_cors import CORS
 from flask_sock import Sock
@@ -49,7 +51,6 @@ def post_run_program():
 @sock.route("/WSRunProgram")
 def ws_run_program(ws):
     logging.debug(f"Request to WSRunProgram")
-    send_message(ws, "test", "test")
     while True:
         # This would be a JSON message
         received_message: str = ws.receive()
@@ -83,7 +84,19 @@ def ws_run_program(ws):
                 # TODO forward memoization map here
                 context_globals = {"connection": ws, "send_value": send_value}
                 # This should only be called from the extension as it is a security risk
-                execute_pipeline(code, main['package'], main['module'], main['pipeline'], context_globals)
+                try:
+                    execute_pipeline(code, main['package'], main['module'], main['pipeline'], context_globals)
+                    send_message(ws, "progress", "done")
+                except BaseException as error:
+                    send_message(ws, "runtime_error",
+                                 {"message": error.__str__(), "backtrace": get_backtrace_info(error)})
+
+
+def get_backtrace_info(error: BaseException) -> list[dict[str, typing.Any]]:
+    backtrace_list = []
+    for frame in stack_data.core.FrameInfo.stack_data(error.__traceback__):
+        backtrace_list.append({"file": frame.filename, "line": str(frame.lineno)})
+    return backtrace_list
 
 
 def send_value(connection, name: str, var_type: str, value: str):
@@ -126,6 +139,7 @@ if __name__ == "__main__":
     # Allow prints to be unbuffered by default
     import functools
     import builtins
+
     builtins.print = functools.partial(print, flush=True)
 
     logging.getLogger().setLevel(logging.DEBUG)
