@@ -1,5 +1,7 @@
 import importlib.abc
-import typing
+import multiprocessing
+import threading
+import queue
 from abc import ABC
 from importlib.machinery import ModuleSpec
 import sys
@@ -7,8 +9,21 @@ import importlib.util
 import types
 import runpy
 import logging
+import typing
+import json
 
 import stack_data
+
+multiprocessing_manager = None
+placeholder_map = None
+messages_queue: queue.Queue | None = None
+
+
+def setup_multiprocessing():
+    global multiprocessing_manager, placeholder_map, messages_queue
+    multiprocessing_manager = multiprocessing.Manager()
+    placeholder_map = multiprocessing_manager.dict()
+    messages_queue = multiprocessing_manager.Queue()
 
 
 class InMemoryLoader(importlib.abc.SourceLoader, ABC):
@@ -74,21 +89,88 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
         sys.meta_path.remove(self)
 
 
-def _execute_pipeline(code: dict[str, dict[str, str]], sdspackage: str, sdsmodule: str, sdspipeline: str):
-    pipeline_finder = InMemoryFinder(code)
-    pipeline_finder.attach()
-    main_module = f"gen_{sdsmodule}_{sdspipeline}"
-    try:
-        runpy.run_module(main_module, run_name="__main__")  # TODO Is the Safe-DS-Package relevant here?
-    except BaseException:
-        raise  # This should keep the backtrace
-    finally:
-        pipeline_finder.detach()
+class PipelineProcess:
+    def __init__(self, code: dict[str, dict[str, str]], sdspackage: str, sdsmodule: str, sdspipeline: str,
+                 execution_id: str, messages_queue: queue.Queue):
+        self.code = code
+        self.sdspackage = sdspackage
+        self.sdsmodule = sdsmodule
+        self.sdspipeline = sdspipeline
+        self.id = execution_id
+        self.messages_queue = messages_queue
+        self.process = multiprocessing.Process(target=self._execute, daemon=True)
+
+    def _send_message(self, message_type: str, value: dict[typing.Any, typing.Any] | str) -> None:
+        global messages_queue
+        self.messages_queue.put({"type": message_type, "id": self.id, "data": value})
+
+    def _send_exception(self, exception: BaseException):
+        backtrace = get_backtrace_info(exception)
+        self._send_message("runtime_error", {"message": exception.__str__(), "backtrace": backtrace})
+
+    def _execute(self):
+        logging.info(f"Executing {self.sdspackage}.{self.sdsmodule}.{self.sdspipeline}...")
+        pipeline_finder = InMemoryFinder(self.code)
+        pipeline_finder.attach()
+        main_module = f"gen_{self.sdsmodule}_{self.sdspipeline}"
+        try:
+            runpy.run_module(main_module, run_name="__main__")  # TODO Is the Safe-DS-Package relevant here?
+            self._send_message("progress", "done")
+        except BaseException as error:
+            self._send_exception(error)
+        finally:
+            pipeline_finder.detach()
+
+    def execute(self):
+        self.process.start()
 
 
-def execute_pipeline(code: dict[str, dict[str, str]], sdspackage: str, sdsmodule: str, sdspipeline: str,
-                     context_globals: dict):
-    logging.info(f"Executing {sdspackage}.{sdsmodule}.{sdspipeline}...")
-    exec('_execute_pipeline(code, sdspackage, sdsmodule, sdspipeline)', context_globals,
-         {"code": code, "sdspackage": sdspackage, "sdsmodule": sdsmodule, "sdspipeline": sdspipeline,
-          "_execute_pipeline": _execute_pipeline, "runpy": runpy})
+def get_backtrace_info(error: BaseException) -> list[dict[str, typing.Any]]:
+    backtrace_list = []
+    for frame in stack_data.core.FrameInfo.stack_data(error.__traceback__):
+        backtrace_list.append({"file": frame.filename, "line": str(frame.lineno)})
+    return backtrace_list
+
+
+def execute_pipeline(code: dict[str, dict[str, str]], sdspackage: str, sdsmodule: str, sdspipeline: str, exec_id: str):
+    global messages_queue
+    process = PipelineProcess(code, sdspackage, sdsmodule, sdspipeline, exec_id, messages_queue)
+    process.execute()
+
+
+def get_placeholder(exec_id: str, placeholder_name: str) -> (str | None, typing.Any):
+    if exec_id not in placeholder_map:
+        return None, None
+    if placeholder_name not in placeholder_map[exec_id]:
+        return None, None
+    # TODO type
+    return "anytype", placeholder_map[exec_id][placeholder_name]
+
+
+def save_placeholder(exec_id: str, placeholder_name: str, value: typing.Any) -> None:
+    if exec_id not in placeholder_map:
+        placeholder_map[exec_id] = {}
+    placeholder_map[exec_id][placeholder_name] = value
+
+
+websocket_target = None
+messages_queue_thread = None
+
+
+def handle_queue_messages():
+    global websocket_target
+    while True:
+        message = messages_queue.get()
+        if websocket_target is not None:
+            websocket_target.send(json.dumps(message))
+
+
+def start_message_queue_handling():
+    global messages_queue_thread
+    messages_queue_thread = threading.Thread(target=handle_queue_messages, daemon=True)
+    messages_queue_thread.start()
+
+
+def set_new_websocket_target(ws):
+    global websocket_target
+    websocket_target = ws
