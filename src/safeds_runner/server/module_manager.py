@@ -11,19 +11,21 @@ import runpy
 import logging
 import typing
 import json
-
 import stack_data
 
+# Multiprocessing
 multiprocessing_manager = None
-placeholder_map = None
-messages_queue: queue.Queue | None = None
+global_placeholder_map = {}
+global_messages_queue: queue.Queue | None = None
+# Threading
+websocket_target = None
+messages_queue_thread = None
 
 
 def setup_multiprocessing():
-    global multiprocessing_manager, placeholder_map, messages_queue
+    global multiprocessing_manager, global_messages_queue
     multiprocessing_manager = multiprocessing.Manager()
-    placeholder_map = multiprocessing_manager.dict()
-    messages_queue = multiprocessing_manager.Queue()
+    global_messages_queue = multiprocessing_manager.Queue()
 
 
 class InMemoryLoader(importlib.abc.SourceLoader, ABC):
@@ -91,25 +93,30 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
 
 class PipelineProcess:
     def __init__(self, code: dict[str, dict[str, str]], sdspackage: str, sdsmodule: str, sdspipeline: str,
-                 execution_id: str, messages_queue: queue.Queue):
+                 execution_id: str, messages_queue: queue.Queue, placeholder_map: dict[str, typing.Any]):
         self.code = code
         self.sdspackage = sdspackage
         self.sdsmodule = sdsmodule
         self.sdspipeline = sdspipeline
         self.id = execution_id
         self.messages_queue = messages_queue
+        self.placeholder_map = placeholder_map
         self.process = multiprocessing.Process(target=self._execute, daemon=True)
 
     def _send_message(self, message_type: str, value: dict[typing.Any, typing.Any] | str) -> None:
-        global messages_queue
+        global global_messages_queue
         self.messages_queue.put({"type": message_type, "id": self.id, "data": value})
 
     def _send_exception(self, exception: BaseException):
         backtrace = get_backtrace_info(exception)
         self._send_message("runtime_error", {"message": exception.__str__(), "backtrace": backtrace})
 
+    def save_placeholder(self, placeholder_name: str, value: typing.Any) -> None:
+        self.placeholder_map[placeholder_name] = value
+
     def _execute(self):
         logging.info(f"Executing {self.sdspackage}.{self.sdsmodule}.{self.sdspipeline}...")
+        self.save_placeholder("abc", "deg")
         pipeline_finder = InMemoryFinder(self.code)
         pipeline_finder.attach()
         main_module = f"gen_{self.sdsmodule}_{self.sdspipeline}"
@@ -133,34 +140,42 @@ def get_backtrace_info(error: BaseException) -> list[dict[str, typing.Any]]:
 
 
 def execute_pipeline(code: dict[str, dict[str, str]], sdspackage: str, sdsmodule: str, sdspipeline: str, exec_id: str):
-    global messages_queue
-    process = PipelineProcess(code, sdspackage, sdsmodule, sdspipeline, exec_id, messages_queue)
+    global multiprocessing_manager, global_messages_queue, global_placeholder_map
+    if exec_id not in global_placeholder_map:
+        global_placeholder_map[exec_id] = multiprocessing_manager.dict()
+    process = PipelineProcess(code, sdspackage, sdsmodule, sdspipeline, exec_id, global_messages_queue,
+                              global_placeholder_map[exec_id])
     process.execute()
 
 
+def _get_placeholder_type(value: typing.Any):
+    if isinstance(value, bool):
+        return "Boolean"
+    if isinstance(value, float):
+        return "Float"
+    if isinstance(value, int):
+        return "Int"
+    if isinstance(value, str):
+        return "String"
+    if isinstance(value, object):
+        return type(value).__name__
+    return "Any"
+
+
 def get_placeholder(exec_id: str, placeholder_name: str) -> (str | None, typing.Any):
-    if exec_id not in placeholder_map:
+    global global_placeholder_map
+    if exec_id not in global_placeholder_map:
         return None, None
-    if placeholder_name not in placeholder_map[exec_id]:
+    if placeholder_name not in global_placeholder_map[exec_id]:
         return None, None
-    # TODO type
-    return "anytype", placeholder_map[exec_id][placeholder_name]
-
-
-def save_placeholder(exec_id: str, placeholder_name: str, value: typing.Any) -> None:
-    if exec_id not in placeholder_map:
-        placeholder_map[exec_id] = {}
-    placeholder_map[exec_id][placeholder_name] = value
-
-
-websocket_target = None
-messages_queue_thread = None
+    value = global_placeholder_map[exec_id][placeholder_name]
+    return _get_placeholder_type(value), value
 
 
 def handle_queue_messages():
     global websocket_target
     while True:
-        message = messages_queue.get()
+        message = global_messages_queue.get()
         if websocket_target is not None:
             websocket_target.send(json.dumps(message))
 
