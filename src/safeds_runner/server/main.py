@@ -9,8 +9,8 @@ from flask_cors import CORS
 from flask_sock import Sock
 
 from safeds_runner.server import messages
-from safeds_runner.server.module_manager import execute_pipeline, get_placeholder, set_new_websocket_target, \
-    start_message_queue_handling, setup_multiprocessing
+from safeds_runner.server.pipeline_manager import execute_pipeline, get_placeholder, set_new_websocket_target, \
+    setup_pipeline_execution
 
 app = Flask(__name__)
 # Websocket Configuration
@@ -114,8 +114,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Start Safe-DS Runner on a specific port.")
     parser.add_argument('--port', type=int, default=5000, help='Port on which to run the python server.')
     args = parser.parse_args()
-    setup_multiprocessing()
-    start_message_queue_handling()
+    setup_pipeline_execution()
     logging.info(f"Starting Safe-DS Runner on port {args.port}")
     # Only bind to host=127.0.0.1. Connections from other devices should not be accepted
     WSGIServer(('127.0.0.1', args.port), app).serve_forever()
