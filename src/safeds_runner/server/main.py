@@ -4,6 +4,7 @@ import json
 import logging
 from typing import Any
 
+import simple_websocket
 from flask import Flask
 from flask_cors import CORS
 from flask_sock import Sock
@@ -28,37 +29,37 @@ main: {"package": <package; Value of Package directive on Safe-DS module>, "modu
 
 
 @sock.route("/WSMain")
-def ws_run_program(ws):
-    logging.debug(f"Request to WSRunProgram")
+def ws_run_program(ws: simple_websocket.Server) -> None:
+    logging.debug("Request to WSRunProgram")
     set_new_websocket_target(ws)
     while True:
         # This would be a JSON message
         received_message: str = ws.receive()
-        logging.debug(f"> Received Message: {received_message}")
+        logging.debug("> Received Message: %s", received_message)
         try:
             received_object: dict[str, Any] = json.loads(received_message)
         except json.JSONDecodeError:
-            logging.warn(f"Invalid message received: {received_message}")
+            logging.warn("Invalid message received: %s", received_message)
             ws.close(None)
             return
         if "type" not in received_object:
-            logging.warn(f"No message type specified in: {received_message}")
+            logging.warn("No message type specified in: %s", received_message)
             ws.close(None)
             return
         if "id" not in received_object:
-            logging.warn(f"No message id specified in: {received_message}")
+            logging.warn("No message id specified in: %s", received_message)
             ws.close(None)
             return
         if "data" not in received_object:
-            logging.warn(f"No message data specified in: {received_message}")
+            logging.warn("No message data specified in: %s", received_message)
             ws.close(None)
             return
         if not isinstance(received_object["type"], str):
-            logging.warn(f"Message type is not a string: {received_message}")
+            logging.warn("Message type is not a string: %s", received_message)
             ws.close(None)
             return
         if not isinstance(received_object["id"], str):
-            logging.warn(f"Message id is not a string: {received_message}")
+            logging.warn("Message id is not a string: %s", received_message)
             ws.close(None)
             return
         request_data = received_object["data"]
@@ -68,7 +69,7 @@ def ws_run_program(ws):
             case "program":
                 valid, invalid_message = messages.validate_program_message(request_data)
                 if not valid:
-                    logging.warn(f"Invalid message data specified in: {received_message} ({invalid_message})")
+                    logging.warn("Invalid message data specified in: %s (%s)", received_message, invalid_message)
                     ws.close(None)
                     return
                 code = request_data["code"]
@@ -78,7 +79,7 @@ def ws_run_program(ws):
             case "placeholder_query":
                 valid, invalid_message = messages.validate_placeholder_query_message(request_data)
                 if not valid:
-                    logging.warn(f"Invalid message data specified in: {received_message} ({invalid_message})")
+                    logging.warn("Invalid message data specified in: %s (%s)", received_message, invalid_message)
                     ws.close(None)
                     return
                 placeholder_type, placeholder_value = get_placeholder(execution_id, request_data)
@@ -89,14 +90,14 @@ def ws_run_program(ws):
                     send_websocket_value(ws, request_data, "", "")
             case _:
                 if message_type not in messages.message_types:
-                    logging.warn(f"Invalid message type {message_type}")
+                    logging.warn("Invalid message type: %s", message_type)
 
 
-def send_websocket_value(connection, name: str, var_type: str, value: str):
+def send_websocket_value(connection: simple_websocket.Server, name: str, var_type: str, value: str) -> None:
     send_websocket_message(connection, "value", {"name": name, "type": var_type, "value": value})
 
 
-def send_websocket_message(connection, msg_type: str, msg_data):
+def send_websocket_message(connection: simple_websocket.Server, msg_type: str, msg_data) -> None:
     message = {"type": msg_type, "data": msg_data}
     connection.send(json.dumps(message))
 
@@ -115,6 +116,6 @@ if __name__ == "__main__":
     parser.add_argument('--port', type=int, default=5000, help='Port on which to run the python server.')
     args = parser.parse_args()
     setup_pipeline_execution()
-    logging.info(f"Starting Safe-DS Runner on port {args.port}")
+    logging.info("Starting Safe-DS Runner on port %s", str(args.port))
     # Only bind to host=127.0.0.1. Connections from other devices should not be accepted
     WSGIServer(('127.0.0.1', args.port), app).serve_forever()

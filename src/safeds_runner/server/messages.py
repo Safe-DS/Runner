@@ -20,7 +20,7 @@ def create_runtime_progress_done() -> str:
     return "done"
 
 
-def validate_program_message(message_data: dict[str, typing.Any] | str) -> (bool, typing.Optional[str]):
+def validate_program_message(message_data: dict[str, typing.Any] | str) -> typing.Tuple[bool, typing.Optional[str]]:
     if not isinstance(message_data, dict):
         return False, "Message data is not a JSON object"
     if "code" not in message_data:
@@ -50,7 +50,8 @@ def validate_program_message(message_data: dict[str, typing.Any] | str) -> (bool
     return True, None
 
 
-def validate_placeholder_query_message(message_data: dict[str, typing.Any] | str) -> (bool, typing.Optional[str]):
+def validate_placeholder_query_message(message_data: dict[str, typing.Any] | str) -> typing.Tuple[
+    bool, typing.Optional[str]]:
     if not isinstance(message_data, str):
         return False, "Message data is not a string"
     return True, None

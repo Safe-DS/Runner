@@ -1,4 +1,5 @@
 import importlib.abc
+import typing
 from abc import ABC
 from importlib.machinery import ModuleSpec
 import sys
@@ -17,10 +18,10 @@ class InMemoryLoader(importlib.abc.SourceLoader, ABC):
         self.code_bytes = code_bytes
         self.filename = filename
 
-    def get_data(self, path) -> bytes:
+    def get_data(self, path: bytes | str) -> bytes:
         return self.code_bytes
 
-    def get_filename(self, fullname) -> str:
+    def get_filename(self, fullname: str) -> str:
         return self.filename
 
 
@@ -33,18 +34,20 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
         """
         self.code = code
         self.allowed_packages = {key for key in code.keys()}
-        self.imports_to_remove = set()
+        self.imports_to_remove: typing.Set[str] = set()
         for key in code.keys():
             while "." in key:
                 key = key.rpartition(".")[0]
                 self.allowed_packages.add(key)
 
-    def find_spec(self, fullname: str, path=None, target: types.ModuleType | None = None) -> ModuleSpec | None:
-        logging.debug(f"Find Spec: {fullname} {path} {target}")
+    def find_spec(self, fullname: str, path: typing.Sequence[bytes | str] = None,
+                  target: types.ModuleType | None = None) -> ModuleSpec | None:
+        logging.debug("Find Spec: %s %s %s", fullname, path, target)
         if fullname in self.allowed_packages:
-            parent_package = importlib.util.spec_from_loader(fullname, loader=InMemoryLoader("".encode("utf-8"),
-                                                                                             fullname.replace(".",
-                                                                                                              "/")))
+            parent_package = importlib.util.spec_from_loader(
+                fullname, loader=InMemoryLoader("".encode("utf-8"), fullname.replace(".", "/")))
+            if parent_package is None:
+                return None
             if parent_package.submodule_search_locations is None:
                 parent_package.submodule_search_locations = []
             parent_package.submodule_search_locations.append(fullname.replace(".", "/"))
@@ -53,19 +56,16 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
         module_path = fullname.split(".")
         if len(module_path) == 1 and "" in self.code and fullname in self.code[""]:
             self.imports_to_remove.add(fullname)
-            return importlib.util.spec_from_loader(fullname,
-                                                   loader=InMemoryLoader(self.code[""][fullname].encode("utf-8"),
-                                                                         fullname.replace(".", "/")),
-                                                   origin="")
-        parent_package = ".".join(module_path[:-1])
+            return importlib.util.spec_from_loader(
+                fullname, loader=InMemoryLoader(self.code[""][fullname].encode("utf-8"), fullname.replace(".", "/")),
+                origin="")
+        parent_package_path = ".".join(module_path[:-1])
         submodule_name = module_path[-1]
-        if parent_package in self.code and submodule_name in self.code[parent_package]:
+        if parent_package_path in self.code and submodule_name in self.code[parent_package_path]:
             self.imports_to_remove.add(fullname)
-            return importlib.util.spec_from_loader(fullname,
-                                                   loader=InMemoryLoader(
-                                                       self.code[parent_package][submodule_name].encode("utf-8"),
-                                                       fullname.replace(".", "/")),
-                                                   origin=parent_package)
+            return importlib.util.spec_from_loader(
+                fullname, loader=InMemoryLoader(self.code[parent_package_path][submodule_name].encode("utf-8"),
+                                                fullname.replace(".", "/")), origin=parent_package_path)
         return None
 
     def attach(self) -> None:

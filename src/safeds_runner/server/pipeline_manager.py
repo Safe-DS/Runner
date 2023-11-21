@@ -4,17 +4,21 @@ import threading
 import json
 import typing
 import runpy
+from multiprocessing.managers import SyncManager
+
+import simple_websocket
 import stack_data
 import logging
+
 from safeds_runner.server.module_manager import InMemoryFinder
 
 # Multiprocessing
-multiprocessing_manager = None
-global_placeholder_map = {}
+multiprocessing_manager: SyncManager | None = None
+global_placeholder_map: dict = {}
 global_messages_queue: queue.Queue | None = None
 # Message Queue
-websocket_target = None
-messages_queue_thread = None
+websocket_target: simple_websocket.Server | None = None
+messages_queue_thread: threading.Thread | None = None
 
 
 def setup_pipeline_execution() -> None:
@@ -35,7 +39,7 @@ def setup_pipeline_execution() -> None:
     messages_queue_thread.start()
 
 
-def _handle_queue_messages():
+def _handle_queue_messages() -> None:
     global websocket_target
     while True:
         message = global_messages_queue.get()
@@ -43,7 +47,7 @@ def _handle_queue_messages():
             websocket_target.send(json.dumps(message))
 
 
-def set_new_websocket_target(ws) -> None:
+def set_new_websocket_target(ws: simple_websocket.Server) -> None:
     """
     Inform the message queue handling thread that the websocket connection has changed.
     :param ws: New websocket connection
@@ -91,7 +95,7 @@ class PipelineProcess:
         self.placeholder_map[placeholder_name] = value
 
     def _execute(self) -> None:
-        logging.info(f"Executing {self.sdspackage}.{self.sdsmodule}.{self.sdspipeline}...")
+        logging.info("Executing %s.%s.%s...", self.sdspackage, self.sdsmodule, self.sdspipeline)
         pipeline_finder = InMemoryFinder(self.code)
         pipeline_finder.attach()
         main_module = f"gen_{self.sdsmodule}_{self.sdspipeline}"
@@ -159,7 +163,7 @@ def _get_placeholder_type(value: typing.Any):
     return "Any"
 
 
-def get_placeholder(exec_id: str, placeholder_name: str) -> (str | None, typing.Any):
+def get_placeholder(exec_id: str, placeholder_name: str) -> typing.Tuple[str | None, typing.Any]:
     """
     Gets a placeholder type and value for an execution id and placeholder name
     :param exec_id: Unique id identifying execution
