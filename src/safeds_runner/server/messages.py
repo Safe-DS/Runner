@@ -1,8 +1,15 @@
 """Module that contains functions for creating and validating messages exchanged with the vscode extension."""
+
 import typing
 
-message_types = ["program", "placeholder_query", "placeholder", "placeholder_value", "runtime_error",
-                 "runtime_progress"]
+message_types = [
+    "program",
+    "placeholder_query",
+    "placeholder",
+    "placeholder_value",
+    "runtime_error",
+    "runtime_progress",
+]
 
 
 def create_placeholder_description(name: str, placeholder_type: str) -> dict[str, typing.Any]:
@@ -25,7 +32,7 @@ def create_runtime_progress_done() -> str:
     return "done"
 
 
-def validate_program_message(message_data: dict[str, typing.Any] | str) -> typing.Tuple[bool, str | None]:
+def validate_program_message(message_data: dict[str, typing.Any] | str) -> tuple[bool, str | None]:
     """Validate the message data of a program message."""
     if not isinstance(message_data, dict):
         return False, "Message data is not a JSON object"
@@ -33,8 +40,11 @@ def validate_program_message(message_data: dict[str, typing.Any] | str) -> typin
         return False, "No 'code' parameter given"
     if "main" not in message_data:
         return False, "No 'main' parameter given"
-    if "package" not in message_data["main"] or "module" not in message_data["main"] or "pipeline" not in message_data[
-        "main"]:
+    if (
+        "package" not in message_data["main"]
+        or "module" not in message_data["main"]
+        or "pipeline" not in message_data["main"]
+    ):
         return False, "Invalid 'main' parameter given"
     if len(message_data["main"]) != 3:
         return False, "Invalid 'main' parameter given"
@@ -61,7 +71,7 @@ def validate_program_message(message_data: dict[str, typing.Any] | str) -> typin
     return True, None
 
 
-def validate_placeholder_query_message(message_data: dict[str, typing.Any] | str) -> typing.Tuple[bool, str | None]:
+def validate_placeholder_query_message(message_data: dict[str, typing.Any] | str) -> tuple[bool, str | None]:
     """Validate the message data of a placeholder query message."""
     if not isinstance(message_data, str):
         return False, "Message data is not a string"

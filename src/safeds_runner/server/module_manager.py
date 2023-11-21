@@ -1,17 +1,18 @@
 """Module that contains the infrastructure for finding and loading modules in-memory."""
 
 import importlib.abc
+import importlib.util
+import logging
+import sys
+import types
 import typing
 from abc import ABC
 from importlib.machinery import ModuleSpec
-import sys
-import importlib.util
-import types
-import logging
 
 
 class InMemoryLoader(importlib.abc.SourceLoader, ABC):
     """Load a virtual python module from a byte array and a filename."""
+
     def __init__(self, code_bytes: bytes, filename: str):
         """
         Create a new in-memory loader.
@@ -43,6 +44,7 @@ class InMemoryLoader(importlib.abc.SourceLoader, ABC):
 
 class InMemoryFinder(importlib.abc.MetaPathFinder):
     """Find python modules in an in-memory dictionary."""
+
     def __init__(self, code: dict[str, dict[str, str]]):
         """
         Create a new in-memory finder.
@@ -52,7 +54,7 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
         """
         self.code = code
         self.allowed_packages = set(code.keys())
-        self.imports_to_remove: typing.Set[str] = set()
+        self.imports_to_remove: set[str] = set()
         for key in code:
             self._add_possible_packages_for_package_path(key)
 
@@ -61,8 +63,9 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
             package_path = package_path.rpartition(".")[0]
             self.allowed_packages.add(package_path)
 
-    def find_spec(self, fullname: str, path: typing.Sequence[str] | None = None,
-                  target: types.ModuleType | None = None) -> ModuleSpec | None:
+    def find_spec(
+        self, fullname: str, path: typing.Sequence[str] | None = None, target: types.ModuleType | None = None,
+    ) -> ModuleSpec | None:
         """
         Find a module which may be registered in the code dictionary.
 
@@ -74,7 +77,8 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
         logging.debug("Find Spec: %s %s %s", fullname, path, target)
         if fullname in self.allowed_packages:
             parent_package = importlib.util.spec_from_loader(
-                fullname, loader=InMemoryLoader("".encode("utf-8"), fullname.replace(".", "/")))
+                fullname, loader=InMemoryLoader(b"", fullname.replace(".", "/")),
+            )
             if parent_package is None:
                 return None
             if parent_package.submodule_search_locations is None:
@@ -86,15 +90,21 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
         if len(module_path) == 1 and "" in self.code and fullname in self.code[""]:
             self.imports_to_remove.add(fullname)
             return importlib.util.spec_from_loader(
-                fullname, loader=InMemoryLoader(self.code[""][fullname].encode("utf-8"), fullname.replace(".", "/")),
-                origin="")
+                fullname,
+                loader=InMemoryLoader(self.code[""][fullname].encode("utf-8"), fullname.replace(".", "/")),
+                origin="",
+            )
         parent_package_path = ".".join(module_path[:-1])
         submodule_name = module_path[-1]
         if parent_package_path in self.code and submodule_name in self.code[parent_package_path]:
             self.imports_to_remove.add(fullname)
             return importlib.util.spec_from_loader(
-                fullname, loader=InMemoryLoader(self.code[parent_package_path][submodule_name].encode("utf-8"),
-                                                fullname.replace(".", "/")), origin=parent_package_path)
+                fullname,
+                loader=InMemoryLoader(
+                    self.code[parent_package_path][submodule_name].encode("utf-8"), fullname.replace(".", "/"),
+                ),
+                origin=parent_package_path,
+            )
         return None
 
     def attach(self) -> None:
