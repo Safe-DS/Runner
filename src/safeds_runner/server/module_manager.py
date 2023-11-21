@@ -64,7 +64,10 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
             self.allowed_packages.add(package_path)
 
     def find_spec(
-        self, fullname: str, path: typing.Sequence[str] | None = None, target: types.ModuleType | None = None,
+        self,
+        fullname: str,
+        path: typing.Sequence[str] | None = None,
+        target: types.ModuleType | None = None,
     ) -> ModuleSpec | None:
         """
         Find a module which may be registered in the code dictionary.
@@ -77,7 +80,8 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
         logging.debug("Find Spec: %s %s %s", fullname, path, target)
         if fullname in self.allowed_packages:
             parent_package = importlib.util.spec_from_loader(
-                fullname, loader=InMemoryLoader(b"", fullname.replace(".", "/")),
+                fullname,
+                loader=InMemoryLoader(b"", fullname.replace(".", "/")),
             )
             if parent_package is None:
                 return None
@@ -101,7 +105,8 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
             return importlib.util.spec_from_loader(
                 fullname,
                 loader=InMemoryLoader(
-                    self.code[parent_package_path][submodule_name].encode("utf-8"), fullname.replace(".", "/"),
+                    self.code[parent_package_path][submodule_name].encode("utf-8"),
+                    fullname.replace(".", "/"),
                 ),
                 origin=parent_package_path,
             )

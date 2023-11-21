@@ -152,7 +152,11 @@ def get_backtrace_info(error: BaseException) -> list[dict[str, typing.Any]]:
 
 
 def execute_pipeline(
-    code: dict[str, dict[str, str]], sdspackage: str, sdsmodule: str, sdspipeline: str, exec_id: str,
+    code: dict[str, dict[str, str]],
+    sdspackage: str,
+    sdsmodule: str,
+    sdspipeline: str,
+    exec_id: str,
 ) -> None:
     """
     Run a Safe-DS pipeline.
@@ -167,7 +171,13 @@ def execute_pipeline(
         if exec_id not in global_placeholder_map:
             global_placeholder_map[exec_id] = multiprocessing_manager.dict()
         process = PipelineProcess(
-            code, sdspackage, sdsmodule, sdspipeline, exec_id, global_messages_queue, global_placeholder_map[exec_id],
+            code,
+            sdspackage,
+            sdsmodule,
+            sdspipeline,
+            exec_id,
+            global_messages_queue,
+            global_placeholder_map[exec_id],
         )
         process.execute()
 
