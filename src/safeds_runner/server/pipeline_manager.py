@@ -1,3 +1,5 @@
+"""Module that contains the infrastructure for pipeline execution in child processes."""
+
 import queue
 import multiprocessing
 import threading
@@ -23,11 +25,12 @@ messages_queue_thread: threading.Thread | None = None
 
 def setup_pipeline_execution() -> None:
     """
-    Prepares the runner for running Safe-DS pipelines.
+    Prepare the runner for running Safe-DS pipelines.
 
-    First structures shared between processes are created, after that a message queue handling thread is started in
-    the main process. This allows receiving messages directly from one of the pipeline processes and relays information
-    directly to the extension connection.
+    Firstly, structures shared between processes are created.
+    After that a message queue handling thread is started in the main process.
+    This allows receiving messages directly from one of the pipeline processes and relaying information
+    directly to the websocket connection (to the vscode-extension).
     """
     # Multiprocessing
     global multiprocessing_manager, global_messages_queue
@@ -40,7 +43,6 @@ def setup_pipeline_execution() -> None:
 
 
 def _handle_queue_messages() -> None:
-    global websocket_target, global_messages_queue
     try:
         while global_messages_queue is not None:
             message = global_messages_queue.get()
@@ -53,6 +55,7 @@ def _handle_queue_messages() -> None:
 def set_new_websocket_target(ws: simple_websocket.Server) -> None:
     """
     Inform the message queue handling thread that the websocket connection has changed.
+
     :param ws: New websocket connection
     """
     global websocket_target
@@ -63,7 +66,8 @@ class PipelineProcess:
     def __init__(self, code: dict[str, dict[str, str]], sdspackage: str, sdsmodule: str, sdspipeline: str,
                  execution_id: str, messages_queue: queue.Queue, placeholder_map: dict[str, typing.Any]):
         """
-        Represents a process that executes a Safe-DS pipeline.
+        Represent a process that executes a Safe-DS pipeline.
+
         :param code: A dictionary containing the code to be executed, in a virtual filesystem
         :param sdspackage: Safe-DS package name
         :param sdsmodule: Safe-DS module name
@@ -91,7 +95,8 @@ class PipelineProcess:
 
     def save_placeholder(self, placeholder_name: str, value: typing.Any) -> None:
         """
-        Save a calculated placeholder in the map
+        Save a calculated placeholder in the map.
+
         :param placeholder_name: Name of the placeholder
         :param value: Actual value of the placeholder
         """
@@ -112,15 +117,17 @@ class PipelineProcess:
 
     def execute(self) -> None:
         """
-        Executes this pipeline in a newly created process and communicates results, progress and errors back
-        to the main process
+        Execute this pipeline in a newly created process.
+
+        Results, progress and errors are communicated back to the main process.
         """
         self.process.start()
 
 
 def get_backtrace_info(error: BaseException) -> list[dict[str, typing.Any]]:
     """
-    Creates a simplified backtrace from an exception
+    Create a simplified backtrace from an exception.
+
     :param error: Caught exception
     :return: List containing file and line information for each stack frame
     """
@@ -133,15 +140,15 @@ def get_backtrace_info(error: BaseException) -> list[dict[str, typing.Any]]:
 def execute_pipeline(code: dict[str, dict[str, str]], sdspackage: str, sdsmodule: str, sdspipeline: str,
                      exec_id: str) -> None:
     """
-    Runs a Safe-DS pipeline
+    Run a Safe-DS pipeline.
+
     :param code: A dictionary containing the code to be executed, in a virtual filesystem
     :param sdspackage: Safe-DS package name
     :param sdsmodule: Safe-DS module name
     :param sdspipeline: Safe-DS main pipeline name
     :param exec_id: Unique ID to identify this execution
     """
-    global multiprocessing_manager, global_messages_queue, global_placeholder_map
-    if global_placeholder_map is not None and global_messages_queue is not None:
+    if global_placeholder_map is not None and global_messages_queue is not None and multiprocessing_manager is not None:
         if exec_id not in global_placeholder_map:
             global_placeholder_map[exec_id] = multiprocessing_manager.dict()
         process = PipelineProcess(code, sdspackage, sdsmodule, sdspipeline, exec_id, global_messages_queue,
@@ -151,6 +158,8 @@ def execute_pipeline(code: dict[str, dict[str, str]], sdspackage: str, sdsmodule
 
 def _get_placeholder_type(value: typing.Any) -> str:
     """
+    Convert a python object to a Safe-DS type.
+
     :param value: any python object
     :return: Safe-DS name corresponding to the given python object instance
     """
@@ -169,12 +178,12 @@ def _get_placeholder_type(value: typing.Any) -> str:
 
 def get_placeholder(exec_id: str, placeholder_name: str) -> typing.Tuple[str | None, typing.Any]:
     """
-    Gets a placeholder type and value for an execution id and placeholder name
+    Get a placeholder type and value for an execution id and placeholder name.
+
     :param exec_id: Unique id identifying execution
     :param placeholder_name: Name of the placeholder
     :return: Tuple containing placeholder type and placeholder value, or (None, None) if the placeholder does not exist
     """
-    global global_placeholder_map
     if exec_id not in global_placeholder_map:
         return None, None
     if placeholder_name not in global_placeholder_map[exec_id]:

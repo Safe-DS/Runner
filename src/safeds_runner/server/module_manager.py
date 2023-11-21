@@ -1,3 +1,5 @@
+"""Module that contains the infrastructure for finding and loading modules in-memory."""
+
 import importlib.abc
 import typing
 from abc import ABC
@@ -11,31 +13,33 @@ import logging
 class InMemoryLoader(importlib.abc.SourceLoader, ABC):
     def __init__(self, code_bytes: bytes, filename: str):
         """
-        Loads a virtual python module from a byte array and a filename
+        Load a virtual python module from a byte array and a filename.
+
         :param code_bytes: byte array containing python code
         :param filename: filename
         """
         self.code_bytes = code_bytes
         self.filename = filename
 
-    def get_data(self, path: bytes | str) -> bytes:
+    def get_data(self, _path: bytes | str) -> bytes:
         return self.code_bytes
 
-    def get_filename(self, fullname: str) -> str:
+    def get_filename(self, _fullname: str) -> str:
         return self.filename
 
 
 class InMemoryFinder(importlib.abc.MetaPathFinder):
     def __init__(self, code: dict[str, dict[str, str]]):
         """
-        Finds python modules in an in-memory dictionary
+        Find python modules in an in-memory dictionary.
+
         :param code: A dictionary containing the code to be executed, grouped by module
         path containing a mapping from module name to module code
         """
         self.code = code
-        self.allowed_packages = {key for key in code.keys()}
+        self.allowed_packages = set(code.keys())
         self.imports_to_remove: typing.Set[str] = set()
-        for key in code.keys():
+        for key in code:
             while "." in key:
                 key = key.rpartition(".")[0]
                 self.allowed_packages.add(key)
@@ -69,18 +73,14 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
         return None
 
     def attach(self) -> None:
-        """
-        Attaches this finder to the meta path
-        """
+        """Attach this finder to the meta path."""
         sys.meta_path.append(self)
 
     def detach(self) -> None:
-        """
-        Removes modules found in this finder and remove finder from meta path
-        """
+        """Remove modules found in this finder and remove finder from meta path."""
         # As modules should not be used from other modules, outside our pipeline,
         # it should be safe to just remove all newly imported modules
         for key in self.imports_to_remove:
-            if key in sys.modules.keys():
+            if key in sys.modules:
                 del sys.modules[key]
         sys.meta_path.remove(self)

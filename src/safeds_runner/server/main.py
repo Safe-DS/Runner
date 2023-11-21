@@ -1,3 +1,4 @@
+"""Module containing the main entry point, for starting the Safe-DS runner"""
 import argparse
 
 import json
@@ -31,6 +32,12 @@ main: {"package": <package; Value of Package directive on Safe-DS module>, "modu
 
 @sock.route("/WSMain")
 def ws_run_program(ws: simple_websocket.Server) -> None:
+    """
+    Handles websocket requests to the WSMain endpoint.
+
+    This function handles the bidirectional communication between the runner and the vscode-extension.
+    :param ws: Websocket Connection, provided by flask
+    """
     logging.debug("Request to WSRunProgram")
     set_new_websocket_target(ws)
     while True:
@@ -95,10 +102,25 @@ def ws_run_program(ws: simple_websocket.Server) -> None:
 
 
 def send_websocket_value(connection: simple_websocket.Server, name: str, var_type: str, value: str) -> None:
+    """
+    Send a computed placeholder value to the vscode-extension.
+
+    :param connection: Websocket connection
+    :param name: Name of placeholder
+    :param var_type: Type of placeholder
+    :param value: Value of placeholder
+    """
     send_websocket_message(connection, "value", {"name": name, "type": var_type, "value": value})
 
 
 def send_websocket_message(connection: simple_websocket.Server, msg_type: str, msg_data: typing.Any) -> None:
+    """
+    Send any message to the vscode-extension.
+
+    :param connection: Websocket connection
+    :param msg_type: Message Type
+    :param msg_data: Message Data
+    """
     message = {"type": msg_type, "data": msg_data}
     connection.send(json.dumps(message))
 
