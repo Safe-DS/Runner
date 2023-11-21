@@ -56,7 +56,7 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
         for key in code:
             self._add_possible_packages_for_package_path(key)
 
-    def _add_possible_packages_for_package_path(self, package_path):
+    def _add_possible_packages_for_package_path(self, package_path: str) -> None:
         while "." in package_path:
             package_path = package_path.rpartition(".")[0]
             self.allowed_packages.add(package_path)
