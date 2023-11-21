@@ -33,22 +33,27 @@ def setup_pipeline_execution() -> None:
     directly to the websocket connection (to the vscode-extension).
     """
     # Multiprocessing
-    global multiprocessing_manager, global_messages_queue
+    global multiprocessing_manager, global_messages_queue  # noqa: PLW0603
     multiprocessing_manager = multiprocessing.Manager()
     global_messages_queue = multiprocessing_manager.Queue()
     # Message Queue
-    global messages_queue_thread
+    global messages_queue_thread  # noqa: PLW0603
     messages_queue_thread = threading.Thread(target=_handle_queue_messages, daemon=True)
     messages_queue_thread.start()
 
 
 def _handle_queue_messages() -> None:
+    """
+    Relay messages from pipeline processes to the currently connected websocket endpoint.
+
+    Should be used in a dedicated thread.
+    """
     try:
         while global_messages_queue is not None:
             message = global_messages_queue.get()
             if websocket_target is not None:
                 websocket_target.send(json.dumps(message))
-    except BaseException as error:
+    except BaseException as error:  # noqa: BLE001
         logging.warn("Message queue terminated: %s", error.__repr__())
 
 
@@ -58,15 +63,16 @@ def set_new_websocket_target(ws: simple_websocket.Server) -> None:
 
     :param ws: New websocket connection
     """
-    global websocket_target
+    global websocket_target  # noqa: PLW0603
     websocket_target = ws
 
 
 class PipelineProcess:
+    """Represent a process that executes a Safe-DS pipeline."""
     def __init__(self, code: dict[str, dict[str, str]], sdspackage: str, sdsmodule: str, sdspipeline: str,
                  execution_id: str, messages_queue: queue.Queue, placeholder_map: dict[str, typing.Any]):
         """
-        Represent a process that executes a Safe-DS pipeline.
+        Create a new process which will execute the given pipeline, when started.
 
         :param code: A dictionary containing the code to be executed, in a virtual filesystem
         :param sdspackage: Safe-DS package name
@@ -86,7 +92,6 @@ class PipelineProcess:
         self.process = multiprocessing.Process(target=self._execute, daemon=True)
 
     def _send_message(self, message_type: str, value: dict[typing.Any, typing.Any] | str) -> None:
-        global global_messages_queue
         self.messages_queue.put({"type": message_type, "id": self.id, "data": value})
 
     def _send_exception(self, exception: BaseException) -> None:
@@ -110,7 +115,7 @@ class PipelineProcess:
         try:
             runpy.run_module(main_module, run_name="__main__")  # TODO Is the Safe-DS-Package relevant here?
             self._send_message("progress", "done")
-        except BaseException as error:
+        except BaseException as error:  # noqa: BLE001
             self._send_exception(error)
         finally:
             pipeline_finder.detach()

@@ -1,4 +1,4 @@
-"""Module containing the main entry point, for starting the Safe-DS runner"""
+"""Module containing the main entry point, for starting the Safe-DS runner."""
 import argparse
 
 import json
@@ -33,7 +33,7 @@ main: {"package": <package; Value of Package directive on Safe-DS module>, "modu
 @sock.route("/WSMain")
 def ws_run_program(ws: simple_websocket.Server) -> None:
     """
-    Handles websocket requests to the WSMain endpoint.
+    Handle websocket requests to the WSMain endpoint.
 
     This function handles the bidirectional communication between the runner and the vscode-extension.
     :param ws: Websocket Connection, provided by flask

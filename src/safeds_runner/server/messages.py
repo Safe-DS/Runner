@@ -25,7 +25,7 @@ def create_runtime_progress_done() -> str:
     return "done"
 
 
-def validate_program_message(message_data: dict[str, typing.Any] | str) -> typing.Tuple[bool, typing.Optional[str]]:
+def validate_program_message(message_data: dict[str, typing.Any] | str) -> typing.Tuple[bool, str | None]:
     """Validate the message data of a program message."""
     if not isinstance(message_data, dict):
         return False, "Message data is not a JSON object"
@@ -39,6 +39,11 @@ def validate_program_message(message_data: dict[str, typing.Any] | str) -> typin
     if len(message_data["main"]) != 3:
         return False, "Invalid 'main' parameter given"
     main: dict[str, str] = message_data["main"]
+    for main_key in main:
+        if not isinstance(main_key, str):
+            return False, "Invalid 'main' parameter given"
+        if not isinstance(main[main_key], str):
+            return False, "Invalid 'main' parameter given"
     if not isinstance(message_data["code"], dict):
         return False, "Invalid 'code' parameter given"
     code: dict = message_data["code"]
@@ -56,8 +61,7 @@ def validate_program_message(message_data: dict[str, typing.Any] | str) -> typin
     return True, None
 
 
-def validate_placeholder_query_message(message_data: dict[str, typing.Any] | str) -> typing.Tuple[
-    bool, typing.Optional[str]]:
+def validate_placeholder_query_message(message_data: dict[str, typing.Any] | str) -> typing.Tuple[bool, str | None]:
     """Validate the message data of a placeholder query message."""
     if not isinstance(message_data, str):
         return False, "Message data is not a string"

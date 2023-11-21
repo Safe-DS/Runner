@@ -11,9 +11,10 @@ import logging
 
 
 class InMemoryLoader(importlib.abc.SourceLoader, ABC):
+    """Load a virtual python module from a byte array and a filename."""
     def __init__(self, code_bytes: bytes, filename: str):
         """
-        Load a virtual python module from a byte array and a filename.
+        Create a new in-memory loader.
 
         :param code_bytes: byte array containing python code
         :param filename: filename
@@ -22,16 +23,29 @@ class InMemoryLoader(importlib.abc.SourceLoader, ABC):
         self.filename = filename
 
     def get_data(self, _path: bytes | str) -> bytes:
+        """
+        Get module code as a byte array.
+
+        :param _path: Module path
+        :return: Module code
+        """
         return self.code_bytes
 
     def get_filename(self, _fullname: str) -> str:
+        """
+        Get file name for a module path.
+
+        :param _fullname: Module path
+        :return: virtual Module path, as in the code array in the InMemoryFinder
+        """
         return self.filename
 
 
 class InMemoryFinder(importlib.abc.MetaPathFinder):
+    """Find python modules in an in-memory dictionary."""
     def __init__(self, code: dict[str, dict[str, str]]):
         """
-        Find python modules in an in-memory dictionary.
+        Create a new in-memory finder.
 
         :param code: A dictionary containing the code to be executed, grouped by module
         path containing a mapping from module name to module code
@@ -40,12 +54,23 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
         self.allowed_packages = set(code.keys())
         self.imports_to_remove: typing.Set[str] = set()
         for key in code:
-            while "." in key:
-                key = key.rpartition(".")[0]
-                self.allowed_packages.add(key)
+            self._add_possible_packages_for_package_path(key)
+
+    def _add_possible_packages_for_package_path(self, package_path):
+        while "." in package_path:
+            package_path = package_path.rpartition(".")[0]
+            self.allowed_packages.add(package_path)
 
     def find_spec(self, fullname: str, path: typing.Sequence[str] | None = None,
                   target: types.ModuleType | None = None) -> ModuleSpec | None:
+        """
+        Find a module which may be registered in the code dictionary.
+
+        :param fullname: Full module path (separated with '.')
+        :param path: Module Path
+        :param target: Module Type
+        :return: A module spec, if found. None otherwise
+        """
         logging.debug("Find Spec: %s %s %s", fullname, path, target)
         if fullname in self.allowed_packages:
             parent_package = importlib.util.spec_from_loader(
