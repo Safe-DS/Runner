@@ -2,6 +2,7 @@ import argparse
 
 import json
 import logging
+import typing
 from typing import Any
 
 import simple_websocket
@@ -97,7 +98,7 @@ def send_websocket_value(connection: simple_websocket.Server, name: str, var_typ
     send_websocket_message(connection, "value", {"name": name, "type": var_type, "value": value})
 
 
-def send_websocket_message(connection: simple_websocket.Server, msg_type: str, msg_data) -> None:
+def send_websocket_message(connection: simple_websocket.Server, msg_type: str, msg_data: typing.Any) -> None:
     message = {"type": msg_type, "data": msg_data}
     connection.send(json.dumps(message))
 
@@ -107,7 +108,7 @@ if __name__ == "__main__":
     import functools
     import builtins
 
-    builtins.print = functools.partial(print, flush=True)
+    builtins.print = functools.partial(print, flush=True)  # type: ignore[assignment]
 
     logging.getLogger().setLevel(logging.DEBUG)
     from gevent.pywsgi import WSGIServer

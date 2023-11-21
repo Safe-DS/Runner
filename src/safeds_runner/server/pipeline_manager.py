@@ -40,11 +40,14 @@ def setup_pipeline_execution() -> None:
 
 
 def _handle_queue_messages() -> None:
-    global websocket_target
-    while True:
-        message = global_messages_queue.get()
-        if websocket_target is not None:
-            websocket_target.send(json.dumps(message))
+    global websocket_target, global_messages_queue
+    try:
+        while global_messages_queue is not None:
+            message = global_messages_queue.get()
+            if websocket_target is not None:
+                websocket_target.send(json.dumps(message))
+    except BaseException as error:
+        logging.warn("Message queue terminated: %s", error.__repr__())
 
 
 def set_new_websocket_target(ws: simple_websocket.Server) -> None:
@@ -138,14 +141,15 @@ def execute_pipeline(code: dict[str, dict[str, str]], sdspackage: str, sdsmodule
     :param exec_id: Unique ID to identify this execution
     """
     global multiprocessing_manager, global_messages_queue, global_placeholder_map
-    if exec_id not in global_placeholder_map:
-        global_placeholder_map[exec_id] = multiprocessing_manager.dict()
-    process = PipelineProcess(code, sdspackage, sdsmodule, sdspipeline, exec_id, global_messages_queue,
-                              global_placeholder_map[exec_id])
-    process.execute()
+    if global_placeholder_map is not None and global_messages_queue is not None:
+        if exec_id not in global_placeholder_map:
+            global_placeholder_map[exec_id] = multiprocessing_manager.dict()
+        process = PipelineProcess(code, sdspackage, sdsmodule, sdspipeline, exec_id, global_messages_queue,
+                                  global_placeholder_map[exec_id])
+        process.execute()
 
 
-def _get_placeholder_type(value: typing.Any):
+def _get_placeholder_type(value: typing.Any) -> str:
     """
     :param value: any python object
     :return: Safe-DS name corresponding to the given python object instance

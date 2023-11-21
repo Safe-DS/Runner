@@ -40,7 +40,7 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
                 key = key.rpartition(".")[0]
                 self.allowed_packages.add(key)
 
-    def find_spec(self, fullname: str, path: typing.Sequence[bytes | str] = None,
+    def find_spec(self, fullname: str, path: typing.Sequence[str] | None = None,
                   target: types.ModuleType | None = None) -> ModuleSpec | None:
         logging.debug("Find Spec: %s %s %s", fullname, path, target)
         if fullname in self.allowed_packages:
