@@ -12,8 +12,11 @@ from multiprocessing.managers import SyncManager
 import simple_websocket
 import stack_data
 
-from safeds_runner.server.messages import create_runtime_error_description, create_runtime_progress_done, \
-    create_placeholder_description
+from safeds_runner.server.messages import (
+    create_placeholder_description,
+    create_runtime_error_description,
+    create_runtime_progress_done,
+)
 from safeds_runner.server.module_manager import InMemoryFinder
 
 # Multiprocessing
@@ -118,8 +121,7 @@ class PipelineProcess:
         """
         self.placeholder_map[placeholder_name] = value
         placeholder_type = _get_placeholder_type(value)
-        self._send_message("placeholder_type",
-                           create_placeholder_description(placeholder_name, placeholder_type))
+        self._send_message("placeholder_type", create_placeholder_description(placeholder_name, placeholder_type))
 
     def _execute(self) -> None:
         logging.info("Executing %s.%s.%s...", self.sdspackage, self.sdsmodule, self.sdspipeline)

@@ -132,8 +132,9 @@ def ws_main(ws: simple_websocket.Server) -> None:
                     logging.warning("Invalid message type: %s", message_type)
 
 
-def send_websocket_value(connection: simple_websocket.Server, exec_id: str, name: str, var_type: str,
-                         value: typing.Any) -> None:
+def send_websocket_value(
+    connection: simple_websocket.Server, exec_id: str, name: str, var_type: str, value: typing.Any,
+) -> None:
     """
     Send a computed placeholder value to the vscode-extension.
 
@@ -146,8 +147,9 @@ def send_websocket_value(connection: simple_websocket.Server, exec_id: str, name
     send_websocket_message(connection, "value", exec_id, create_placeholder_value(name, var_type, value))
 
 
-def send_websocket_message(connection: simple_websocket.Server, msg_type: str, exec_id: str,
-                           msg_data: typing.Any) -> None:
+def send_websocket_message(
+    connection: simple_websocket.Server, msg_type: str, exec_id: str, msg_data: typing.Any,
+) -> None:
     """
     Send any message to the vscode-extension.
 
