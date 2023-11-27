@@ -45,7 +45,7 @@ def test_websocket_no_json() -> None:
     assert str(mock_connection.close_message) == "Invalid Message: not JSON"
 
 
-@pytest.mark.parametrize("websocket_message,exception_message", [
+@pytest.mark.parametrize(argnames="websocket_message,exception_message", argvalues=[
     ({"id": "a", "data": "b"}, "Invalid Message: no type"),
     ({"type": "a", "data": "b"}, "Invalid Message: no id"),
     ({"type": "b", "id": "123"}, "Invalid Message: no data"),
