@@ -158,9 +158,14 @@ def test_websocket_validation_error(websocket_message: dict[str, typing.Any], ex
     assert str(mock_connection.close_message) == exception_message
 
 
-@pytest.mark.skipif(sys.platform.startswith("win"), reason="skipping multiprocessing tests on windows, as pytest "
-                                                           "causes Manager to hang, when using multiprocessing "
-                                                           "coverage")
+@pytest.mark.skipif(
+    sys.platform.startswith("win"),
+    reason=(
+        "skipping multiprocessing tests on windows, as pytest "
+        "causes Manager to hang, when using multiprocessing "
+        "coverage"
+    ),
+)
 def test_websocket_progress_message_done() -> None:
     setup_pipeline_execution()
     code_id = "123456789"
@@ -200,9 +205,14 @@ def test_websocket_progress_message_done() -> None:
     assert done_message["data"] == "done"
 
 
-@pytest.mark.skipif(sys.platform.startswith("win"), reason="skipping multiprocessing tests on windows, as pytest "
-                                                           "causes Manager to hang, when using multiprocessing "
-                                                           "coverage")
+@pytest.mark.skipif(
+    sys.platform.startswith("win"),
+    reason=(
+        "skipping multiprocessing tests on windows, as pytest "
+        "causes Manager to hang, when using multiprocessing "
+        "coverage"
+    ),
+)
 def test_websocket_exception_message() -> None:
     setup_pipeline_execution()
     code_id = "abcdefg"
@@ -236,9 +246,14 @@ def test_websocket_exception_message() -> None:
         assert isinstance(frame["line"], int)
 
 
-@pytest.mark.skipif(sys.platform.startswith("win"), reason="skipping multiprocessing tests on windows, as pytest "
-                                                           "causes Manager to hang, when using multiprocessing "
-                                                           "coverage")
+@pytest.mark.skipif(
+    sys.platform.startswith("win"),
+    reason=(
+        "skipping multiprocessing tests on windows, as pytest "
+        "causes Manager to hang, when using multiprocessing "
+        "coverage"
+    ),
+)
 def test_websocket_placeholder_valid() -> None:
     setup_pipeline_execution()
     code_id = "abcdefg"
@@ -313,9 +328,14 @@ def test_websocket_placeholder_valid() -> None:
     assert query_result_invalid["data"]["value"] == ""
 
 
-@pytest.mark.skipif(sys.platform.startswith("win"), reason="skipping multiprocessing tests on windows, as pytest "
-                                                           "causes Manager to hang, when using multiprocessing "
-                                                           "coverage")
+@pytest.mark.skipif(
+    sys.platform.startswith("win"),
+    reason=(
+        "skipping multiprocessing tests on windows, as pytest "
+        "causes Manager to hang, when using multiprocessing "
+        "coverage"
+    ),
+)
 def test_websocket_invalid_message_invalid_placeholder_query() -> None:
     setup_pipeline_execution()
     code_id = "unknown-code-id-never-generated"
