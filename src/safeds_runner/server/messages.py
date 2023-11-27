@@ -41,14 +41,14 @@ def validate_program_message(message_data: dict[str, typing.Any] | str) -> tuple
     if "main" not in message_data:
         return False, "No 'main' parameter given"
     if (
-        "package" not in message_data["main"]
+        not isinstance(message_data["main"], dict)
+        or "package" not in message_data["main"]
         or "module" not in message_data["main"]
         or "pipeline" not in message_data["main"]
     ):
         return False, "Invalid 'main' parameter given"
     if len(message_data["main"]) != 3:
         return False, "Invalid 'main' parameter given"
-    main: dict[str, str] = message_data["main"]
     if not isinstance(message_data["code"], dict):
         return False, "Invalid 'code' parameter given"
     code: dict = message_data["code"]

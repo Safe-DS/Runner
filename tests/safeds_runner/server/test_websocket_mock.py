@@ -12,8 +12,8 @@ class MockWebsocketConnection:
     def __init__(self, messages: list[str]):
         self.messages = messages
         self.received: list[str] = []
-        self.close_reason = None
-        self.close_message = None
+        self.close_reason: int | None = None
+        self.close_message: str | None = None
         self.condition_variable = threading.Condition()
 
     def send(self, msg: str) -> None:
@@ -26,7 +26,7 @@ class MockWebsocketConnection:
             return None
         return self.messages.pop(0)
 
-    def close(self, reason: int | None = None, message: str | None = None):
+    def close(self, reason: int | None = None, message: str | None = None) -> None:
         self.close_reason = reason
         self.close_message = message
 
@@ -38,7 +38,7 @@ class MockWebsocketConnection:
                 self.condition_variable.wait()
 
 
-def test_websocket_no_json():
+def test_websocket_no_json() -> None:
     # with pytest.raises(ConnectionResetError) as exception:
     mock_connection = MockWebsocketConnection(["<invalid message>"])
     ws_main(mock_connection)
@@ -85,14 +85,14 @@ def test_websocket_no_json():
     "program_invalid_main2", "program_invalid_main3", "program_invalid_main4",
     "program_invalid_main5", "program_invalid_code1", "program_invalid_code2", "program_invalid_code3"
 ])
-def test_websocket_validation_error(websocket_message: dict[str, typing.Any], exception_message: str):
+def test_websocket_validation_error(websocket_message: dict[str, typing.Any], exception_message: str) -> None:
     # with pytest.raises(ConnectionResetError) as exception:
     mock_connection = MockWebsocketConnection([json.dumps(websocket_message)])
     ws_main(mock_connection)
     assert str(mock_connection.close_message) == exception_message
 
 
-def test_websocket_progress_message_done():
+def test_websocket_progress_message_done() -> None:
     setup_pipeline_execution()
     code_id = "123456789"
     code_message = {
@@ -125,7 +125,7 @@ def test_websocket_progress_message_done():
     assert done_message["data"] == "done"
 
 
-def test_websocket_exception_message():
+def test_websocket_exception_message() -> None:
     setup_pipeline_execution()
     code_id = "abcdefg"
     code_message = {
@@ -149,11 +149,13 @@ def test_websocket_exception_message():
     assert isinstance(exception_message["data"]["backtrace"], list)
     assert len(exception_message["data"]["backtrace"]) > 0
     for frame in exception_message["data"]["backtrace"]:
-        assert "file" in frame and isinstance(frame["file"], str)
-        assert "line" in frame and isinstance(frame["line"], int)
+        assert "file" in frame
+        assert isinstance(frame["file"], str)
+        assert "line" in frame
+        assert isinstance(frame["line"], int)
 
 
-def test_websocket_placeholder_valid():
+def test_websocket_placeholder_valid() -> None:
     setup_pipeline_execution()
     code_id = "abcdefg"
     code_message = {
@@ -220,7 +222,7 @@ def test_websocket_placeholder_valid():
     assert query_result_invalid["data"]["value"] == ""
 
 
-def test_websocket_invalid_message_invalid_placeholder_query():
+def test_websocket_invalid_message_invalid_placeholder_query() -> None:
     setup_pipeline_execution()
     code_id = "unknown-code-id-never-generated"
     placeholder_name = "v"

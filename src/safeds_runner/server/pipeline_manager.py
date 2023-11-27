@@ -126,7 +126,7 @@ class PipelineProcess:
         pipeline_finder = InMemoryFinder(self.code)
         pipeline_finder.attach()
         main_module = f"gen_{self.sdsmodule}_{self.sdspipeline}"
-        global current_pipeline
+        global current_pipeline  # noqa: PLW0603
         current_pipeline = self
         try:
             runpy.run_module(main_module, run_name="__main__")  # TODO Is the Safe-DS-Package relevant here?

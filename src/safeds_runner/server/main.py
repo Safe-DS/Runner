@@ -23,7 +23,7 @@ from safeds_runner.server.pipeline_manager import (
 )
 
 
-def create_flask_app(testing=False) -> flask.app.App:
+def create_flask_app(testing: bool = False) -> flask.app.App:
     """
     Create a flask app, that handles all requests.
 
@@ -161,7 +161,11 @@ def send_websocket_message(connection: simple_websocket.Server, msg_type: str, e
 
 
 def main() -> None:
-    """Main entry point of the runner application."""
+    """
+    Execute the runner application.
+
+    Main entry point of the runner application.
+    """
     # Allow prints to be unbuffered by default
     import builtins
     import functools
