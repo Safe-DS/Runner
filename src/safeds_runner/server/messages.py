@@ -17,7 +17,7 @@ def create_placeholder_description(name: str, placeholder_type: str) -> dict[str
     return {"name": name, "type": placeholder_type}
 
 
-def create_placeholder_value(name: str, placeholder_type: str, value: str) -> dict[str, typing.Any]:
+def create_placeholder_value(name: str, placeholder_type: str, value: typing.Any) -> dict[str, typing.Any]:
     """Create the message data of a placeholder value message containing name, type and the actual value."""
     return {"name": name, "type": placeholder_type, "value": value}
 
@@ -49,23 +49,14 @@ def validate_program_message(message_data: dict[str, typing.Any] | str) -> tuple
     if len(message_data["main"]) != 3:
         return False, "Invalid 'main' parameter given"
     main: dict[str, str] = message_data["main"]
-    for main_key in main:
-        if not isinstance(main_key, str):
-            return False, "Invalid 'main' parameter given"
-        if not isinstance(main[main_key], str):
-            return False, "Invalid 'main' parameter given"
     if not isinstance(message_data["code"], dict):
         return False, "Invalid 'code' parameter given"
     code: dict = message_data["code"]
     for key in code:
-        if not isinstance(key, str):
-            return False, "Invalid 'code' parameter given"
         if not isinstance(code[key], dict):
             return False, "Invalid 'code' parameter given"
         next_dict: dict = code[key]
         for next_key in next_dict:
-            if not isinstance(next_key, str):
-                return False, "Invalid 'code' parameter given"
             if not isinstance(next_dict[next_key], str):
                 return False, "Invalid 'code' parameter given"
     return True, None

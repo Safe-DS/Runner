@@ -12,6 +12,8 @@ from multiprocessing.managers import SyncManager
 import simple_websocket
 import stack_data
 
+from safeds_runner.server.messages import create_runtime_error_description, create_runtime_progress_done, \
+    create_placeholder_description
 from safeds_runner.server.module_manager import InMemoryFinder
 
 # Multiprocessing
@@ -105,7 +107,7 @@ class PipelineProcess:
 
     def _send_exception(self, exception: BaseException) -> None:
         backtrace = get_backtrace_info(exception)
-        self._send_message("runtime_error", {"message": exception.__str__(), "backtrace": backtrace})
+        self._send_message("runtime_error", create_runtime_error_description(exception.__str__(), backtrace))
 
     def save_placeholder(self, placeholder_name: str, value: typing.Any) -> None:
         """
@@ -115,15 +117,20 @@ class PipelineProcess:
         :param value: Actual value of the placeholder
         """
         self.placeholder_map[placeholder_name] = value
+        placeholder_type = _get_placeholder_type(value)
+        self._send_message("placeholder_type",
+                           create_placeholder_description(placeholder_name, placeholder_type))
 
     def _execute(self) -> None:
         logging.info("Executing %s.%s.%s...", self.sdspackage, self.sdsmodule, self.sdspipeline)
         pipeline_finder = InMemoryFinder(self.code)
         pipeline_finder.attach()
         main_module = f"gen_{self.sdsmodule}_{self.sdspipeline}"
+        global current_pipeline
+        current_pipeline = self
         try:
             runpy.run_module(main_module, run_name="__main__")  # TODO Is the Safe-DS-Package relevant here?
-            self._send_message("progress", "done")
+            self._send_message("progress", create_runtime_progress_done())
         except BaseException as error:  # noqa: BLE001
             self._send_exception(error)
         finally:
@@ -136,6 +143,21 @@ class PipelineProcess:
         Results, progress and errors are communicated back to the main process.
         """
         self.process.start()
+
+
+# Current Pipeline
+current_pipeline: PipelineProcess | None = None
+
+
+def runner_save_placeholder(placeholder_name: str, value: typing.Any) -> None:
+    """
+    Save a placeholder for the current running pipeline.
+
+    :param placeholder_name: Name of the placeholder
+    :param value: Actual value of the placeholder
+    """
+    if current_pipeline is not None:
+        current_pipeline.save_placeholder(placeholder_name, value)
 
 
 def get_backtrace_info(error: BaseException) -> list[dict[str, typing.Any]]:
@@ -198,7 +220,12 @@ def _get_placeholder_type(value: typing.Any) -> str:
     if isinstance(value, str):
         return "String"
     if isinstance(value, object):
-        return type(value).__name__
+        object_name = type(value).__name__
+        if object_name == "function":
+            return "Callable"
+        if object_name == "NoneType":
+            return "Null"
+        return object_name
     return "Any"
 
 

@@ -6,12 +6,15 @@ import logging
 import typing
 from typing import Any
 
+import flask.app
+import flask_sock
 import simple_websocket
 from flask import Flask
 from flask_cors import CORS
 from flask_sock import Sock
 
 from safeds_runner.server import messages
+from safeds_runner.server.messages import create_placeholder_value
 from safeds_runner.server.pipeline_manager import (
     execute_pipeline,
     get_placeholder,
@@ -19,23 +22,42 @@ from safeds_runner.server.pipeline_manager import (
     setup_pipeline_execution,
 )
 
-app = Flask(__name__)
-# Websocket Configuration
-app.config["SOCK_SERVER_OPTIONS"] = {"ping_interval": 25}
-sock = Sock(app)
-# Allow access from VSCode extension
-CORS(app, resources={r"/*": {"origins": "vscode-webview://*"}})
 
-"""
-Args should contain every source file that was generated
-code: ["<package>" => ["<file>" => "<code>", ...], ...]
-main: {"package": <package; Value of Package directive on Safe-DS module>, "module": <module; Name of Safe-DS source file>, "pipeline": <pipeline; Name of executable Pipeline>}
-:return: Tuple: (Result String, HTTP Code)
-"""
+def create_flask_app(testing=False) -> flask.app.App:
+    """
+    Create a flask app, that handles all requests.
+
+    :param testing Whether the app should run in a testing context
+    """
+    flask_app = Flask(__name__)
+    # Websocket Configuration
+    flask_app.config["SOCK_SERVER_OPTIONS"] = {"ping_interval": 25}
+    flask_app.config["TESTING"] = testing
+
+    # Allow access from VSCode extension
+    CORS(flask_app, resources={r"/*": {"origins": "vscode-webview://*"}})
+    return flask_app
+
+
+def create_flask_websocket(flask_app: flask.app.App) -> flask_sock.Sock:
+    """
+    Create a flask websocket extension.
+
+    :param flask_app Flask App
+    """
+    return Sock(flask_app)
+
+
+app = create_flask_app()
+sock = create_flask_websocket(app)
 
 
 @sock.route("/WSMain")
-def ws_run_program(ws: simple_websocket.Server) -> None:
+def _ws_main(ws: simple_websocket.Server) -> None:
+    ws_main(ws)
+
+
+def ws_main(ws: simple_websocket.Server) -> None:
     """
     Handle websocket requests to the WSMain endpoint.
 
@@ -47,32 +69,36 @@ def ws_run_program(ws: simple_websocket.Server) -> None:
     while True:
         # This would be a JSON message
         received_message: str = ws.receive()
+        if received_message is None:
+            logging.debug("Received EOF, closing connection")
+            ws.close()
+            return
         logging.debug("> Received Message: %s", received_message)
         try:
             received_object: dict[str, Any] = json.loads(received_message)
         except json.JSONDecodeError:
             logging.warning("Invalid message received: %s", received_message)
-            ws.close(None)
+            ws.close(None, "Invalid Message: not JSON")
             return
         if "type" not in received_object:
             logging.warning("No message type specified in: %s", received_message)
-            ws.close(None)
+            ws.close(None, "Invalid Message: no type")
             return
         if "id" not in received_object:
             logging.warning("No message id specified in: %s", received_message)
-            ws.close(None)
+            ws.close(None, "Invalid Message: no id")
             return
         if "data" not in received_object:
             logging.warning("No message data specified in: %s", received_message)
-            ws.close(None)
+            ws.close(None, "Invalid Message: no data")
             return
         if not isinstance(received_object["type"], str):
             logging.warning("Message type is not a string: %s", received_message)
-            ws.close(None)
+            ws.close(None, "Invalid Message: invalid type")
             return
         if not isinstance(received_object["id"], str):
             logging.warning("Message id is not a string: %s", received_message)
-            ws.close(None)
+            ws.close(None, "Invalid Message: invalid id")
             return
         request_data = received_object["data"]
         message_type = received_object["type"]
@@ -82,54 +108,60 @@ def ws_run_program(ws: simple_websocket.Server) -> None:
                 valid, invalid_message = messages.validate_program_message(request_data)
                 if not valid:
                     logging.warning("Invalid message data specified in: %s (%s)", received_message, invalid_message)
-                    ws.close(None)
+                    ws.close(None, invalid_message)
                     return
                 code = request_data["code"]
-                main = request_data["main"]
+                msg_main = request_data["main"]
                 # This should only be called from the extension as it is a security risk
-                execute_pipeline(code, main["package"], main["module"], main["pipeline"], execution_id)
+                execute_pipeline(code, msg_main["package"], msg_main["module"], msg_main["pipeline"], execution_id)
             case "placeholder_query":
                 valid, invalid_message = messages.validate_placeholder_query_message(request_data)
                 if not valid:
                     logging.warning("Invalid message data specified in: %s (%s)", received_message, invalid_message)
-                    ws.close(None)
+                    ws.close(None, invalid_message)
                     return
                 placeholder_type, placeholder_value = get_placeholder(execution_id, request_data)
                 if placeholder_type is not None:
-                    send_websocket_value(ws, request_data, placeholder_type, placeholder_value)
+                    send_websocket_value(ws, execution_id, request_data, placeholder_type, placeholder_value)
                 else:
                     # Send back empty type / value, to communicate that no placeholder exists (yet)
-                    send_websocket_value(ws, request_data, "", "")
+                    # Use name from query to allow linking a response to a request on the peer
+                    send_websocket_value(ws, execution_id, request_data, "", "")
             case _:
                 if message_type not in messages.message_types:
                     logging.warning("Invalid message type: %s", message_type)
 
 
-def send_websocket_value(connection: simple_websocket.Server, name: str, var_type: str, value: str) -> None:
+def send_websocket_value(connection: simple_websocket.Server, exec_id: str, name: str, var_type: str,
+                         value: typing.Any) -> None:
     """
     Send a computed placeholder value to the vscode-extension.
 
     :param connection: Websocket connection
+    :param exec_id: ID of the execution, where the placeholder to be sent was generated
     :param name: Name of placeholder
     :param var_type: Type of placeholder
     :param value: Value of placeholder
     """
-    send_websocket_message(connection, "value", {"name": name, "type": var_type, "value": value})
+    send_websocket_message(connection, "value", exec_id, create_placeholder_value(name, var_type, value))
 
 
-def send_websocket_message(connection: simple_websocket.Server, msg_type: str, msg_data: typing.Any) -> None:
+def send_websocket_message(connection: simple_websocket.Server, msg_type: str, exec_id: str,
+                           msg_data: typing.Any) -> None:
     """
     Send any message to the vscode-extension.
 
     :param connection: Websocket connection
     :param msg_type: Message Type
+    :param exec_id: ID of the execution, where this message belongs to
     :param msg_data: Message Data
     """
-    message = {"type": msg_type, "data": msg_data}
+    message = {"type": msg_type, "id": exec_id, "data": msg_data}
     connection.send(json.dumps(message))
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Main entry point of the runner application."""
     # Allow prints to be unbuffered by default
     import builtins
     import functools
@@ -146,3 +178,7 @@ if __name__ == "__main__":
     logging.info("Starting Safe-DS Runner on port %s", str(args.port))
     # Only bind to host=127.0.0.1. Connections from other devices should not be accepted
     WSGIServer(("127.0.0.1", args.port), app).serve_forever()
+
+
+if __name__ == "__main__":
+    main()
