@@ -133,8 +133,10 @@ class PipelineProcess:
         global current_pipeline  # noqa: PLW0603
         current_pipeline = self
         try:
-            runpy.run_module(main_module if len(self.modulepath) == 0 else f"{self.modulepath}.{main_module}",
-                             run_name="__main__")
+            runpy.run_module(
+                main_module if len(self.modulepath) == 0 else f"{self.modulepath}.{main_module}",
+                run_name="__main__",
+            )
             self._send_message(message_type_runtime_progress, create_runtime_progress_done())
         except BaseException as error:  # noqa: BLE001
             self._send_exception(error)
