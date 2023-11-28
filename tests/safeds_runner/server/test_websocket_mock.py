@@ -56,7 +56,7 @@ def test_websocket_no_json() -> None:
         ({"type": "program", "id": "1234", "data": "a"}, "Message data is not a JSON object"),
         ({"type": "placeholder_query", "id": "123", "data": {"a": "v"}}, "Message data is not a string"),
         (
-            {"type": "program", "id": "1234", "data": {"main": {"package": "1", "module": "2", "pipeline": "3"}}},
+            {"type": "program", "id": "1234", "data": {"main": {"modulepath": "1", "module": "2", "pipeline": "3"}}},
             "No 'code' parameter given",
         ),
         ({"type": "program", "id": "1234", "data": {"code": {"": {"entry": ""}}}}, "No 'main' parameter given"),
@@ -64,7 +64,7 @@ def test_websocket_no_json() -> None:
             {
                 "type": "program",
                 "id": "1234",
-                "data": {"code": {"": {"entry": ""}}, "main": {"package": "1", "module": "2"}},
+                "data": {"code": {"": {"entry": ""}}, "main": {"modulepath": "1", "module": "2"}},
             },
             "Invalid 'main' parameter given",
         ),
@@ -72,7 +72,7 @@ def test_websocket_no_json() -> None:
             {
                 "type": "program",
                 "id": "1234",
-                "data": {"code": {"": {"entry": ""}}, "main": {"package": "1", "pipeline": "3"}},
+                "data": {"code": {"": {"entry": ""}}, "main": {"modulepath": "1", "pipeline": "3"}},
             },
             "Invalid 'main' parameter given",
         ),
@@ -90,7 +90,7 @@ def test_websocket_no_json() -> None:
                 "id": "1234",
                 "data": {
                     "code": {"": {"entry": ""}},
-                    "main": {"package": "1", "module": "2", "pipeline": "3", "other": "4"},
+                    "main": {"modulepath": "1", "module": "2", "pipeline": "3", "other": "4"},
                 },
             },
             "Invalid 'main' parameter given",
@@ -101,7 +101,7 @@ def test_websocket_no_json() -> None:
                 "id": "1234",
                 "data": {
                     "code": {"": {"entry": ""}},
-                    "main": {"package": "1", "module": "2", "pipeline": "3", "other": {"4": "a"}},
+                    "main": {"modulepath": "1", "module": "2", "pipeline": "3", "other": {"4": "a"}},
                 },
             },
             "Invalid 'main' parameter given",
@@ -110,7 +110,7 @@ def test_websocket_no_json() -> None:
             {
                 "type": "program",
                 "id": "1234",
-                "data": {"code": "a", "main": {"package": "1", "module": "2", "pipeline": "3"}},
+                "data": {"code": "a", "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
             },
             "Invalid 'code' parameter given",
         ),
@@ -118,7 +118,7 @@ def test_websocket_no_json() -> None:
             {
                 "type": "program",
                 "id": "1234",
-                "data": {"code": {"": "a"}, "main": {"package": "1", "module": "2", "pipeline": "3"}},
+                "data": {"code": {"": "a"}, "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
             },
             "Invalid 'code' parameter given",
         ),
@@ -126,7 +126,7 @@ def test_websocket_no_json() -> None:
             {
                 "type": "program",
                 "id": "1234",
-                "data": {"code": {"": {"a": {"b": "c"}}}, "main": {"package": "1", "module": "2", "pipeline": "3"}},
+                "data": {"code": {"": {"a": {"b": "c"}}}, "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
             },
             "Invalid 'code' parameter given",
         ),
@@ -193,7 +193,7 @@ def test_websocket_progress_message_done() -> None:
                 "a": {"stub": "def u():\n\treturn 1"},
                 "v.u.s": {"testing": "import a.stub;\n\ndef add1(v1, v2):\n\treturn v1 + v2 + a.stub.u()\n"},
             },
-            "main": {"package": "", "module": "b", "pipeline": "c"},
+            "main": {"modulepath": "", "module": "b", "pipeline": "c"},
         },
     }
     mock_connection = MockWebsocketConnection([json.dumps(code_message)])
@@ -215,7 +215,7 @@ def test_websocket_progress_message_done() -> None:
 )
 def test_websocket_exception_message() -> None:
     setup_pipeline_execution()
-    code_id = "abcdefg"
+    code_id = "abcdefgh"
     code_message = {
         "type": "program",
         "id": code_id,
@@ -226,7 +226,7 @@ def test_websocket_exception_message() -> None:
                     "gen_test_a_pipe": "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()",
                 },
             },
-            "main": {"package": "", "module": "test_a", "pipeline": "pipe"},
+            "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
         },
     }
     mock_connection = MockWebsocketConnection([json.dumps(code_message)])
@@ -272,7 +272,7 @@ def test_websocket_placeholder_valid() -> None:
                     "gen_test_a_pipe": "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()",
                 },
             },
-            "main": {"package": "", "module": "test_a", "pipeline": "pipe"},
+            "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
         },
     }
     mock_connection = MockWebsocketConnection([json.dumps(code_message)])

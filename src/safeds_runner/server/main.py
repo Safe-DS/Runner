@@ -113,7 +113,7 @@ def ws_main(ws: simple_websocket.Server) -> None:
                 code = request_data["code"]
                 msg_main = request_data["main"]
                 # This should only be called from the extension as it is a security risk
-                execute_pipeline(code, msg_main["package"], msg_main["module"], msg_main["pipeline"], execution_id)
+                execute_pipeline(code, msg_main["modulepath"], msg_main["module"], msg_main["pipeline"], execution_id)
             case "placeholder_query":
                 valid, invalid_message = messages.validate_placeholder_query_message(request_data)
                 if not valid:

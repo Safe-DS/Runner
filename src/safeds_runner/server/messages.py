@@ -42,7 +42,7 @@ def validate_program_message(message_data: dict[str, typing.Any] | str) -> tuple
         return False, "No 'main' parameter given"
     if (
         not isinstance(message_data["main"], dict)
-        or "package" not in message_data["main"]
+        or "modulepath" not in message_data["main"]
         or "module" not in message_data["main"]
         or "pipeline" not in message_data["main"]
     ):

@@ -78,7 +78,7 @@ class PipelineProcess:
     def __init__(
         self,
         code: dict[str, dict[str, str]],
-        sdspackage: str,
+        modulepath: str,
         sdsmodule: str,
         sdspipeline: str,
         execution_id: str,
@@ -89,7 +89,7 @@ class PipelineProcess:
         Create a new process which will execute the given pipeline, when started.
 
         :param code: A dictionary containing the code to be executed, in a virtual filesystem
-        :param sdspackage: Safe-DS package name
+        :param modulepath: Relative path to the main module
         :param sdsmodule: Safe-DS module name
         :param sdspipeline: Safe-DS main pipeline name
         :param execution_id: Unique ID to identify this process
@@ -97,7 +97,7 @@ class PipelineProcess:
         :param placeholder_map: A map to save calculated placeholders in
         """
         self.code = code
-        self.sdspackage = sdspackage
+        self.modulepath = modulepath
         self.sdsmodule = sdsmodule
         self.sdspipeline = sdspipeline
         self.id = execution_id
@@ -124,14 +124,15 @@ class PipelineProcess:
         self._send_message("placeholder_type", create_placeholder_description(placeholder_name, placeholder_type))
 
     def _execute(self) -> None:
-        logging.info("Executing %s.%s.%s...", self.sdspackage, self.sdsmodule, self.sdspipeline)
+        logging.info("Executing %s.%s.%s...", self.modulepath, self.sdsmodule, self.sdspipeline)
         pipeline_finder = InMemoryFinder(self.code)
         pipeline_finder.attach()
         main_module = f"gen_{self.sdsmodule}_{self.sdspipeline}"
         global current_pipeline  # noqa: PLW0603
         current_pipeline = self
         try:
-            runpy.run_module(main_module, run_name="__main__")  # TODO Is the Safe-DS-Package relevant here?
+            runpy.run_module(main_module if len(self.modulepath) == 0 else f"{self.modulepath}.{main_module}",
+                             run_name="__main__")
             self._send_message("progress", create_runtime_progress_done())
         except BaseException as error:  # noqa: BLE001
             self._send_exception(error)
@@ -177,7 +178,7 @@ def get_backtrace_info(error: BaseException) -> list[dict[str, typing.Any]]:
 
 def execute_pipeline(
     code: dict[str, dict[str, str]],
-    sdspackage: str,
+    modulepath: str,
     sdsmodule: str,
     sdspipeline: str,
     exec_id: str,
@@ -186,7 +187,7 @@ def execute_pipeline(
     Run a Safe-DS pipeline.
 
     :param code: A dictionary containing the code to be executed, in a virtual filesystem
-    :param sdspackage: Safe-DS package name
+    :param modulepath: Relative path to the main module
     :param sdsmodule: Safe-DS module name
     :param sdspipeline: Safe-DS main pipeline name
     :param exec_id: Unique ID to identify this execution
@@ -196,7 +197,7 @@ def execute_pipeline(
             global_placeholder_map[exec_id] = multiprocessing_manager.dict()
         process = PipelineProcess(
             code,
-            sdspackage,
+            modulepath,
             sdsmodule,
             sdspipeline,
             exec_id,
