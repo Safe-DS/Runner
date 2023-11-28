@@ -132,7 +132,8 @@ class PipelineProcess:
         current_pipeline = self
         try:
             runpy.run_module(
-                main_module if len(self.modulepath) == 0 else f"{self.modulepath}.{main_module}", run_name="__main__",
+                main_module if len(self.modulepath) == 0 else f"{self.modulepath}.{main_module}",
+                run_name="__main__",
             )
             self._send_message("progress", create_runtime_progress_done())
         except BaseException as error:  # noqa: BLE001
