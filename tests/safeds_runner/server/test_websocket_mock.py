@@ -5,8 +5,12 @@ import typing
 
 import pytest
 from safeds_runner.server.main import ws_main
-from safeds_runner.server.messages import message_type_placeholder_value, message_type_runtime_progress, \
-    message_type_placeholder_type, message_type_runtime_error
+from safeds_runner.server.messages import (
+    message_type_placeholder_type,
+    message_type_placeholder_value,
+    message_type_runtime_error,
+    message_type_runtime_progress,
+)
 from safeds_runner.server.pipeline_manager import setup_pipeline_execution
 
 
