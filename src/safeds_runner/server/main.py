@@ -14,7 +14,7 @@ from flask_cors import CORS
 from flask_sock import Sock
 
 from safeds_runner.server import messages
-from safeds_runner.server.messages import create_placeholder_value
+from safeds_runner.server.messages import create_placeholder_value, message_type_placeholder_value
 from safeds_runner.server.pipeline_manager import (
     execute_pipeline,
     get_placeholder,
@@ -148,7 +148,8 @@ def send_websocket_value(
     :param var_type: Type of placeholder
     :param value: Value of placeholder
     """
-    send_websocket_message(connection, "value", exec_id, create_placeholder_value(name, var_type, value))
+    send_websocket_message(connection, message_type_placeholder_value, exec_id, create_placeholder_value(name, var_type,
+                                                                                                         value))
 
 
 def send_websocket_message(

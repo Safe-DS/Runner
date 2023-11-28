@@ -5,6 +5,8 @@ import typing
 
 import pytest
 from safeds_runner.server.main import ws_main
+from safeds_runner.server.messages import message_type_placeholder_value, message_type_runtime_progress, \
+    message_type_placeholder_type, message_type_runtime_error
 from safeds_runner.server.pipeline_manager import setup_pipeline_execution
 
 
@@ -200,7 +202,7 @@ def test_websocket_progress_message_done() -> None:
     ws_main(mock_connection)
     mock_connection.wait_for_messages(1)
     done_message = json.loads(mock_connection.received.pop(0))
-    assert done_message["type"] == "progress"
+    assert done_message["type"] == message_type_runtime_progress
     assert done_message["id"] == code_id
     assert done_message["data"] == "done"
 
@@ -233,7 +235,7 @@ def test_websocket_exception_message() -> None:
     ws_main(mock_connection)
     mock_connection.wait_for_messages(1)
     exception_message = json.loads(mock_connection.received.pop(0))
-    assert exception_message["type"] == "runtime_error"
+    assert exception_message["type"] == message_type_runtime_error
     assert exception_message["id"] == code_id
     assert isinstance(exception_message["data"], dict)
     assert exception_message["data"]["message"] == "Test Exception"
@@ -280,7 +282,7 @@ def test_websocket_placeholder_valid() -> None:
     mock_connection.wait_for_messages(2)
     placeholder_type_message = json.loads(mock_connection.received.pop(0))
     # Validate Placeholder Information
-    assert placeholder_type_message["type"] == "placeholder_type"
+    assert placeholder_type_message["type"] == message_type_placeholder_type
     assert placeholder_type_message["id"] == code_id
     assert isinstance(placeholder_type_message["data"], dict)
     assert "name" in placeholder_type_message["data"]
@@ -289,7 +291,7 @@ def test_websocket_placeholder_valid() -> None:
     assert placeholder_type_message["data"]["type"] == "Int"
     # Validate Progress Information
     done_message = json.loads(mock_connection.received.pop(0))
-    assert done_message["type"] == "progress"
+    assert done_message["type"] == message_type_runtime_progress
     assert done_message["id"] == code_id
     assert done_message["data"] == "done"
     # Query Placeholder
@@ -298,7 +300,7 @@ def test_websocket_placeholder_valid() -> None:
     mock_connection.wait_for_messages(1)
     # Query Result Valid
     query_result = json.loads(mock_connection.received.pop(0))
-    assert query_result["type"] == "value"
+    assert query_result["type"] == message_type_placeholder_value
     assert query_result["id"] == code_id
     assert isinstance(query_result["data"], dict)
     assert "name" in query_result["data"]
@@ -316,7 +318,7 @@ def test_websocket_placeholder_valid() -> None:
     mock_connection.wait_for_messages(1)
     # Query Result Invalid
     query_result_invalid = json.loads(mock_connection.received.pop(0))
-    assert query_result_invalid["type"] == "value"
+    assert query_result_invalid["type"] == message_type_placeholder_value
     assert query_result_invalid["id"] == code_id
     assert isinstance(query_result_invalid["data"], dict)
     assert "name" in query_result_invalid["data"]
@@ -350,7 +352,7 @@ def test_websocket_invalid_message_invalid_placeholder_query() -> None:
     mock_connection.wait_for_messages(1)
     # Query Result Invalid (no pipeline exists)
     query_result_invalid = json.loads(mock_connection.received.pop(0))
-    assert query_result_invalid["type"] == "value"
+    assert query_result_invalid["type"] == message_type_placeholder_value
     assert query_result_invalid["id"] == code_id
     assert isinstance(query_result_invalid["data"], dict)
     assert "name" in query_result_invalid["data"]

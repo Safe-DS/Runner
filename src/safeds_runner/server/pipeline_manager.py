@@ -15,7 +15,8 @@ import stack_data
 from safeds_runner.server.messages import (
     create_placeholder_description,
     create_runtime_error_description,
-    create_runtime_progress_done,
+    create_runtime_progress_done, message_type_runtime_progress, message_type_placeholder_type,
+    message_type_runtime_error,
 )
 from safeds_runner.server.module_manager import InMemoryFinder
 
@@ -110,7 +111,7 @@ class PipelineProcess:
 
     def _send_exception(self, exception: BaseException) -> None:
         backtrace = get_backtrace_info(exception)
-        self._send_message("runtime_error", create_runtime_error_description(exception.__str__(), backtrace))
+        self._send_message(message_type_runtime_error, create_runtime_error_description(exception.__str__(), backtrace))
 
     def save_placeholder(self, placeholder_name: str, value: typing.Any) -> None:
         """
@@ -121,7 +122,8 @@ class PipelineProcess:
         """
         self.placeholder_map[placeholder_name] = value
         placeholder_type = _get_placeholder_type(value)
-        self._send_message("placeholder_type", create_placeholder_description(placeholder_name, placeholder_type))
+        self._send_message(message_type_placeholder_type, create_placeholder_description(placeholder_name,
+                                                                                         placeholder_type))
 
     def _execute(self) -> None:
         logging.info("Executing %s.%s.%s...", self.modulepath, self.sdsmodule, self.sdspipeline)
@@ -133,7 +135,7 @@ class PipelineProcess:
         try:
             runpy.run_module(main_module if len(self.modulepath) == 0 else f"{self.modulepath}.{main_module}",
                              run_name="__main__")
-            self._send_message("progress", create_runtime_progress_done())
+            self._send_message(message_type_runtime_progress, create_runtime_progress_done())
         except BaseException as error:  # noqa: BLE001
             self._send_exception(error)
         finally:

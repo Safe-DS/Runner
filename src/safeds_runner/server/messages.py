@@ -2,13 +2,20 @@
 
 import typing
 
+message_type_program = "program"
+message_type_placeholder_query = "placeholder_query"
+message_type_placeholder_type = "placeholder_type"
+message_type_placeholder_value = "placeholder_value"
+message_type_runtime_error = "runtime_error"
+message_type_runtime_progress = "runtime_progress"
+
 message_types = [
-    "program",
-    "placeholder_query",
-    "placeholder",
-    "placeholder_value",
-    "runtime_error",
-    "runtime_progress",
+    message_type_program,
+    message_type_placeholder_query,
+    message_type_placeholder_type,
+    message_type_placeholder_value,
+    message_type_runtime_error,
+    message_type_runtime_progress,
 ]
 
 
