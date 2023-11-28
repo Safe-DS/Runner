@@ -58,8 +58,8 @@ def _handle_queue_messages() -> None:
             message = global_messages_queue.get()
             if websocket_target is not None:
                 websocket_target.send(json.dumps(message))
-    except BaseException as error:  # noqa: BLE001
-        logging.warning("Message queue terminated: %s", error.__repr__())
+    except BaseException as error:  # noqa: BLE001  # pragma: no cover
+        logging.warning("Message queue terminated: %s", error.__repr__())  # pragma: no cover
 
 
 def set_new_websocket_target(ws: simple_websocket.Server) -> None:
@@ -228,7 +228,7 @@ def _get_placeholder_type(value: typing.Any) -> str:
         if object_name == "NoneType":
             return "Null"
         return object_name
-    return "Any"
+    return "Any"  # pragma: no cover
 
 
 def get_placeholder(exec_id: str, placeholder_name: str) -> tuple[str | None, typing.Any]:

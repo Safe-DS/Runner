@@ -54,7 +54,7 @@ sock = create_flask_websocket(app)
 
 @sock.route("/WSMain")
 def _ws_main(ws: simple_websocket.Server) -> None:
-    ws_main(ws)
+    ws_main(ws)  # pragma: no cover
 
 
 def ws_main(ws: simple_websocket.Server) -> None:
@@ -169,7 +169,7 @@ def send_websocket_message(
     connection.send(json.dumps(message))
 
 
-def main() -> None:
+def main() -> None:  # pragma: no cover
     """
     Execute the runner application.
 
@@ -194,4 +194,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    main()  # pragma: no cover

@@ -84,7 +84,7 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
                 loader=InMemoryLoader(b"", fullname.replace(".", "/")),
             )
             if parent_package is None:
-                return None
+                return None  # pragma: no cover
             if parent_package.submodule_search_locations is None:
                 parent_package.submodule_search_locations = []
             parent_package.submodule_search_locations.append(fullname.replace(".", "/"))
@@ -110,7 +110,7 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
                 ),
                 origin=parent_package_path,
             )
-        return None
+        return None  # pragma: no cover
 
     def attach(self) -> None:
         """Attach this finder to the meta path."""
