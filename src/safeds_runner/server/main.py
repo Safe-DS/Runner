@@ -149,7 +149,10 @@ def send_websocket_value(
     :param value: Value of placeholder
     """
     send_websocket_message(
-        connection, message_type_placeholder_value, exec_id, create_placeholder_value(name, var_type, value),
+        connection,
+        message_type_placeholder_value,
+        exec_id,
+        create_placeholder_value(name, var_type, value),
     )
 
 

@@ -125,7 +125,8 @@ class PipelineProcess:
         self.placeholder_map[placeholder_name] = value
         placeholder_type = _get_placeholder_type(value)
         self._send_message(
-            message_type_placeholder_type, create_placeholder_description(placeholder_name, placeholder_type),
+            message_type_placeholder_type,
+            create_placeholder_description(placeholder_name, placeholder_type),
         )
 
     def _execute(self) -> None:
