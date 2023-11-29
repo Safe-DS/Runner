@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 import threading
 import typing
@@ -8,7 +9,6 @@ from safeds_runner.server.main import ws_main
 from safeds_runner.server.messages import message_type_placeholder_value, message_type_runtime_progress, \
     message_type_placeholder_type, message_type_runtime_error
 from safeds_runner.server.pipeline_manager import setup_pipeline_execution
-
 
 class MockWebsocketConnection:
     def __init__(self, messages: list[str]):
@@ -161,11 +161,10 @@ def test_websocket_validation_error(websocket_message: dict[str, typing.Any], ex
 
 
 @pytest.mark.skipif(
-    sys.platform.startswith("win"),
+    sys.platform.startswith("win") and os.getenv("COVERAGE_RCFILE") is not None,
     reason=(
-        "skipping multiprocessing tests on windows, as pytest "
-        "causes Manager to hang, when using multiprocessing "
-        "coverage"
+        "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
+        "causes Manager to hang, when using multiprocessing coverage"
     ),
 )
 def test_websocket_progress_message_done() -> None:
@@ -208,11 +207,10 @@ def test_websocket_progress_message_done() -> None:
 
 
 @pytest.mark.skipif(
-    sys.platform.startswith("win"),
+    sys.platform.startswith("win") and os.getenv("COVERAGE_RCFILE") is not None,
     reason=(
-        "skipping multiprocessing tests on windows, as pytest "
-        "causes Manager to hang, when using multiprocessing "
-        "coverage"
+        "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
+        "causes Manager to hang, when using multiprocessing coverage"
     ),
 )
 def test_websocket_exception_message() -> None:
@@ -249,11 +247,10 @@ def test_websocket_exception_message() -> None:
 
 
 @pytest.mark.skipif(
-    sys.platform.startswith("win"),
+    sys.platform.startswith("win") and os.getenv("COVERAGE_RCFILE") is not None,
     reason=(
-        "skipping multiprocessing tests on windows, as pytest "
-        "causes Manager to hang, when using multiprocessing "
-        "coverage"
+        "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
+        "causes Manager to hang, when using multiprocessing coverage"
     ),
 )
 def test_websocket_placeholder_valid() -> None:
@@ -331,11 +328,10 @@ def test_websocket_placeholder_valid() -> None:
 
 
 @pytest.mark.skipif(
-    sys.platform.startswith("win"),
+    sys.platform.startswith("win") and os.getenv("COVERAGE_RCFILE") is not None,
     reason=(
-        "skipping multiprocessing tests on windows, as pytest "
-        "causes Manager to hang, when using multiprocessing "
-        "coverage"
+        "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
+        "causes Manager to hang, when using multiprocessing coverage"
     ),
 )
 def test_websocket_invalid_message_invalid_placeholder_query() -> None:
