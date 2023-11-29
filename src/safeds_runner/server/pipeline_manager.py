@@ -6,7 +6,6 @@ import multiprocessing
 import queue
 import runpy
 import threading
-import typing
 from typing import Any
 from multiprocessing.managers import SyncManager
 
@@ -17,14 +16,14 @@ from safeds_runner.server.messages import (
     create_placeholder_description,
     create_runtime_error_description,
     create_runtime_progress_done, message_type_runtime_progress, message_type_placeholder_type,
-    message_type_runtime_error, MessageDataProgram,
+    message_type_runtime_error, MessageDataProgram, Message,
 )
 from safeds_runner.server.module_manager import InMemoryFinder
 
 # Multiprocessing
 multiprocessing_manager: SyncManager | None = None
-global_placeholder_map: dict = {}
-global_messages_queue: queue.Queue | None = None
+global_placeholder_map: dict[str, dict[str, Any]] = {}
+global_messages_queue: queue.Queue[Message] | None = None
 # Message Queue
 websocket_target: simple_websocket.Server | None = None
 messages_queue_thread: threading.Thread | None = None
@@ -59,7 +58,7 @@ def _handle_queue_messages() -> None:
         while global_messages_queue is not None:
             message = global_messages_queue.get()
             if websocket_target is not None:
-                websocket_target.send(json.dumps(message))
+                websocket_target.send(json.dumps(message.to_dict()))
     except BaseException as error:  # noqa: BLE001  # pragma: no cover
         logging.warning("Message queue terminated: %s", error.__repr__())  # pragma: no cover
 
@@ -68,29 +67,38 @@ def set_new_websocket_target(ws: simple_websocket.Server) -> None:
     """
     Inform the message queue handling thread that the websocket connection has changed.
 
-    :param ws: New websocket connection
+    Parameters
+    ----------
+    ws : simple_websocket.Server
+        New websocket connection.
     """
     global websocket_target  # noqa: PLW0603
     websocket_target = ws
 
 
 class PipelineProcess:
-    """Represent a process that executes a Safe-DS pipeline."""
+    """A process that executes a Safe-DS pipeline."""
 
     def __init__(
         self,
         pipeline: MessageDataProgram,
         execution_id: str,
-        messages_queue: queue.Queue,
+        messages_queue: queue.Queue[Message],
         placeholder_map: dict[str, Any],
     ):
         """
         Create a new process which will execute the given pipeline, when started.
 
-        :param pipeline: Message object that contains the information to run a pipeline
-        :param execution_id: Unique ID to identify this process
-        :param messages_queue: A queue to write outgoing messages to
-        :param placeholder_map: A map to save calculated placeholders in
+        Parameters
+        ----------
+        pipeline : MessageDataProgram
+            Message object that contains the information to run a pipeline.
+        execution_id : str
+            Unique ID to identify this process.
+        messages_queue : queue.Queue[Message]
+            A queue to write outgoing messages to.
+        placeholder_map : dict[str, Any]
+            A map to save calculated placeholders in.
         """
         self.pipeline = pipeline
         self.id = execution_id
@@ -99,7 +107,7 @@ class PipelineProcess:
         self.process = multiprocessing.Process(target=self._execute, daemon=True)
 
     def _send_message(self, message_type: str, value: dict[Any, Any] | str) -> None:
-        self.messages_queue.put({"type": message_type, "id": self.id, "data": value})
+        self.messages_queue.put(Message(message_type, self.id, value))
 
     def _send_exception(self, exception: BaseException) -> None:
         backtrace = get_backtrace_info(exception)
@@ -109,8 +117,12 @@ class PipelineProcess:
         """
         Save a calculated placeholder in the map.
 
-        :param placeholder_name: Name of the placeholder
-        :param value: Actual value of the placeholder
+        Parameters
+        ----------
+        placeholder_name : str
+            Name of the placeholder.
+        value : Any
+            Actual value of the placeholder.
         """
         self.placeholder_map[placeholder_name] = value
         placeholder_type = _get_placeholder_type(value)
@@ -118,7 +130,8 @@ class PipelineProcess:
                                                                                          placeholder_type))
 
     def _execute(self) -> None:
-        logging.info("Executing %s.%s.%s...", self.pipeline.main.modulepath, self.pipeline.main.module, self.pipeline.main.pipeline)
+        logging.info("Executing %s.%s.%s...", self.pipeline.main.modulepath, self.pipeline.main.module,
+                     self.pipeline.main.pipeline)
         pipeline_finder = InMemoryFinder(self.pipeline.code)
         pipeline_finder.attach()
         main_module = f"gen_{self.pipeline.main.module}_{self.pipeline.main.pipeline}"
@@ -126,7 +139,8 @@ class PipelineProcess:
         current_pipeline = self
         try:
             runpy.run_module(
-                main_module if len(self.pipeline.main.modulepath) == 0 else f"{self.pipeline.main.modulepath}.{main_module}",
+                main_module if len(
+                    self.pipeline.main.modulepath) == 0 else f"{self.pipeline.main.modulepath}.{main_module}",
                 run_name="__main__",
             )
             self._send_message(message_type_runtime_progress, create_runtime_progress_done())
@@ -152,8 +166,12 @@ def runner_save_placeholder(placeholder_name: str, value: Any) -> None:
     """
     Save a placeholder for the current running pipeline.
 
-    :param placeholder_name: Name of the placeholder
-    :param value: Actual value of the placeholder
+    Parameters
+    ----------
+    placeholder_name : str
+        Name of the placeholder.
+    value : Any
+        Actual value of the placeholder.
     """
     if current_pipeline is not None:
         current_pipeline.save_placeholder(placeholder_name, value)
@@ -163,8 +181,15 @@ def get_backtrace_info(error: BaseException) -> list[dict[str, Any]]:
     """
     Create a simplified backtrace from an exception.
 
-    :param error: Caught exception
-    :return: List containing file and line information for each stack frame
+    Parameters
+    ----------
+    error : BaseException
+        Caught exception.
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        List containing file and line information for each stack frame.
     """
     backtrace_list = []
     for frame in stack_data.core.FrameInfo.stack_data(error.__traceback__):
@@ -174,22 +199,26 @@ def get_backtrace_info(error: BaseException) -> list[dict[str, Any]]:
 
 def execute_pipeline(
     pipeline: MessageDataProgram,
-    exec_id: str,
+    execution_id: str,
 ) -> None:
     """
     Run a Safe-DS pipeline.
 
-    :param pipeline: Message object that contains the information to run a pipeline
-    :param exec_id: Unique ID to identify this execution
+    Parameters
+    ----------
+    pipeline : MessageDataProgram
+        Message object that contains the information to run a pipeline.
+    execution_id : str
+        Unique ID to identify this execution.
     """
     if global_placeholder_map is not None and global_messages_queue is not None and multiprocessing_manager is not None:
-        if exec_id not in global_placeholder_map:
-            global_placeholder_map[exec_id] = multiprocessing_manager.dict()
+        if execution_id not in global_placeholder_map:
+            global_placeholder_map[execution_id] = multiprocessing_manager.dict()
         process = PipelineProcess(
             pipeline,
-            exec_id,
+            execution_id,
             global_messages_queue,
-            global_placeholder_map[exec_id],
+            global_placeholder_map[execution_id],
         )
         process.execute()
 
@@ -198,8 +227,15 @@ def _get_placeholder_type(value: Any) -> str:
     """
     Convert a python object to a Safe-DS type.
 
-    :param value: any python object
-    :return: Safe-DS name corresponding to the given python object instance
+    Parameters
+    ----------
+    value : Any
+        A python object.
+
+    Returns
+    -------
+    str
+        Safe-DS name corresponding to the given python object instance.
     """
     if isinstance(value, bool):
         return "Boolean"
@@ -219,17 +255,25 @@ def _get_placeholder_type(value: Any) -> str:
     return "Any"  # pragma: no cover
 
 
-def get_placeholder(exec_id: str, placeholder_name: str) -> tuple[str | None, Any]:
+def get_placeholder(execution_id: str, placeholder_name: str) -> tuple[str | None, Any]:
     """
     Get a placeholder type and value for an execution id and placeholder name.
 
-    :param exec_id: Unique id identifying execution
-    :param placeholder_name: Name of the placeholder
-    :return: Tuple containing placeholder type and placeholder value, or (None, None) if the placeholder does not exist
+    Parameters
+    ----------
+    execution_id : str
+        Unique ID identifying the execution in which the placeholder was calculated.
+    placeholder_name : str
+        Name of the placeholder.
+
+    Returns
+    -------
+    tuple[str | None, Any]
+        Tuple containing placeholder type and placeholder value, or (None, None) if the placeholder does not exist.
     """
-    if exec_id not in global_placeholder_map:
+    if execution_id not in global_placeholder_map:
         return None, None
-    if placeholder_name not in global_placeholder_map[exec_id]:
+    if placeholder_name not in global_placeholder_map[execution_id]:
         return None, None
-    value = global_placeholder_map[exec_id][placeholder_name]
+    value = global_placeholder_map[execution_id][placeholder_name]
     return _get_placeholder_type(value), value

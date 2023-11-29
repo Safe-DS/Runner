@@ -17,8 +17,12 @@ class InMemoryLoader(importlib.abc.SourceLoader, ABC):
         """
         Create a new in-memory loader.
 
-        :param code_bytes: byte array containing python code
-        :param filename: filename
+        Parameters
+        ----------
+        code_bytes : bytes
+            Byte array containing python code.
+        filename : str
+            Filename of the python module.
         """
         self.code_bytes = code_bytes
         self.filename = filename
@@ -27,8 +31,15 @@ class InMemoryLoader(importlib.abc.SourceLoader, ABC):
         """
         Get module code as a byte array.
 
-        :param _path: Module path
-        :return: Module code
+        Parameters
+        ----------
+        _path : bytes | str
+            Module path.
+
+        Returns
+        -------
+        bytes
+            Module code.
         """
         return self.code_bytes
 
@@ -36,8 +47,15 @@ class InMemoryLoader(importlib.abc.SourceLoader, ABC):
         """
         Get file name for a module path.
 
-        :param _fullname: Module path
-        :return: virtual Module path, as in the code array in the InMemoryFinder
+        Parameters
+        ----------
+        _fullname : str
+            Module path.
+
+        Returns
+        -------
+        str
+            virtual module path, as located in the code array in the InMemoryFinder that created this loader.
         """
         return self.filename
 
@@ -49,8 +67,11 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
         """
         Create a new in-memory finder.
 
-        :param code: A dictionary containing the code to be executed, grouped by module
-        path containing a mapping from module name to module code
+        Parameters
+        ----------
+        code : dict[str, dict[str, str]]
+            A dictionary containing the code to be executed,
+            grouped by module path containing a mapping from module name to module code.
         """
         self.code = code
         self.allowed_packages = set(code.keys())
@@ -72,10 +93,19 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
         """
         Find a module which may be registered in the code dictionary.
 
-        :param fullname: Full module path (separated with '.')
-        :param path: Module Path
-        :param target: Module Type
-        :return: A module spec, if found. None otherwise
+        Parameters
+        ----------
+        fullname : str
+            Full module path (separated with '.').
+        path : typing.Sequence[str] | None
+            Module Path.
+        target : types.ModuleType | None
+            Module Type.
+
+        Returns
+        -------
+        ModuleSpec | None
+            A module spec, if found. None otherwise
         """
         logging.debug("Find Spec: %s %s %s", fullname, path, target)
         if fullname in self.allowed_packages:

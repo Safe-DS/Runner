@@ -3,7 +3,6 @@
 import argparse
 import json
 import logging
-import typing
 from typing import Any
 
 import flask.app
@@ -28,7 +27,15 @@ def create_flask_app(testing: bool = False) -> flask.app.App:
     """
     Create a flask app, that handles all requests.
 
-    :param testing Whether the app should run in a testing context
+    Parameters
+    ----------
+    testing : bool
+        Whether the app should run in a testing context.
+
+    Returns
+    -------
+    flask.app.App
+        Flask app.
     """
     flask_app = Flask(__name__)
     # Websocket Configuration
@@ -44,7 +51,15 @@ def create_flask_websocket(flask_app: flask.app.App) -> flask_sock.Sock:
     """
     Create a flask websocket extension.
 
-    :param flask_app Flask App
+    Parameters
+    ----------
+    flask_app: flask.app.App
+        Flask App Instance.
+
+    Returns
+    -------
+    flask_sock.Sock
+        Websocket extension for the provided flask app.
     """
     return Sock(flask_app)
 
@@ -63,7 +78,10 @@ def ws_main(ws: simple_websocket.Server) -> None:
     Handle websocket requests to the WSMain endpoint.
 
     This function handles the bidirectional communication between the runner and the VS Code extension.
-    :param ws: Websocket Connection, provided by flask
+    Parameters
+    ----------
+    ws : simple_websocket.Server
+        Websocket Connection, provided by flask.
     """
     logging.debug("Request to WSRunProgram")
     set_new_websocket_target(ws)
@@ -119,11 +137,18 @@ def send_websocket_value(
     """
     Send a computed placeholder value to the VS Code extension.
 
-    :param connection: Websocket connection
-    :param exec_id: ID of the execution, where the placeholder to be sent was generated
-    :param name: Name of placeholder
-    :param type_: Type of placeholder
-    :param value: Value of placeholder
+    Parameters
+    ----------
+    connection : simple_websocket.Server
+        Websocket connection.
+    exec_id : str
+        ID of the execution, where the placeholder to be sent was generated.
+    name : str
+        Name of placeholder.
+    type_ : str
+        Type of placeholder.
+    value : Any
+        Value of placeholder.
     """
     send_websocket_message(connection, message_type_placeholder_value, exec_id, create_placeholder_value(name, type_,
                                                                                                          value))
@@ -138,10 +163,16 @@ def send_websocket_message(
     """
     Send any message to the VS Code extension.
 
-    :param connection: Websocket connection
-    :param msg_type: Message Type
-    :param exec_id: ID of the execution, where this message belongs to
-    :param msg_data: Message Data
+    Parameters
+    ----------
+    connection : simple_websocket.Server
+        Websocket connection.
+    msg_type : str
+        Message Type.
+    exec_id : str
+        ID of the execution, where this message belongs to.
+    msg_data : Any
+        Message Data.
     """
     message = {"type": msg_type, "id": exec_id, "data": msg_data}
     connection.send(json.dumps(message))
