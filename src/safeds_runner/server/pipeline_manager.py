@@ -15,8 +15,12 @@ import stack_data
 from safeds_runner.server.messages import (
     create_placeholder_description,
     create_runtime_error_description,
-    create_runtime_progress_done, message_type_runtime_progress, message_type_placeholder_type,
-    message_type_runtime_error, MessageDataProgram, Message,
+    create_runtime_progress_done,
+    message_type_placeholder_type,
+    message_type_runtime_error,
+    message_type_runtime_progress,
+    Message,
+    MessageDataProgram,
 )
 from safeds_runner.server.module_manager import InMemoryFinder
 
@@ -126,8 +130,10 @@ class PipelineProcess:
         """
         self.placeholder_map[placeholder_name] = value
         placeholder_type = _get_placeholder_type(value)
-        self._send_message(message_type_placeholder_type, create_placeholder_description(placeholder_name,
-                                                                                         placeholder_type))
+        self._send_message(
+            message_type_placeholder_type,
+            create_placeholder_description(placeholder_name, placeholder_type),
+        )
 
     def _execute(self) -> None:
         logging.info("Executing %s.%s.%s...", self.pipeline.main.modulepath, self.pipeline.main.module,
