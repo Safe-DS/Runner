@@ -67,7 +67,7 @@ class Message:
         dict[str, Any]
             Dictionary containing all the fields which are part of this dataclass.
         """
-        return dataclasses.asdict(self)  # pragma: no cover
+        return dataclasses.asdict(self)
 
 
 @dataclass(frozen=True)
@@ -160,7 +160,7 @@ class ProgramMainInformation:
         dict[str, Any]
             Dictionary containing all the fields which are part of this dataclass.
         """
-        return dataclasses.asdict(self)
+        return dataclasses.asdict(self)  # pragma: no cover
 
 
 def create_placeholder_description(name: str, type_: str) -> dict[str, str]:
