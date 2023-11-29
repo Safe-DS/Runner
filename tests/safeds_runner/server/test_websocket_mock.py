@@ -61,7 +61,9 @@ class MockWebsocketConnection:
         (json.dumps({"type": "placeholder_query", "id": "123", "data": {"a": "v"}}), "Message data is not a string"),
         (
             json.dumps({
-                "type": "program", "id": "1234", "data": {"main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
+                "type": "program",
+                "id": "1234",
+                "data": {"main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
             }),
             "No 'code' parameter given",
         ),
@@ -201,7 +203,8 @@ def test_should_fail_message_validation(websocket_message: str, exception_messag
     ids=["raise_exception"],
 )
 def test_should_execute_pipeline_return_exception(
-    messages: list[str], expected_response_runtime_error: Message,
+    messages: list[str],
+    expected_response_runtime_error: Message,
 ) -> None:
     setup_pipeline_execution()
     mock_connection = MockWebsocketConnection(messages)
@@ -348,7 +351,9 @@ def test_should_execute_pipeline_return_valid_placeholder(
                 json.dumps({"type": "placeholder_query", "id": "unknown-code-id-never-generated", "data": "v"}),
             ],
             Message(
-                message_type_placeholder_value, "unknown-code-id-never-generated", create_placeholder_value("v", "", ""),
+                message_type_placeholder_value,
+                "unknown-code-id-never-generated",
+                create_placeholder_value("v", "", ""),
             ),
         ),
     ],
