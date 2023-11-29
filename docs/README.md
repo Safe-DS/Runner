@@ -1,10 +1,19 @@
 # Safe-DS Runner
 
+[![PyPI](https://img.shields.io/pypi/v/safe-ds-runner)](https://pypi.org/project/safe-ds-runner)
 [![Main](https://github.com/Safe-DS/Runner/actions/workflows/main.yml/badge.svg)](https://github.com/Safe-DS/Runner/actions/workflows/main.yml)
 [![codecov](https://codecov.io/gh/Safe-DS/Runner/branch/main/graph/badge.svg?token=ma0ytglhO1)](https://codecov.io/gh/Safe-DS/Runner)
 [![Documentation Status](https://readthedocs.org/projects/safe-ds-runner/badge/?version=stable)](https://runner.safeds.com)
 
 Execute Safe-DS programs that were compiled to Python.
+
+## Installation
+
+Get the latest version from [PyPI](https://pypi.org/project/safe-ds-runner):
+
+```shell
+pip install safe-ds-runner
+```
 
 ## Documentation
 
