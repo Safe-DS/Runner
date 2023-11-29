@@ -7,6 +7,14 @@
 
 Execute Safe-DS programs that were compiled to Python.
 
+## Installation
+
+Get the latest version from [PyPI](https://pypi.org/project/safe-ds-runner):
+
+```shell
+pip install safe-ds-runner
+```
+
 ## Documentation
 
 You can find the full documentation [here](https://runner.safeds.com).
