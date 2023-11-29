@@ -6,7 +6,10 @@ import multiprocessing
 import queue
 import runpy
 import threading
-from multiprocessing.managers import SyncManager
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from multiprocessing.managers import SyncManager
 from typing import Any
 
 import simple_websocket
@@ -27,11 +30,13 @@ from safeds_runner.server.module_manager import InMemoryFinder
 
 class PipelineManager:
     """
-    A PipelineManager handles the execution of pipelines in subprocesses and the communication between the
+    A PipelineManager handles the execution of pipelines and processing of results.
+
+    This includes launching subprocesses and the communication between the
     subprocess and the main process using a shared message queue.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Prepare the runner for running Safe-DS pipelines.
 
