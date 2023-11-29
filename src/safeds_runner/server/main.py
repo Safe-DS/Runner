@@ -3,7 +3,6 @@
 import argparse
 import json
 import logging
-from typing import Any
 
 import flask.app
 import flask_sock
@@ -14,7 +13,7 @@ from flask_sock import Sock
 
 from safeds_runner.server import messages
 from safeds_runner.server.messages import create_placeholder_value, message_type_placeholder_value, \
-    parse_validate_message
+    parse_validate_message, Message
 from safeds_runner.server.pipeline_manager import (
     execute_pipeline,
     get_placeholder,
@@ -115,51 +114,25 @@ def ws_main(ws: simple_websocket.Server) -> None:
                     ws.close(None, invalid_message)
                     return
                 placeholder_type, placeholder_value = get_placeholder(received_object.id, placeholder_query_data)
+                # send back a value message
                 if placeholder_type is not None:
-                    send_websocket_value(ws, received_object.id, placeholder_query_data, placeholder_type,
-                                         placeholder_value)
+                    send_websocket_message(
+                        ws,
+                        Message(message_type_placeholder_value, received_object.id,
+                                create_placeholder_value(placeholder_query_data, placeholder_type, placeholder_value)))
                 else:
                     # Send back empty type / value, to communicate that no placeholder exists (yet)
                     # Use name from query to allow linking a response to a request on the peer
-                    send_websocket_value(ws, received_object.id, placeholder_query_data, "", "")
+                    send_websocket_message(
+                        ws,
+                        Message(message_type_placeholder_value, received_object.id,
+                                create_placeholder_value(placeholder_query_data, "", "")))
             case _:
                 if received_object.type not in messages.message_types:
                     logging.warning("Invalid message type: %s", received_object.type)
 
 
-def send_websocket_value(
-    connection: simple_websocket.Server,
-    exec_id: str,
-    name: str,
-    type_: str,
-    value: Any,
-) -> None:
-    """
-    Send a computed placeholder value to the VS Code extension.
-
-    Parameters
-    ----------
-    connection : simple_websocket.Server
-        Websocket connection.
-    exec_id : str
-        ID of the execution, where the placeholder to be sent was generated.
-    name : str
-        Name of placeholder.
-    type_ : str
-        Type of placeholder.
-    value : Any
-        Value of placeholder.
-    """
-    send_websocket_message(connection, message_type_placeholder_value, exec_id, create_placeholder_value(name, type_,
-                                                                                                         value))
-
-
-def send_websocket_message(
-    connection: simple_websocket.Server,
-    msg_type: str,
-    exec_id: str,
-    msg_data: Any,
-) -> None:
+def send_websocket_message(connection: simple_websocket.Server, message: Message) -> None:
     """
     Send any message to the VS Code extension.
 
@@ -167,15 +140,10 @@ def send_websocket_message(
     ----------
     connection : simple_websocket.Server
         Websocket connection.
-    msg_type : str
-        Message Type.
-    exec_id : str
-        ID of the execution, where this message belongs to.
-    msg_data : Any
-        Message Data.
+    message : Message
+        Object that will be sent.
     """
-    message = {"type": msg_type, "id": exec_id, "data": msg_data}
-    connection.send(json.dumps(message))
+    connection.send(json.dumps(message.to_dict()))
 
 
 def main() -> None:  # pragma: no cover

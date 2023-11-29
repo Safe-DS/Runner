@@ -2,13 +2,14 @@ import json
 import os
 import sys
 import threading
-import typing
 
 import pytest
 from safeds_runner.server.main import ws_main
 from safeds_runner.server.messages import message_type_placeholder_value, message_type_runtime_progress, \
-    message_type_placeholder_type, message_type_runtime_error
+    message_type_placeholder_type, message_type_runtime_error, Message, create_placeholder_value, \
+    create_runtime_progress_done, create_placeholder_description
 from safeds_runner.server.pipeline_manager import setup_pipeline_execution
+
 
 class MockWebsocketConnection:
     def __init__(self, messages: list[str]):
@@ -40,100 +41,97 @@ class MockWebsocketConnection:
                 self.condition_variable.wait()
 
 
-def test_websocket_no_json() -> None:
-    # with pytest.raises(ConnectionResetError) as exception:
-    mock_connection = MockWebsocketConnection(["<invalid message>"])
-    ws_main(mock_connection)
-    assert str(mock_connection.close_message) == "Invalid Message: not JSON"
-
-
 @pytest.mark.parametrize(
     argnames="websocket_message,exception_message",
     argvalues=[
-        ({"id": "a", "data": "b"}, "Invalid Message: no type"),
-        ({"type": "a", "data": "b"}, "Invalid Message: no id"),
-        ({"type": "b", "id": "123"}, "Invalid Message: no data"),
-        ({"type": {"program": "2"}, "id": "123", "data": "a"}, "Invalid Message: invalid type"),
-        ({"type": "c", "id": {"": "1233"}, "data": "a"}, "Invalid Message: invalid id"),
-        ({"type": "program", "id": "1234", "data": "a"}, "Message data is not a JSON object"),
-        ({"type": "placeholder_query", "id": "123", "data": {"a": "v"}}, "Message data is not a string"),
+        ("<invalid message>", "Invalid Message: not JSON"),
+        (json.dumps({"id": "a", "data": "b"}), "Invalid Message: no type"),
+        (json.dumps({"type": "a", "data": "b"}), "Invalid Message: no id"),
+        (json.dumps({"type": "b", "id": "123"}), "Invalid Message: no data"),
+        (json.dumps({"type": {"program": "2"}, "id": "123", "data": "a"}), "Invalid Message: invalid type"),
+        (json.dumps({"type": "c", "id": {"": "1233"}, "data": "a"}), "Invalid Message: invalid id"),
+        (json.dumps({"type": "program", "id": "1234", "data": "a"}), "Message data is not a JSON object"),
+        (json.dumps({"type": "placeholder_query", "id": "123", "data": {"a": "v"}}), "Message data is not a string"),
         (
-            {"type": "program", "id": "1234", "data": {"main": {"modulepath": "1", "module": "2", "pipeline": "3"}}},
+            json.dumps({"type": "program", "id": "1234",
+                        "data": {"main": {"modulepath": "1", "module": "2", "pipeline": "3"}}}),
             "No 'code' parameter given",
         ),
-        ({"type": "program", "id": "1234", "data": {"code": {"": {"entry": ""}}}}, "No 'main' parameter given"),
+        (json.dumps({"type": "program", "id": "1234", "data": {"code": {"": {"entry": ""}}}}),
+         "No 'main' parameter given"),
         (
-            {
+            json.dumps({
                 "type": "program",
                 "id": "1234",
                 "data": {"code": {"": {"entry": ""}}, "main": {"modulepath": "1", "module": "2"}},
-            },
+            }),
             "Invalid 'main' parameter given",
         ),
         (
-            {
+            json.dumps({
                 "type": "program",
                 "id": "1234",
                 "data": {"code": {"": {"entry": ""}}, "main": {"modulepath": "1", "pipeline": "3"}},
-            },
+            }),
             "Invalid 'main' parameter given",
         ),
         (
-            {
+            json.dumps({
                 "type": "program",
                 "id": "1234",
                 "data": {"code": {"": {"entry": ""}}, "main": {"module": "2", "pipeline": "3"}},
-            },
+            }),
             "Invalid 'main' parameter given",
         ),
         (
-            {
+            json.dumps({
                 "type": "program",
                 "id": "1234",
                 "data": {
                     "code": {"": {"entry": ""}},
                     "main": {"modulepath": "1", "module": "2", "pipeline": "3", "other": "4"},
                 },
-            },
+            }),
             "Invalid 'main' parameter given",
         ),
         (
-            {
+            json.dumps({
                 "type": "program",
                 "id": "1234",
                 "data": {
                     "code": {"": {"entry": ""}},
                     "main": {"modulepath": "1", "module": "2", "pipeline": "3", "other": {"4": "a"}},
                 },
-            },
+            }),
             "Invalid 'main' parameter given",
         ),
         (
-            {
+            json.dumps({
                 "type": "program",
                 "id": "1234",
                 "data": {"code": "a", "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
-            },
+            }),
             "Invalid 'code' parameter given",
         ),
         (
-            {
+            json.dumps({
                 "type": "program",
                 "id": "1234",
                 "data": {"code": {"": "a"}, "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
-            },
+            }),
             "Invalid 'code' parameter given",
         ),
         (
-            {
+            json.dumps({
                 "type": "program",
                 "id": "1234",
                 "data": {"code": {"": {"a": {"b": "c"}}}, "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
-            },
+            }),
             "Invalid 'code' parameter given",
         ),
     ],
     ids=[
+        "no_json",
         "any_no_type",
         "any_no_id",
         "any_no_data",
@@ -153,9 +151,8 @@ def test_websocket_no_json() -> None:
         "program_invalid_code3",
     ],
 )
-def test_websocket_validation_error(websocket_message: dict[str, typing.Any], exception_message: str) -> None:
-    # with pytest.raises(ConnectionResetError) as exception:
-    mock_connection = MockWebsocketConnection([json.dumps(websocket_message)])
+def test_should_fail_message_validation(websocket_message: str, exception_message: str) -> None:
+    mock_connection = MockWebsocketConnection([websocket_message])
     ws_main(mock_connection)
     assert str(mock_connection.close_message) == exception_message
 
@@ -167,79 +164,41 @@ def test_websocket_validation_error(websocket_message: dict[str, typing.Any], ex
         "causes Manager to hang, when using multiprocessing coverage"
     ),
 )
-def test_websocket_progress_message_done() -> None:
-    setup_pipeline_execution()
-    code_id = "123456789"
-    code_message = {
-        "type": "program",
-        "id": code_id,
-        "data": {
-            "code": {
-                "": {
-                    "gen_b": (
-                        "import safeds_runner.codegen\n"
-                        "from a.stub import u\n"
-                        "from v.u.s.testing import add1\n"
-                        "\n"
-                        "def c():\n"
-                        "\ta1 = 1\n"
-                        "\ta2 = safeds_runner.codegen.eager_or(True, False)\n"
-                        "\tprint('test2')\n"
-                        "\tprint('new dynamic output')\n"
-                        "\tprint(f'Add1: {add1(1, 2)}')\n"
-                        "\treturn a1 + a2\n"
-                    ),
-                    "gen_b_c": "from gen_b import c\n\nif __name__ == '__main__':\n\tc()",
+@pytest.mark.parametrize(argnames="messages,expected_response_runtime_error", argvalues=[
+    (
+        [
+            json.dumps({
+                "type": "program",
+                "id": "abcdefgh",
+                "data": {
+                    "code": {
+                        "": {
+                            "gen_test_a": "def pipe():\n\traise Exception('Test Exception')\n",
+                            "gen_test_a_pipe": "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()",
+                        },
+                    },
+                    "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
                 },
-                "a": {"stub": "def u():\n\treturn 1"},
-                "v.u.s": {"testing": "import a.stub;\n\ndef add1(v1, v2):\n\treturn v1 + v2 + a.stub.u()\n"},
-            },
-            "main": {"modulepath": "", "module": "b", "pipeline": "c"},
-        },
-    }
-    mock_connection = MockWebsocketConnection([json.dumps(code_message)])
+            })
+        ],
+        Message(message_type_runtime_error, "abcdefgh", {"message": "Test Exception"})
+    )
+], ids=["raise_exception"])
+def test_should_execute_pipeline_return_exception(messages: list[str],
+                                                  expected_response_runtime_error: Message) -> None:
+    setup_pipeline_execution()
+    mock_connection = MockWebsocketConnection(messages)
     ws_main(mock_connection)
     mock_connection.wait_for_messages(1)
-    done_message = json.loads(mock_connection.received.pop(0))
-    assert done_message["type"] == message_type_runtime_progress
-    assert done_message["id"] == code_id
-    assert done_message["data"] == "done"
+    exception_message = Message.from_dict(json.loads(mock_connection.received.pop(0)))
 
-
-@pytest.mark.skipif(
-    sys.platform.startswith("win") and os.getenv("COVERAGE_RCFILE") is not None,
-    reason=(
-        "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
-        "causes Manager to hang, when using multiprocessing coverage"
-    ),
-)
-def test_websocket_exception_message() -> None:
-    setup_pipeline_execution()
-    code_id = "abcdefgh"
-    code_message = {
-        "type": "program",
-        "id": code_id,
-        "data": {
-            "code": {
-                "": {
-                    "gen_test_a": "def pipe():\n\traise Exception('Test Exception')\n",
-                    "gen_test_a_pipe": "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()",
-                },
-            },
-            "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
-        },
-    }
-    mock_connection = MockWebsocketConnection([json.dumps(code_message)])
-    ws_main(mock_connection)
-    mock_connection.wait_for_messages(1)
-    exception_message = json.loads(mock_connection.received.pop(0))
-    assert exception_message["type"] == message_type_runtime_error
-    assert exception_message["id"] == code_id
-    assert isinstance(exception_message["data"], dict)
-    assert exception_message["data"]["message"] == "Test Exception"
-    assert isinstance(exception_message["data"]["backtrace"], list)
-    assert len(exception_message["data"]["backtrace"]) > 0
-    for frame in exception_message["data"]["backtrace"]:
+    assert exception_message.type == expected_response_runtime_error.type
+    assert exception_message.id == expected_response_runtime_error.id
+    assert isinstance(exception_message.data, dict)
+    assert exception_message.data["message"] == expected_response_runtime_error.data["message"]
+    assert isinstance(exception_message.data["backtrace"], list)
+    assert len(exception_message.data["backtrace"]) > 0
+    for frame in exception_message.data["backtrace"]:
         assert "file" in frame
         assert isinstance(frame["file"], str)
         assert "line" in frame
@@ -253,78 +212,66 @@ def test_websocket_exception_message() -> None:
         "causes Manager to hang, when using multiprocessing coverage"
     ),
 )
-def test_websocket_placeholder_valid() -> None:
+@pytest.mark.parametrize(
+    argnames="initial_messages,initial_execution_message_wait,appended_messages,expected_responses", argvalues=[
+        (
+            [
+                json.dumps({
+                    "type": "program",
+                    "id": "abcdefg",
+                    "data": {
+                        "code": {
+                            "": {
+                                "gen_test_a": (
+                                    "import safeds_runner.server.pipeline_manager\n\n"
+                                    "def pipe():\n"
+                                    "\tvalue1 = 1\n"
+                                    "\tsafeds_runner.server.pipeline_manager.runner_save_placeholder('value1', value1)\n"
+                                ),
+                                "gen_test_a_pipe": "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()",
+                            },
+                        },
+                        "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
+                    },
+                })
+            ],
+            2,
+            [
+                # Query Placeholder
+                json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": "value1"}),
+                # Query invalid placeholder
+                json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": "value2"}),
+            ],
+            [
+                # Validate Placeholder Information
+                Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("value1", "Int")),
+                # Validate Progress Information
+                Message(message_type_runtime_progress, "abcdefg", create_runtime_progress_done()),
+                # Query Result Valid
+                Message(message_type_placeholder_value, "abcdefg", create_placeholder_value("value1", "Int", 1)),
+                # Query Result Invalid
+                Message(message_type_placeholder_value, "abcdefg", create_placeholder_value("value2", "", ""))
+            ]
+        )
+    ], ids=["query_valid_query_invalid"])
+def test_should_execute_pipeline_return_valid_placeholder(initial_messages: list[str],
+                                                          initial_execution_message_wait: int,
+                                                          appended_messages: list[str],
+                                                          expected_responses: list[Message]) -> None:
     setup_pipeline_execution()
-    code_id = "abcdefg"
-    code_message = {
-        "type": "program",
-        "id": code_id,
-        "data": {
-            "code": {
-                "": {
-                    "gen_test_a": (
-                        "import safeds_runner.server.pipeline_manager\n\n"
-                        "def pipe():\n"
-                        "\tvalue1 = 1\n"
-                        "\tsafeds_runner.server.pipeline_manager.runner_save_placeholder('value1', value1)\n"
-                    ),
-                    "gen_test_a_pipe": "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()",
-                },
-            },
-            "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
-        },
-    }
-    mock_connection = MockWebsocketConnection([json.dumps(code_message)])
+    # Initial execution
+    mock_connection = MockWebsocketConnection(initial_messages)
     ws_main(mock_connection)
-    mock_connection.wait_for_messages(2)
-    placeholder_type_message = json.loads(mock_connection.received.pop(0))
-    # Validate Placeholder Information
-    assert placeholder_type_message["type"] == message_type_placeholder_type
-    assert placeholder_type_message["id"] == code_id
-    assert isinstance(placeholder_type_message["data"], dict)
-    assert "name" in placeholder_type_message["data"]
-    assert "type" in placeholder_type_message["data"]
-    assert placeholder_type_message["data"]["name"] == "value1"
-    assert placeholder_type_message["data"]["type"] == "Int"
-    # Validate Progress Information
-    done_message = json.loads(mock_connection.received.pop(0))
-    assert done_message["type"] == message_type_runtime_progress
-    assert done_message["id"] == code_id
-    assert done_message["data"] == "done"
-    # Query Placeholder
-    mock_connection.messages.append(json.dumps({"type": "placeholder_query", "id": code_id, "data": "value1"}))
+    # Wait for at least enough messages to successfully execute pipeline
+    mock_connection.wait_for_messages(initial_execution_message_wait)
+    # Now send queries
+    mock_connection.messages.extend(appended_messages)
     ws_main(mock_connection)
-    mock_connection.wait_for_messages(1)
-    # Query Result Valid
-    query_result = json.loads(mock_connection.received.pop(0))
-    assert query_result["type"] == message_type_placeholder_value
-    assert query_result["id"] == code_id
-    assert isinstance(query_result["data"], dict)
-    assert "name" in query_result["data"]
-    assert "type" in query_result["data"]
-    assert "value" in query_result["data"]
-    assert query_result["data"]["name"] == "value1"
-    assert query_result["data"]["type"] == "Int"
-    assert query_result["data"]["value"] == 1
-    # Query invalid placeholder
-    invalid_name_placeholder = "value2"
-    mock_connection.messages.append(
-        json.dumps({"type": "placeholder_query", "id": code_id, "data": invalid_name_placeholder}),
-    )
-    ws_main(mock_connection)
-    mock_connection.wait_for_messages(1)
-    # Query Result Invalid
-    query_result_invalid = json.loads(mock_connection.received.pop(0))
-    assert query_result_invalid["type"] == message_type_placeholder_value
-    assert query_result_invalid["id"] == code_id
-    assert isinstance(query_result_invalid["data"], dict)
-    assert "name" in query_result_invalid["data"]
-    assert "type" in query_result_invalid["data"]
-    assert "value" in query_result_invalid["data"]
-    assert query_result_invalid["data"]["name"] == invalid_name_placeholder
-    # invalid queries respond with an empty type and empty value
-    assert query_result_invalid["data"]["type"] == ""
-    assert query_result_invalid["data"]["value"] == ""
+    # And compare with expected responses
+    while len(expected_responses) > 0:
+        mock_connection.wait_for_messages(1)
+        next_message = Message.from_dict(json.loads(mock_connection.received.pop(0)))
+        assert next_message == expected_responses.pop(0)
 
 
 @pytest.mark.skipif(
@@ -334,27 +281,53 @@ def test_websocket_placeholder_valid() -> None:
         "causes Manager to hang, when using multiprocessing coverage"
     ),
 )
-def test_websocket_invalid_message_invalid_placeholder_query() -> None:
-    setup_pipeline_execution()
-    code_id = "unknown-code-id-never-generated"
-    placeholder_name = "v"
-    mock_connection = MockWebsocketConnection(
+@pytest.mark.parametrize(argnames="messages,expected_response", argvalues=[
+    (
         [
-            json.dumps({"type": "invalid_message_type", "id": code_id, "data": ""}),
-            json.dumps({"type": "placeholder_query", "id": code_id, "data": placeholder_name}),
+            json.dumps({
+                "type": "program",
+                "id": "123456789",
+                "data": {
+                    "code": {
+                        "": {
+                            "gen_b": (
+                                "import safeds_runner.codegen\n"
+                                "from a.stub import u\n"
+                                "from v.u.s.testing import add1\n"
+                                "\n"
+                                "def c():\n"
+                                "\ta1 = 1\n"
+                                "\ta2 = safeds_runner.codegen.eager_or(True, False)\n"
+                                "\tprint('test2')\n"
+                                "\tprint('new dynamic output')\n"
+                                "\tprint(f'Add1: {add1(1, 2)}')\n"
+                                "\treturn a1 + a2\n"
+                            ),
+                            "gen_b_c": "from gen_b import c\n\nif __name__ == '__main__':\n\tc()",
+                        },
+                        "a": {"stub": "def u():\n\treturn 1"},
+                        "v.u.s": {"testing": "import a.stub;\n\ndef add1(v1, v2):\n\treturn v1 + v2 + a.stub.u()\n"},
+                    },
+                    "main": {"modulepath": "", "module": "b", "pipeline": "c"},
+                },
+            })
         ],
+        Message(message_type_runtime_progress, "123456789", create_runtime_progress_done())
+    ),
+    (
+        # Query Result Invalid (no pipeline exists)
+        [
+            json.dumps({"type": "invalid_message_type", "id": "unknown-code-id-never-generated", "data": ""}),
+            json.dumps({"type": "placeholder_query", "id": "unknown-code-id-never-generated", "data": "v"}),
+        ],
+        Message(message_type_placeholder_value, "unknown-code-id-never-generated",
+                create_placeholder_value("v", "", ""))
     )
+], ids=["progress_message_done", "invalid_message_invalid_placeholder_query"])
+def test_should_successfully_execute_simple_flow(messages: list[str], expected_response: Message) -> None:
+    setup_pipeline_execution()
+    mock_connection = MockWebsocketConnection(messages)
     ws_main(mock_connection)
     mock_connection.wait_for_messages(1)
-    # Query Result Invalid (no pipeline exists)
-    query_result_invalid = json.loads(mock_connection.received.pop(0))
-    assert query_result_invalid["type"] == message_type_placeholder_value
-    assert query_result_invalid["id"] == code_id
-    assert isinstance(query_result_invalid["data"], dict)
-    assert "name" in query_result_invalid["data"]
-    assert "type" in query_result_invalid["data"]
-    assert "value" in query_result_invalid["data"]
-    assert query_result_invalid["data"]["name"] == placeholder_name
-    # invalid queries respond with an empty type and empty value
-    assert query_result_invalid["data"]["type"] == ""
-    assert query_result_invalid["data"]["value"] == ""
+    query_result_invalid = Message.from_dict(json.loads(mock_connection.received.pop(0)))
+    assert query_result_invalid == expected_response

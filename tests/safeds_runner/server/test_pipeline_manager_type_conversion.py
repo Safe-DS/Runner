@@ -5,7 +5,7 @@ import pytest
 from safeds_runner.server.pipeline_manager import _get_placeholder_type
 
 
-@pytest.mark.parametrize("value,type_", [
+@pytest.mark.parametrize(argnames="value,type_", argvalues=[
     (True, "Boolean"),
     (False, "Boolean"),
     (1.23, "Float"),
