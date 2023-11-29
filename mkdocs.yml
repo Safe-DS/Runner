@@ -11,7 +11,8 @@ nav:
       - Changelog: CHANGELOG.md
   - Development:
       - Environment: development/environment.md
-      - Contributing: https://github.com/Safe-DS/Runner/contribute
+      - Project Guidelines: development/project_guidelines.md
+      - Contributing 🌐: https://github.com/Safe-DS/Runner/contribute
 
 # Configuration of MkDocs & Material for MkDocs --------------------------------
 
