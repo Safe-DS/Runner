@@ -26,7 +26,7 @@ from safeds_runner.server.module_manager import InMemoryFinder
 
 # Multiprocessing
 multiprocessing_manager: SyncManager | None = None
-global_placeholder_map: dict[str, dict[str, Any]] = {}
+global_placeholder_map: dict = {}
 global_messages_queue: queue.Queue[Message] | None = None
 # Message Queue
 websocket_target: simple_websocket.Server | None = None

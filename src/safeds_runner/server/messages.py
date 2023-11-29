@@ -43,10 +43,31 @@ class Message:
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> Message:
+        """
+        Create a new Message object from a dictionary.
+
+        Parameters
+        ----------
+        d : dict[str, Any]
+            Dictionary which should contain all needed fields.
+
+        Returns
+        -------
+        Message
+            Dataclass which contains information copied from the provided dictionary.
+        """
         return Message(**d)
 
     def to_dict(self) -> dict[str, Any]:
-        return dataclasses.asdict(self)
+        """
+        Convert this dataclass to a dictionary.
+
+        Returns
+        -------
+        dict[str, Any]
+            Dictionary containing all the fields which are part of this dataclass.
+        """
+        return dataclasses.asdict(self)  # pragma: no cover
 
 
 @dataclass(frozen=True)
@@ -68,10 +89,31 @@ class MessageDataProgram:
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> MessageDataProgram:
+        """
+        Create a new MessageDataProgram object from a dictionary.
+
+        Parameters
+        ----------
+        d : dict[str, Any]
+            Dictionary which should contain all needed fields.
+
+        Returns
+        -------
+        MessageDataProgram
+            Dataclass which contains information copied from the provided dictionary.
+        """
         return MessageDataProgram(d["code"], ProgramMainInformation.from_dict(d["main"]))
 
     def to_dict(self) -> dict[str, Any]:
-        return dataclasses.asdict(self)
+        """
+        Convert this dataclass to a dictionary.
+
+        Returns
+        -------
+        dict[str, Any]
+            Dictionary containing all the fields which are part of this dataclass.
+        """
+        return dataclasses.asdict(self)  # pragma: no cover
 
 
 @dataclass(frozen=True)
@@ -94,9 +136,30 @@ class ProgramMainInformation:
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> ProgramMainInformation:
+        """
+        Create a new ProgramMainInformation object from a dictionary.
+
+        Parameters
+        ----------
+        d : dict[str, Any]
+            Dictionary which should contain all needed fields.
+
+        Returns
+        -------
+        ProgramMainInformation
+            Dataclass which contains information copied from the provided dictionary.
+        """
         return ProgramMainInformation(**d)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert this dataclass to a dictionary.
+
+        Returns
+        -------
+        dict[str, Any]
+            Dictionary containing all the fields which are part of this dataclass.
+        """
         return dataclasses.asdict(self)
 
 
