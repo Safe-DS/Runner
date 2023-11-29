@@ -6,21 +6,21 @@ import multiprocessing
 import queue
 import runpy
 import threading
-from typing import Any
 from multiprocessing.managers import SyncManager
+from typing import Any
 
 import simple_websocket
 import stack_data
 
 from safeds_runner.server.messages import (
+    Message,
+    MessageDataProgram,
     create_placeholder_description,
     create_runtime_error_description,
     create_runtime_progress_done,
     message_type_placeholder_type,
     message_type_runtime_error,
     message_type_runtime_progress,
-    Message,
-    MessageDataProgram,
 )
 from safeds_runner.server.module_manager import InMemoryFinder
 
@@ -136,8 +136,12 @@ class PipelineProcess:
         )
 
     def _execute(self) -> None:
-        logging.info("Executing %s.%s.%s...", self.pipeline.main.modulepath, self.pipeline.main.module,
-                     self.pipeline.main.pipeline)
+        logging.info(
+            "Executing %s.%s.%s...",
+            self.pipeline.main.modulepath,
+            self.pipeline.main.module,
+            self.pipeline.main.pipeline,
+        )
         pipeline_finder = InMemoryFinder(self.pipeline.code)
         pipeline_finder.attach()
         main_module = f"gen_{self.pipeline.main.module}_{self.pipeline.main.pipeline}"
@@ -145,8 +149,11 @@ class PipelineProcess:
         current_pipeline = self
         try:
             runpy.run_module(
-                main_module if len(
-                    self.pipeline.main.modulepath) == 0 else f"{self.pipeline.main.modulepath}.{main_module}",
+                (
+                    main_module
+                    if len(self.pipeline.main.modulepath) == 0
+                    else f"{self.pipeline.main.modulepath}.{main_module}"
+                ),
                 run_name="__main__",
             )
             self._send_message(message_type_runtime_progress, create_runtime_progress_done())

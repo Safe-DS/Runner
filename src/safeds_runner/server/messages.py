@@ -1,10 +1,11 @@
 """Module that contains functions for creating and validating messages exchanged with the vscode extension."""
+
 from __future__ import annotations
 
-from typing import Any
-import json
 import dataclasses
+import json
 from dataclasses import dataclass
+from typing import Any
 
 message_type_program = "program"
 message_type_placeholder_query = "placeholder_query"
@@ -37,6 +38,7 @@ class Message:
     data : Any
         Message data section. Differs between message types.
     """
+
     type: str
     id: str
     data: Any
@@ -84,6 +86,7 @@ class MessageDataProgram:
     main : ProgramMainInformation
         Information where the main pipeline (the pipeline to be executed) is located.
     """
+
     code: dict[str, dict[str, str]]
     main: ProgramMainInformation
 
@@ -130,6 +133,7 @@ class ProgramMainInformation:
     pipeline : str
         Safe-DS pipeline name.
     """
+
     modulepath: str
     module: str
     pipeline: str
@@ -265,8 +269,7 @@ def parse_validate_message(message: str) -> tuple[Message | None, str | None, st
     return Message.from_dict(message_dict), None, None
 
 
-def validate_program_message_data(message_data: dict[str, Any] | str) -> tuple[
-    MessageDataProgram | None, str | None]:
+def validate_program_message_data(message_data: dict[str, Any] | str) -> tuple[MessageDataProgram | None, str | None]:
     """
     Validate the message data of a program message.
 

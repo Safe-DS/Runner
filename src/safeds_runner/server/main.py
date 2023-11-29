@@ -12,8 +12,12 @@ from flask_cors import CORS
 from flask_sock import Sock
 
 from safeds_runner.server import messages
-from safeds_runner.server.messages import create_placeholder_value, message_type_placeholder_value, \
-    parse_validate_message, Message
+from safeds_runner.server.messages import (
+    Message,
+    create_placeholder_value,
+    message_type_placeholder_value,
+    parse_validate_message,
+)
 from safeds_runner.server.pipeline_manager import (
     execute_pipeline,
     get_placeholder,
@@ -77,6 +81,7 @@ def ws_main(ws: simple_websocket.Server) -> None:
     Handle websocket requests to the WSMain endpoint.
 
     This function handles the bidirectional communication between the runner and the VS Code extension.
+
     Parameters
     ----------
     ws : simple_websocket.Server
@@ -108,7 +113,8 @@ def ws_main(ws: simple_websocket.Server) -> None:
                 execute_pipeline(program_data, received_object.id)
             case "placeholder_query":
                 placeholder_query_data, invalid_message = messages.validate_placeholder_query_message_data(
-                    received_object.data)
+                    received_object.data,
+                )
                 if placeholder_query_data is None:
                     logging.error("Invalid message data specified in: %s (%s)", received_message, invalid_message)
                     ws.close(None, invalid_message)
@@ -118,15 +124,23 @@ def ws_main(ws: simple_websocket.Server) -> None:
                 if placeholder_type is not None:
                     send_websocket_message(
                         ws,
-                        Message(message_type_placeholder_value, received_object.id,
-                                create_placeholder_value(placeholder_query_data, placeholder_type, placeholder_value)))
+                        Message(
+                            message_type_placeholder_value,
+                            received_object.id,
+                            create_placeholder_value(placeholder_query_data, placeholder_type, placeholder_value),
+                        ),
+                    )
                 else:
                     # Send back empty type / value, to communicate that no placeholder exists (yet)
                     # Use name from query to allow linking a response to a request on the peer
                     send_websocket_message(
                         ws,
-                        Message(message_type_placeholder_value, received_object.id,
-                                create_placeholder_value(placeholder_query_data, "", "")))
+                        Message(
+                            message_type_placeholder_value,
+                            received_object.id,
+                            create_placeholder_value(placeholder_query_data, "", ""),
+                        ),
+                    )
             case _:
                 if received_object.type not in messages.message_types:
                     logging.warning("Invalid message type: %s", received_object.type)

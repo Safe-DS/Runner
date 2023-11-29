@@ -6,6 +6,7 @@ import threading
 import pytest
 from safeds_runner.server.main import ws_main
 from safeds_runner.server.messages import (
+    Message,
     create_placeholder_description,
     create_placeholder_value,
     create_runtime_progress_done,
@@ -13,7 +14,6 @@ from safeds_runner.server.messages import (
     message_type_placeholder_value,
     message_type_runtime_error,
     message_type_runtime_progress,
-    Message,
 )
 from safeds_runner.server.pipeline_manager import setup_pipeline_execution
 
@@ -60,12 +60,15 @@ class MockWebsocketConnection:
         (json.dumps({"type": "program", "id": "1234", "data": "a"}), "Message data is not a JSON object"),
         (json.dumps({"type": "placeholder_query", "id": "123", "data": {"a": "v"}}), "Message data is not a string"),
         (
-            json.dumps({"type": "program", "id": "1234",
-                        "data": {"main": {"modulepath": "1", "module": "2", "pipeline": "3"}}}),
+            json.dumps({
+                "type": "program", "id": "1234", "data": {"main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
+            }),
             "No 'code' parameter given",
         ),
-        (json.dumps({"type": "program", "id": "1234", "data": {"code": {"": {"entry": ""}}}}),
-         "No 'main' parameter given"),
+        (
+            json.dumps({"type": "program", "id": "1234", "data": {"code": {"": {"entry": ""}}}}),
+            "No 'main' parameter given",
+        ),
         (
             json.dumps({
                 "type": "program",
@@ -171,28 +174,35 @@ def test_should_fail_message_validation(websocket_message: str, exception_messag
         "causes Manager to hang, when using multiprocessing coverage"
     ),
 )
-@pytest.mark.parametrize(argnames="messages,expected_response_runtime_error", argvalues=[
-    (
-        [
-            json.dumps({
-                "type": "program",
-                "id": "abcdefgh",
-                "data": {
-                    "code": {
-                        "": {
-                            "gen_test_a": "def pipe():\n\traise Exception('Test Exception')\n",
-                            "gen_test_a_pipe": "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()",
+@pytest.mark.parametrize(
+    argnames="messages,expected_response_runtime_error",
+    argvalues=[
+        (
+            [
+                json.dumps({
+                    "type": "program",
+                    "id": "abcdefgh",
+                    "data": {
+                        "code": {
+                            "": {
+                                "gen_test_a": "def pipe():\n\traise Exception('Test Exception')\n",
+                                "gen_test_a_pipe": (
+                                    "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()"
+                                ),
+                            },
                         },
+                        "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
                     },
-                    "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
-                },
-            })
-        ],
-        Message(message_type_runtime_error, "abcdefgh", {"message": "Test Exception"})
-    )
-], ids=["raise_exception"])
-def test_should_execute_pipeline_return_exception(messages: list[str],
-                                                  expected_response_runtime_error: Message) -> None:
+                }),
+            ],
+            Message(message_type_runtime_error, "abcdefgh", {"message": "Test Exception"}),
+        ),
+    ],
+    ids=["raise_exception"],
+)
+def test_should_execute_pipeline_return_exception(
+    messages: list[str], expected_response_runtime_error: Message,
+) -> None:
     setup_pipeline_execution()
     mock_connection = MockWebsocketConnection(messages)
     ws_main(mock_connection)
@@ -220,7 +230,8 @@ def test_should_execute_pipeline_return_exception(messages: list[str],
     ),
 )
 @pytest.mark.parametrize(
-    argnames="initial_messages,initial_execution_message_wait,appended_messages,expected_responses", argvalues=[
+    argnames="initial_messages,initial_execution_message_wait,appended_messages,expected_responses",
+    argvalues=[
         (
             [
                 json.dumps({
@@ -230,17 +241,18 @@ def test_should_execute_pipeline_return_exception(messages: list[str],
                         "code": {
                             "": {
                                 "gen_test_a": (
-                                    "import safeds_runner.server.pipeline_manager\n\n"
-                                    "def pipe():\n"
-                                    "\tvalue1 = 1\n"
-                                    "\tsafeds_runner.server.pipeline_manager.runner_save_placeholder('value1', value1)\n"
+                                    "import safeds_runner.server.pipeline_manager\n\ndef pipe():\n\tvalue1 ="
+                                    " 1\n\tsafeds_runner.server.pipeline_manager.runner_save_placeholder('value1',"
+                                    " value1)\n"
                                 ),
-                                "gen_test_a_pipe": "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()",
+                                "gen_test_a_pipe": (
+                                    "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()"
+                                ),
                             },
                         },
                         "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
                     },
-                })
+                }),
             ],
             2,
             [
@@ -257,14 +269,18 @@ def test_should_execute_pipeline_return_exception(messages: list[str],
                 # Query Result Valid
                 Message(message_type_placeholder_value, "abcdefg", create_placeholder_value("value1", "Int", 1)),
                 # Query Result Invalid
-                Message(message_type_placeholder_value, "abcdefg", create_placeholder_value("value2", "", ""))
-            ]
-        )
-    ], ids=["query_valid_query_invalid"])
-def test_should_execute_pipeline_return_valid_placeholder(initial_messages: list[str],
-                                                          initial_execution_message_wait: int,
-                                                          appended_messages: list[str],
-                                                          expected_responses: list[Message]) -> None:
+                Message(message_type_placeholder_value, "abcdefg", create_placeholder_value("value2", "", "")),
+            ],
+        ),
+    ],
+    ids=["query_valid_query_invalid"],
+)
+def test_should_execute_pipeline_return_valid_placeholder(
+    initial_messages: list[str],
+    initial_execution_message_wait: int,
+    appended_messages: list[str],
+    expected_responses: list[Message],
+) -> None:
     setup_pipeline_execution()
     # Initial execution
     mock_connection = MockWebsocketConnection(initial_messages)
@@ -288,49 +304,56 @@ def test_should_execute_pipeline_return_valid_placeholder(initial_messages: list
         "causes Manager to hang, when using multiprocessing coverage"
     ),
 )
-@pytest.mark.parametrize(argnames="messages,expected_response", argvalues=[
-    (
-        [
-            json.dumps({
-                "type": "program",
-                "id": "123456789",
-                "data": {
-                    "code": {
-                        "": {
-                            "gen_b": (
-                                "import safeds_runner.codegen\n"
-                                "from a.stub import u\n"
-                                "from v.u.s.testing import add1\n"
-                                "\n"
-                                "def c():\n"
-                                "\ta1 = 1\n"
-                                "\ta2 = safeds_runner.codegen.eager_or(True, False)\n"
-                                "\tprint('test2')\n"
-                                "\tprint('new dynamic output')\n"
-                                "\tprint(f'Add1: {add1(1, 2)}')\n"
-                                "\treturn a1 + a2\n"
-                            ),
-                            "gen_b_c": "from gen_b import c\n\nif __name__ == '__main__':\n\tc()",
+@pytest.mark.parametrize(
+    argnames="messages,expected_response",
+    argvalues=[
+        (
+            [
+                json.dumps({
+                    "type": "program",
+                    "id": "123456789",
+                    "data": {
+                        "code": {
+                            "": {
+                                "gen_b": (
+                                    "import safeds_runner.codegen\n"
+                                    "from a.stub import u\n"
+                                    "from v.u.s.testing import add1\n"
+                                    "\n"
+                                    "def c():\n"
+                                    "\ta1 = 1\n"
+                                    "\ta2 = safeds_runner.codegen.eager_or(True, False)\n"
+                                    "\tprint('test2')\n"
+                                    "\tprint('new dynamic output')\n"
+                                    "\tprint(f'Add1: {add1(1, 2)}')\n"
+                                    "\treturn a1 + a2\n"
+                                ),
+                                "gen_b_c": "from gen_b import c\n\nif __name__ == '__main__':\n\tc()",
+                            },
+                            "a": {"stub": "def u():\n\treturn 1"},
+                            "v.u.s": {
+                                "testing": "import a.stub;\n\ndef add1(v1, v2):\n\treturn v1 + v2 + a.stub.u()\n",
+                            },
                         },
-                        "a": {"stub": "def u():\n\treturn 1"},
-                        "v.u.s": {"testing": "import a.stub;\n\ndef add1(v1, v2):\n\treturn v1 + v2 + a.stub.u()\n"},
+                        "main": {"modulepath": "", "module": "b", "pipeline": "c"},
                     },
-                    "main": {"modulepath": "", "module": "b", "pipeline": "c"},
-                },
-            })
-        ],
-        Message(message_type_runtime_progress, "123456789", create_runtime_progress_done())
-    ),
-    (
-        # Query Result Invalid (no pipeline exists)
-        [
-            json.dumps({"type": "invalid_message_type", "id": "unknown-code-id-never-generated", "data": ""}),
-            json.dumps({"type": "placeholder_query", "id": "unknown-code-id-never-generated", "data": "v"}),
-        ],
-        Message(message_type_placeholder_value, "unknown-code-id-never-generated",
-                create_placeholder_value("v", "", ""))
-    )
-], ids=["progress_message_done", "invalid_message_invalid_placeholder_query"])
+                }),
+            ],
+            Message(message_type_runtime_progress, "123456789", create_runtime_progress_done()),
+        ),
+        (
+            # Query Result Invalid (no pipeline exists)
+            [
+                json.dumps({"type": "invalid_message_type", "id": "unknown-code-id-never-generated", "data": ""}),
+                json.dumps({"type": "placeholder_query", "id": "unknown-code-id-never-generated", "data": "v"}),
+            ],
+            Message(
+                message_type_placeholder_value, "unknown-code-id-never-generated", create_placeholder_value("v", "", ""),
+            ),
+        ),
+    ],
+    ids=["progress_message_done", "invalid_message_invalid_placeholder_query"],
+)
 def test_should_successfully_execute_simple_flow(messages: list[str], expected_response: Message) -> None:
     setup_pipeline_execution()
     mock_connection = MockWebsocketConnection(messages)
