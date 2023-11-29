@@ -17,7 +17,7 @@ python = "^3.11,<3.13"
 safe-ds = ">=0.14,<0.17"
 
 [tool.poetry.dev-dependencies]
-pytest = "^7.4.0"
+pytest = "^7.4.3"
 pytest-cov = "^4.1.0"
 
 [tool.poetry.group.docs.dependencies]
