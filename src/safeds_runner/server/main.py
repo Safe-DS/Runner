@@ -18,12 +18,7 @@ from safeds_runner.server.messages import (
     message_type_placeholder_value,
     parse_validate_message,
 )
-from safeds_runner.server.pipeline_manager import (
-    execute_pipeline,
-    get_placeholder,
-    set_new_websocket_target,
-    setup_pipeline_execution,
-)
+from safeds_runner.server.pipeline_manager import PipelineManager
 
 
 def create_flask_app(testing: bool = False) -> flask.app.App:
@@ -69,14 +64,15 @@ def create_flask_websocket(flask_app: flask.app.App) -> flask_sock.Sock:
 
 app = create_flask_app()
 sock = create_flask_websocket(app)
+app_pipeline_manager = PipelineManager()
 
 
 @sock.route("/WSMain")
 def _ws_main(ws: simple_websocket.Server) -> None:
-    ws_main(ws)  # pragma: no cover
+    ws_main(ws, app_pipeline_manager)  # pragma: no cover
 
 
-def ws_main(ws: simple_websocket.Server) -> None:
+def ws_main(ws: simple_websocket.Server, pipeline_manager: PipelineManager) -> None:
     """
     Handle websocket requests to the WSMain endpoint.
 
@@ -86,9 +82,11 @@ def ws_main(ws: simple_websocket.Server) -> None:
     ----------
     ws : simple_websocket.Server
         Websocket Connection, provided by flask.
+    pipeline_manager : PipelineManager
+        Manager used to execute pipelines on, and retrieve placeholders from
     """
     logging.debug("Request to WSRunProgram")
-    set_new_websocket_target(ws)
+    pipeline_manager.set_new_websocket_target(ws)
     while True:
         # This would be a JSON message
         received_message: str = ws.receive()
@@ -110,7 +108,7 @@ def ws_main(ws: simple_websocket.Server) -> None:
                     ws.close(None, invalid_message)
                     return
                 # This should only be called from the extension as it is a security risk
-                execute_pipeline(program_data, received_object.id)
+                pipeline_manager.execute_pipeline(program_data, received_object.id)
             case "placeholder_query":
                 placeholder_query_data, invalid_message = messages.validate_placeholder_query_message_data(
                     received_object.data,
@@ -119,7 +117,8 @@ def ws_main(ws: simple_websocket.Server) -> None:
                     logging.error("Invalid message data specified in: %s (%s)", received_message, invalid_message)
                     ws.close(None, invalid_message)
                     return
-                placeholder_type, placeholder_value = get_placeholder(received_object.id, placeholder_query_data)
+                placeholder_type, placeholder_value = pipeline_manager.get_placeholder(received_object.id,
+                                                                                       placeholder_query_data)
                 # send back a value message
                 if placeholder_type is not None:
                     send_websocket_message(
@@ -178,7 +177,6 @@ def main() -> None:  # pragma: no cover
     parser = argparse.ArgumentParser(description="Start Safe-DS Runner on a specific port.")
     parser.add_argument("--port", type=int, default=5000, help="Port on which to run the python server.")
     args = parser.parse_args()
-    setup_pipeline_execution()
     logging.info("Starting Safe-DS Runner on port %s", str(args.port))
     # Only bind to host=127.0.0.1. Connections from other devices should not be accepted
     WSGIServer(("127.0.0.1", args.port), app).serve_forever()

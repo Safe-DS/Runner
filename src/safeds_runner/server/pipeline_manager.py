@@ -24,60 +24,101 @@ from safeds_runner.server.messages import (
 )
 from safeds_runner.server.module_manager import InMemoryFinder
 
-# Multiprocessing
-multiprocessing_manager: SyncManager | None = None
-global_placeholder_map: dict = {}
-global_messages_queue: queue.Queue[Message] | None = None
-# Message Queue
-websocket_target: simple_websocket.Server | None = None
-messages_queue_thread: threading.Thread | None = None
 
-
-def setup_pipeline_execution() -> None:
+class PipelineManager:
     """
-    Prepare the runner for running Safe-DS pipelines.
-
-    Firstly, structures shared between processes are created.
-    After that a message queue handling thread is started in the main process.
-    This allows receiving messages directly from one of the pipeline processes and relaying information
-    directly to the websocket connection (to the VS Code extension).
+    A PipelineManager handles the execution of pipelines in subprocesses and the communication between the
+    subprocess and the main process using a shared message queue.
     """
-    # Multiprocessing
-    global multiprocessing_manager, global_messages_queue  # noqa: PLW0603
-    multiprocessing_manager = multiprocessing.Manager()
-    global_messages_queue = multiprocessing_manager.Queue()
-    # Message Queue
-    global messages_queue_thread  # noqa: PLW0603
-    messages_queue_thread = threading.Thread(target=_handle_queue_messages, daemon=True)
-    messages_queue_thread.start()
 
+    def __init__(self):
+        """
+        Prepare the runner for running Safe-DS pipelines.
 
-def _handle_queue_messages() -> None:
-    """
-    Relay messages from pipeline processes to the currently connected websocket endpoint.
+        Firstly, structures shared between processes are created.
+        After that a message queue handling thread is started in the main process.
+        This allows receiving messages directly from one of the pipeline processes and relaying information
+        directly to the websocket connection (to the VS Code extension).
+        """
+        self.multiprocessing_manager: SyncManager = multiprocessing.Manager()
+        self.placeholder_map: dict = {}
+        self.messages_queue: queue.Queue[Message] = self.multiprocessing_manager.Queue()
+        self.websocket_target: simple_websocket.Server | None = None
+        self.messages_queue_thread: threading.Thread = threading.Thread(target=self._handle_queue_messages, daemon=True)
+        self.messages_queue_thread.start()
 
-    Should be used in a dedicated thread.
-    """
-    try:
-        while global_messages_queue is not None:
-            message = global_messages_queue.get()
-            if websocket_target is not None:
-                websocket_target.send(json.dumps(message.to_dict()))
-    except BaseException as error:  # noqa: BLE001  # pragma: no cover
-        logging.warning("Message queue terminated: %s", error.__repr__())  # pragma: no cover
+    def _handle_queue_messages(self) -> None:
+        """
+        Relay messages from pipeline processes to the currently connected websocket endpoint.
 
+        Should be used in a dedicated thread.
+        """
+        try:
+            while self.messages_queue is not None:
+                message = self.messages_queue.get()
+                if self.websocket_target is not None:
+                    self.websocket_target.send(json.dumps(message.to_dict()))
+        except BaseException as error:  # noqa: BLE001  # pragma: no cover
+            logging.warning("Message queue terminated: %s", error.__repr__())  # pragma: no cover
 
-def set_new_websocket_target(ws: simple_websocket.Server) -> None:
-    """
-    Inform the message queue handling thread that the websocket connection has changed.
+    def set_new_websocket_target(self, websocket_connection: simple_websocket.Server) -> None:
+        """
+        Change the websocket connection to relay messages to, which are occurring during pipeline execution.
 
-    Parameters
-    ----------
-    ws : simple_websocket.Server
-        New websocket connection.
-    """
-    global websocket_target  # noqa: PLW0603
-    websocket_target = ws
+        Parameters
+        ----------
+        websocket_connection : simple_websocket.Server
+            New websocket connection.
+        """
+        self.websocket_target = websocket_connection
+
+    def execute_pipeline(
+        self,
+        pipeline: MessageDataProgram,
+        execution_id: str,
+    ) -> None:
+        """
+        Run a Safe-DS pipeline.
+
+        Parameters
+        ----------
+        pipeline : MessageDataProgram
+            Message object that contains the information to run a pipeline.
+        execution_id : str
+            Unique ID to identify this execution.
+        """
+        if execution_id not in self.placeholder_map:
+            self.placeholder_map[execution_id] = self.multiprocessing_manager.dict()
+        process = PipelineProcess(
+            pipeline,
+            execution_id,
+            self.messages_queue,
+            self.placeholder_map[execution_id],
+        )
+        process.execute()
+
+    def get_placeholder(self, execution_id: str, placeholder_name: str) -> tuple[str | None, Any]:
+        """
+        Get a placeholder type and value for an execution id and placeholder name.
+
+        Parameters
+        ----------
+        execution_id : str
+            Unique ID identifying the execution in which the placeholder was calculated.
+        placeholder_name : str
+            Name of the placeholder.
+
+        Returns
+        -------
+        tuple[str | None, Any]
+            Tuple containing placeholder type and placeholder value, or (None, None) if the placeholder does not exist.
+        """
+        if execution_id not in self.placeholder_map:
+            return None, None
+        if placeholder_name not in self.placeholder_map[execution_id]:
+            return None, None
+        value = self.placeholder_map[execution_id][placeholder_name]
+        return _get_placeholder_type(value), value
 
 
 class PipelineProcess:
@@ -145,8 +186,8 @@ class PipelineProcess:
         pipeline_finder = InMemoryFinder(self.pipeline.code)
         pipeline_finder.attach()
         main_module = f"gen_{self.pipeline.main.module}_{self.pipeline.main.pipeline}"
-        global current_pipeline  # noqa: PLW0603
-        current_pipeline = self
+        # Populate current_pipeline global, so child process can save placeholders in correct location
+        globals()["current_pipeline"] = self
         try:
             runpy.run_module(
                 (
@@ -155,6 +196,7 @@ class PipelineProcess:
                     else f"{self.pipeline.main.modulepath}.{main_module}"
                 ),
                 run_name="__main__",
+                alter_sys=True
             )
             self._send_message(message_type_runtime_progress, create_runtime_progress_done())
         except BaseException as error:  # noqa: BLE001
@@ -171,7 +213,7 @@ class PipelineProcess:
         self.process.start()
 
 
-# Current Pipeline
+# Pipeline process object visible in child process
 current_pipeline: PipelineProcess | None = None
 
 
@@ -210,32 +252,6 @@ def get_backtrace_info(error: BaseException) -> list[dict[str, Any]]:
     return backtrace_list
 
 
-def execute_pipeline(
-    pipeline: MessageDataProgram,
-    execution_id: str,
-) -> None:
-    """
-    Run a Safe-DS pipeline.
-
-    Parameters
-    ----------
-    pipeline : MessageDataProgram
-        Message object that contains the information to run a pipeline.
-    execution_id : str
-        Unique ID to identify this execution.
-    """
-    if global_placeholder_map is not None and global_messages_queue is not None and multiprocessing_manager is not None:
-        if execution_id not in global_placeholder_map:
-            global_placeholder_map[execution_id] = multiprocessing_manager.dict()
-        process = PipelineProcess(
-            pipeline,
-            execution_id,
-            global_messages_queue,
-            global_placeholder_map[execution_id],
-        )
-        process.execute()
-
-
 def _get_placeholder_type(value: Any) -> str:
     """
     Convert a python object to a Safe-DS type.
@@ -266,27 +282,3 @@ def _get_placeholder_type(value: Any) -> str:
             return "Null"
         return object_name
     return "Any"  # pragma: no cover
-
-
-def get_placeholder(execution_id: str, placeholder_name: str) -> tuple[str | None, Any]:
-    """
-    Get a placeholder type and value for an execution id and placeholder name.
-
-    Parameters
-    ----------
-    execution_id : str
-        Unique ID identifying the execution in which the placeholder was calculated.
-    placeholder_name : str
-        Name of the placeholder.
-
-    Returns
-    -------
-    tuple[str | None, Any]
-        Tuple containing placeholder type and placeholder value, or (None, None) if the placeholder does not exist.
-    """
-    if execution_id not in global_placeholder_map:
-        return None, None
-    if placeholder_name not in global_placeholder_map[execution_id]:
-        return None, None
-    value = global_placeholder_map[execution_id][placeholder_name]
-    return _get_placeholder_type(value), value

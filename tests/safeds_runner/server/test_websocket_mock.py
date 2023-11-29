@@ -4,7 +4,7 @@ import sys
 import threading
 
 import pytest
-from safeds_runner.server.main import ws_main
+from safeds_runner.server.main import ws_main, app_pipeline_manager
 from safeds_runner.server.messages import (
     Message,
     create_placeholder_description,
@@ -15,7 +15,6 @@ from safeds_runner.server.messages import (
     message_type_runtime_error,
     message_type_runtime_progress,
 )
-from safeds_runner.server.pipeline_manager import setup_pipeline_execution
 
 
 class MockWebsocketConnection:
@@ -165,7 +164,7 @@ class MockWebsocketConnection:
 )
 def test_should_fail_message_validation(websocket_message: str, exception_message: str) -> None:
     mock_connection = MockWebsocketConnection([websocket_message])
-    ws_main(mock_connection)
+    ws_main(mock_connection, app_pipeline_manager)
     assert str(mock_connection.close_message) == exception_message
 
 
@@ -206,9 +205,8 @@ def test_should_execute_pipeline_return_exception(
     messages: list[str],
     expected_response_runtime_error: Message,
 ) -> None:
-    setup_pipeline_execution()
     mock_connection = MockWebsocketConnection(messages)
-    ws_main(mock_connection)
+    ws_main(mock_connection, app_pipeline_manager)
     mock_connection.wait_for_messages(1)
     exception_message = Message.from_dict(json.loads(mock_connection.received.pop(0)))
 
@@ -284,15 +282,14 @@ def test_should_execute_pipeline_return_valid_placeholder(
     appended_messages: list[str],
     expected_responses: list[Message],
 ) -> None:
-    setup_pipeline_execution()
     # Initial execution
     mock_connection = MockWebsocketConnection(initial_messages)
-    ws_main(mock_connection)
+    ws_main(mock_connection, app_pipeline_manager)
     # Wait for at least enough messages to successfully execute pipeline
     mock_connection.wait_for_messages(initial_execution_message_wait)
     # Now send queries
     mock_connection.messages.extend(appended_messages)
-    ws_main(mock_connection)
+    ws_main(mock_connection, app_pipeline_manager)
     # And compare with expected responses
     while len(expected_responses) > 0:
         mock_connection.wait_for_messages(1)
@@ -360,9 +357,8 @@ def test_should_execute_pipeline_return_valid_placeholder(
     ids=["progress_message_done", "invalid_message_invalid_placeholder_query"],
 )
 def test_should_successfully_execute_simple_flow(messages: list[str], expected_response: Message) -> None:
-    setup_pipeline_execution()
     mock_connection = MockWebsocketConnection(messages)
-    ws_main(mock_connection)
+    ws_main(mock_connection, app_pipeline_manager)
     mock_connection.wait_for_messages(1)
     query_result_invalid = Message.from_dict(json.loads(mock_connection.received.pop(0)))
     assert query_result_invalid == expected_response
