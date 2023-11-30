@@ -50,7 +50,8 @@ class PipelineManager:
         self._messages_queue: queue.Queue[Message] = self._multiprocessing_manager.Queue()
         self._websocket_target: simple_websocket.Server | None = None
         self._messages_queue_thread: threading.Thread = threading.Thread(
-            target=self._handle_queue_messages, daemon=True,
+            target=self._handle_queue_messages,
+            daemon=True,
         )
         self._messages_queue_thread.start()
 
