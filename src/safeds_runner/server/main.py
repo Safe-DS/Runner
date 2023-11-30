@@ -185,6 +185,4 @@ def main() -> None:  # pragma: no cover
 
 
 if __name__ == "__main__":
-    # Initialize PipelineManager deferred so new process is not spawned during startup
-    app_pipeline_manager.startup()  # pragma: no cover
     main()  # pragma: no cover

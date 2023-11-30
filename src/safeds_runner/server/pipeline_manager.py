@@ -54,7 +54,7 @@ class PipelineManager:
             daemon=True,
         )
 
-    def startup(self):
+    def _startup(self):
         """
         Prepare the runner for running Safe-DS pipelines.
 
@@ -65,7 +65,8 @@ class PipelineManager:
 
         This method should not be called during the bootstrap phase of the python interpreter, as it leads to a crash.
         """
-        self._messages_queue_thread.start()
+        if not self._messages_queue_thread.is_alive():
+            self._messages_queue_thread.start()
 
     def _handle_queue_messages(self) -> None:
         """
@@ -107,6 +108,7 @@ class PipelineManager:
         execution_id : str
             Unique ID to identify this execution.
         """
+        self._startup()
         if execution_id not in self._placeholder_map:
             self._placeholder_map[execution_id] = self._multiprocessing_manager.dict()
         process = PipelineProcess(
