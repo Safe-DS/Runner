@@ -15,6 +15,14 @@ Get the latest version from [PyPI](https://pypi.org/project/safe-ds-runner):
 pip install safe-ds-runner
 ```
 
+## Usage
+
+Launch the runner:
+
+```shell
+safe-ds-runner
+```
+
 ## Documentation
 
 You can find the full documentation [here](https://runner.safeds.com).
