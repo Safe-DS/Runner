@@ -1,7 +1,7 @@
 import subprocess
+import typing
 from pathlib import Path
 from typing import IO
-import typing
 
 _project_root: Path = Path(__file__).parent / ".." / ".." / ".."
 
