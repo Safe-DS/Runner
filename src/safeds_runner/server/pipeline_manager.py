@@ -45,12 +45,13 @@ class PipelineManager:
         This allows receiving messages directly from one of the pipeline processes and relaying information
         directly to the websocket connection (to the VS Code extension).
         """
-        self.multiprocessing_manager: SyncManager = multiprocessing.Manager()
-        self.placeholder_map: dict = {}
-        self.messages_queue: queue.Queue[Message] = self.multiprocessing_manager.Queue()
-        self.websocket_target: simple_websocket.Server | None = None
-        self.messages_queue_thread: threading.Thread = threading.Thread(target=self._handle_queue_messages, daemon=True)
-        self.messages_queue_thread.start()
+        self._multiprocessing_manager: SyncManager = multiprocessing.Manager()
+        self._placeholder_map: dict = {}
+        self._messages_queue: queue.Queue[Message] = self._multiprocessing_manager.Queue()
+        self._websocket_target: simple_websocket.Server | None = None
+        self._messages_queue_thread: threading.Thread = threading.Thread(target=self._handle_queue_messages,
+                                                                         daemon=True)
+        self._messages_queue_thread.start()
 
     def _handle_queue_messages(self) -> None:
         """
@@ -59,10 +60,10 @@ class PipelineManager:
         Should be used in a dedicated thread.
         """
         try:
-            while self.messages_queue is not None:
-                message = self.messages_queue.get()
-                if self.websocket_target is not None:
-                    self.websocket_target.send(json.dumps(message.to_dict()))
+            while self._messages_queue is not None:
+                message = self._messages_queue.get()
+                if self._websocket_target is not None:
+                    self._websocket_target.send(json.dumps(message.to_dict()))
         except BaseException as error:  # noqa: BLE001  # pragma: no cover
             logging.warning("Message queue terminated: %s", error.__repr__())  # pragma: no cover
 
@@ -75,7 +76,7 @@ class PipelineManager:
         websocket_connection : simple_websocket.Server
             New websocket connection.
         """
-        self.websocket_target = websocket_connection
+        self._websocket_target = websocket_connection
 
     def execute_pipeline(
         self,
@@ -92,13 +93,13 @@ class PipelineManager:
         execution_id : str
             Unique ID to identify this execution.
         """
-        if execution_id not in self.placeholder_map:
-            self.placeholder_map[execution_id] = self.multiprocessing_manager.dict()
+        if execution_id not in self._placeholder_map:
+            self._placeholder_map[execution_id] = self._multiprocessing_manager.dict()
         process = PipelineProcess(
             pipeline,
             execution_id,
-            self.messages_queue,
-            self.placeholder_map[execution_id],
+            self._messages_queue,
+            self._placeholder_map[execution_id],
         )
         process.execute()
 
@@ -118,11 +119,11 @@ class PipelineManager:
         tuple[str | None, Any]
             Tuple containing placeholder type and placeholder value, or (None, None) if the placeholder does not exist.
         """
-        if execution_id not in self.placeholder_map:
+        if execution_id not in self._placeholder_map:
             return None, None
-        if placeholder_name not in self.placeholder_map[execution_id]:
+        if placeholder_name not in self._placeholder_map[execution_id]:
             return None, None
-        value = self.placeholder_map[execution_id][placeholder_name]
+        value = self._placeholder_map[execution_id][placeholder_name]
         return _get_placeholder_type(value), value
 
 
@@ -150,14 +151,14 @@ class PipelineProcess:
         placeholder_map : dict[str, Any]
             A map to save calculated placeholders in.
         """
-        self.pipeline = pipeline
-        self.id = execution_id
-        self.messages_queue = messages_queue
-        self.placeholder_map = placeholder_map
-        self.process = multiprocessing.Process(target=self._execute, daemon=True)
+        self._pipeline = pipeline
+        self._id = execution_id
+        self._messages_queue = messages_queue
+        self._placeholder_map = placeholder_map
+        self._process = multiprocessing.Process(target=self._execute, daemon=True)
 
     def _send_message(self, message_type: str, value: dict[Any, Any] | str) -> None:
-        self.messages_queue.put(Message(message_type, self.id, value))
+        self._messages_queue.put(Message(message_type, self._id, value))
 
     def _send_exception(self, exception: BaseException) -> None:
         backtrace = get_backtrace_info(exception)
@@ -174,7 +175,7 @@ class PipelineProcess:
         value : Any
             Actual value of the placeholder.
         """
-        self.placeholder_map[placeholder_name] = value
+        self._placeholder_map[placeholder_name] = value
         placeholder_type = _get_placeholder_type(value)
         self._send_message(
             message_type_placeholder_type,
@@ -184,21 +185,21 @@ class PipelineProcess:
     def _execute(self) -> None:
         logging.info(
             "Executing %s.%s.%s...",
-            self.pipeline.main.modulepath,
-            self.pipeline.main.module,
-            self.pipeline.main.pipeline,
+            self._pipeline.main.modulepath,
+            self._pipeline.main.module,
+            self._pipeline.main.pipeline,
         )
-        pipeline_finder = InMemoryFinder(self.pipeline.code)
+        pipeline_finder = InMemoryFinder(self._pipeline.code)
         pipeline_finder.attach()
-        main_module = f"gen_{self.pipeline.main.module}_{self.pipeline.main.pipeline}"
+        main_module = f"gen_{self._pipeline.main.module}_{self._pipeline.main.pipeline}"
         # Populate current_pipeline global, so child process can save placeholders in correct location
         globals()["current_pipeline"] = self
         try:
             runpy.run_module(
                 (
                     main_module
-                    if len(self.pipeline.main.modulepath) == 0
-                    else f"{self.pipeline.main.modulepath}.{main_module}"
+                    if len(self._pipeline.main.modulepath) == 0
+                    else f"{self._pipeline.main.modulepath}.{main_module}"
                 ),
                 run_name="__main__",
                 alter_sys=True,
@@ -215,7 +216,7 @@ class PipelineProcess:
 
         Results, progress and errors are communicated back to the main process.
         """
-        self.process.start()
+        self._process.start()
 
 
 # Pipeline process object visible in child process
@@ -271,19 +272,23 @@ def _get_placeholder_type(value: Any) -> str:
     str
         Safe-DS name corresponding to the given python object instance.
     """
-    if isinstance(value, bool):
-        return "Boolean"
-    if isinstance(value, float):
-        return "Float"
-    if isinstance(value, int):
-        return "Int"
-    if isinstance(value, str):
-        return "String"
-    if isinstance(value, object):
-        object_name = type(value).__name__
-        if object_name == "function":
-            return "Callable"
-        if object_name == "NoneType":
-            return "Null"
-        return object_name
-    return "Any"  # pragma: no cover
+    match value:
+        case bool():
+            return "Boolean"
+        case float():
+            return "Float"
+        case int():
+            return "Int"
+        case str():
+            return "String"
+        case object():
+            object_name = type(value).__name__
+            match object_name:
+                case "function":
+                    return "Callable"
+                case "NoneType":
+                    return "Null"
+                case _:
+                    return object_name
+        case _:
+            return "Any"  # pragma: no cover
