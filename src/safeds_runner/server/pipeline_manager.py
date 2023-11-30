@@ -292,5 +292,5 @@ def _get_placeholder_type(value: Any) -> str:
                     return "Null"
                 case _:
                     return object_name
-        case _:
+        case _:  # pragma: no cover
             return "Any"  # pragma: no cover
