@@ -54,7 +54,7 @@ class PipelineManager:
             daemon=True,
         )
 
-    def _startup(self):
+    def _startup(self) -> None:
         """
         Prepare the runner for running Safe-DS pipelines.
 
