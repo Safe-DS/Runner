@@ -2,3 +2,7 @@
 exclude_lines =
     pragma: no cover
     if\s+(typing\.)?TYPE_CHECKING:
+
+[run]
+parallel = True
+concurrency = multiprocessing, thread

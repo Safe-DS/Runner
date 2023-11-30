@@ -15,6 +15,10 @@ packages = [
 [tool.poetry.dependencies]
 python = "^3.11,<3.13"
 safe-ds = ">=0.14,<0.17"
+flask = "^3.0.0"
+flask-cors = "^4.0.0"
+flask-sock = "^0.7.0"
+gevent = "^23.9.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.4.3"
