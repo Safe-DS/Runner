@@ -4,7 +4,7 @@ import sys
 import threading
 
 import pytest
-from safeds_runner.server.main import ws_main, app_pipeline_manager
+from safeds_runner.server.main import app_pipeline_manager, ws_main
 from safeds_runner.server.messages import (
     Message,
     create_placeholder_description,

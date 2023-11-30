@@ -201,7 +201,7 @@ class PipelineProcess:
                     else f"{self.pipeline.main.modulepath}.{main_module}"
                 ),
                 run_name="__main__",
-                alter_sys=True
+                alter_sys=True,
             )
             self._send_message(message_type_runtime_progress, create_runtime_progress_done())
         except BaseException as error:  # noqa: BLE001

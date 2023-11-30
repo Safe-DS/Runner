@@ -117,8 +117,9 @@ def ws_main(ws: simple_websocket.Server, pipeline_manager: PipelineManager) -> N
                     logging.error("Invalid message data specified in: %s (%s)", received_message, invalid_message)
                     ws.close(None, invalid_message)
                     return
-                placeholder_type, placeholder_value = pipeline_manager.get_placeholder(received_object.id,
-                                                                                       placeholder_query_data)
+                placeholder_type, placeholder_value = pipeline_manager.get_placeholder(
+                    received_object.id, placeholder_query_data,
+                )
                 # send back a value message
                 if placeholder_type is not None:
                     send_websocket_message(
