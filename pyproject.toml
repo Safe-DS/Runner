@@ -12,6 +12,9 @@ packages = [
     { include = "safeds_runner", from = "src" },
 ]
 
+[tool.poetry.scripts]
+safe-ds-runner = "safeds_runner.server.main:main"
+
 [tool.poetry.dependencies]
 python = "^3.11,<3.13"
 safe-ds = ">=0.14,<0.17"
