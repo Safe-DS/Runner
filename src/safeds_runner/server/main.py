@@ -118,7 +118,8 @@ def ws_main(ws: simple_websocket.Server, pipeline_manager: PipelineManager) -> N
                     ws.close(None, invalid_message)
                     return
                 placeholder_type, placeholder_value = pipeline_manager.get_placeholder(
-                    received_object.id, placeholder_query_data,
+                    received_object.id,
+                    placeholder_query_data,
                 )
                 # send back a value message
                 if placeholder_type is not None:
