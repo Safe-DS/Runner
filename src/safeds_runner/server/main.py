@@ -64,7 +64,7 @@ def create_flask_websocket(flask_app: flask.app.App) -> flask_sock.Sock:
 
 app = create_flask_app()
 sock = create_flask_websocket(app)
-app_pipeline_manager = PipelineManager()
+app_pipeline_manager = None
 
 
 @sock.route("/WSMain")
@@ -185,4 +185,5 @@ def main() -> None:  # pragma: no cover
 
 
 if __name__ == "__main__":
+    app_pipeline_manager = PipelineManager()  # Initialize deferred so new process is not spawned during startup
     main()  # pragma: no cover
