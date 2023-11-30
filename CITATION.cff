@@ -1,0 +1,70 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+message: >-
+  Please cite this software using the metadata from
+  'preferred-citation'.
+type: software
+title: Safe-DS Runner
+repository-code: https://github.com/Safe-DS/Runner
+license: MIT
+preferred-citation:
+  type: conference-paper
+  year: 2023
+  conference:
+    name: >-
+      2023 IEEE/ACM 45th International Conference on
+      Software Engineering: New Ideas and Emerging Results
+  collection-title: >-
+    2023 IEEE/ACM 45th International Conference on
+    Software Engineering: New Ideas and Emerging Results
+  title: >-
+    An Alternative to Cells for Selective Execution of Data Science Pipelines
+  authors:
+    - given-names: Lars
+      family-names: Reimann
+      email: "reimann@cs.uni-bonn.de"
+      affiliation: >-
+        Institute for Computer Science III, University
+        of Bonn, Germany
+      orcid: "https://orcid.org/0000-0002-5129-3902"
+    - affiliation: >-
+        Institute for Computer Science III, University
+        of Bonn, Germany
+      given-names: Günter
+      family-names: Kniesel-Wünsche
+  abstract: >-
+    Data Scientists often use notebooks to develop Data Science (DS) pipelines,
+    particularly since they allow to selectively execute parts of the pipeline.
+    However, notebooks for DS have many well-known flaws. We focus on the
+    following ones in this paper: (1) Notebooks can become littered with code
+    cells that are not part of the main DS pipeline but exist solely to make
+    decisions (e.g. listing the columns of a tabular dataset). (2) While users
+    are allowed to execute cells in any order, not every ordering is correct,
+    because a cell can depend on declarations from other cells. (3) After making
+    changes to a cell, this cell and all cells that depend on changed
+    declarations must be rerun. (4) Changes to external values necessitate
+    partial re-execution of the notebook. (5) Since cells are the smallest unit
+    of execution, code that is unaffected by changes, can inadvertently be
+    re-executed. To solve these issues, we propose to replace cells as the basis
+    for the selective execution of DS pipelines. Instead, we suggest populating
+    a context-menu for variables with actions fitting their type (like listing
+    columns if the variable is a tabular dataset). These actions are executed
+    based on a data-flow analysis to ensure dependencies between variables are
+    respected and results are updated properly after changes. Our solution
+    separates pipeline code from decision making code and automates dependency
+    management, thus reducing clutter and the risk of making errors.
+  keywords:
+    - "notebook"
+    - "usability"
+    - "data science"
+    - "machine learning"
+  doi: "10.1109/ICSE-NIER58687.2023.00029"
+  identifiers:
+    - type: doi
+      value: "10.1109/ICSE-NIER58687.2023.00029"
+      description: "IEEE Xplore"
+    - type: doi
+      value: "10.48550/arXiv.2302.14556"
+      description: "arXiv (preprint)"
