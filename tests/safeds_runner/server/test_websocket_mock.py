@@ -4,7 +4,6 @@ import sys
 import threading
 
 import pytest
-
 import safeds_runner.server.main
 from safeds_runner.server.main import ws_main
 from safeds_runner.server.messages import (
