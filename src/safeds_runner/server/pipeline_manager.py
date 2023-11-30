@@ -6,10 +6,8 @@ import multiprocessing
 import queue
 import runpy
 import threading
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from multiprocessing.managers import SyncManager
+from functools import cached_property
+from multiprocessing.managers import SyncManager
 from typing import Any
 
 import simple_websocket
@@ -37,22 +35,36 @@ class PipelineManager:
     """
 
     def __init__(self) -> None:
-        """
-        Prepare the runner for running Safe-DS pipelines.
-
-        Firstly, structures shared between processes are created.
-        After that a message queue handling thread is started in the main process.
-        This allows receiving messages directly from one of the pipeline processes and relaying information
-        directly to the websocket connection (to the VS Code extension).
-        """
-        self._multiprocessing_manager: SyncManager = multiprocessing.Manager()
+        """Create a new PipelineManager object, which needs to be started by calling startup()."""
         self._placeholder_map: dict = {}
-        self._messages_queue: queue.Queue[Message] = self._multiprocessing_manager.Queue()
         self._websocket_target: simple_websocket.Server | None = None
-        self._messages_queue_thread: threading.Thread = threading.Thread(
+
+    @cached_property
+    def _multiprocessing_manager(self) -> SyncManager:
+        return multiprocessing.Manager()
+
+    @cached_property
+    def _messages_queue(self) -> queue.Queue[Message]:
+        return self._multiprocessing_manager.Queue()
+
+    @cached_property
+    def _messages_queue_thread(self) -> threading.Thread:
+        return threading.Thread(
             target=self._handle_queue_messages,
             daemon=True,
         )
+
+    def startup(self):
+        """
+        Prepare the runner for running Safe-DS pipelines.
+
+        Firstly, structures shared between processes are lazily created.
+        After that a message queue handling thread is started in the main process.
+        This allows receiving messages directly from one of the pipeline processes and relaying information
+        directly to the websocket connection (to the VS Code extension).
+
+        This method should not be called during the bootstrap phase of the python interpreter, as it leads to a crash.
+        """
         self._messages_queue_thread.start()
 
     def _handle_queue_messages(self) -> None:

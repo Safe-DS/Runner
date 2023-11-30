@@ -64,13 +64,12 @@ def create_flask_websocket(flask_app: flask.app.App) -> flask_sock.Sock:
 
 app = create_flask_app()
 sock = create_flask_websocket(app)
-app_pipeline_manager: PipelineManager | None = None
+app_pipeline_manager = PipelineManager()
 
 
 @sock.route("/WSMain")
 def _ws_main(ws: simple_websocket.Server) -> None:
-    if app_pipeline_manager is not None:  # pragma: no cover
-        ws_main(ws, app_pipeline_manager)  # pragma: no cover
+    ws_main(ws, app_pipeline_manager)  # pragma: no cover
 
 
 def ws_main(ws: simple_websocket.Server, pipeline_manager: PipelineManager) -> None:
@@ -187,5 +186,5 @@ def main() -> None:  # pragma: no cover
 
 if __name__ == "__main__":
     # Initialize PipelineManager deferred so new process is not spawned during startup
-    app_pipeline_manager = PipelineManager()  # pragma: no cover
+    app_pipeline_manager.startup()  # pragma: no cover
     main()  # pragma: no cover
