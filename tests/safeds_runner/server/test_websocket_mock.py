@@ -44,7 +44,7 @@ class MockWebsocketConnection:
             with self.condition_variable:
                 if len(self.received) >= wait_for_messages:
                     return
-                self.condition_variable.wait()
+                self.condition_variable.wait(1.0)  # this should not be needed, but it seems the process can get stuck
 
 
 @pytest.mark.parametrize(
