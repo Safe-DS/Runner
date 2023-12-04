@@ -2,6 +2,7 @@
 
 import json
 import logging
+import sys
 
 import flask.app
 import flask_sock
@@ -100,6 +101,10 @@ def ws_main(ws: simple_websocket.Server, pipeline_manager: PipelineManager) -> N
             ws.close(message=error_short)
             return
         match received_object.type:
+            case "shutdown":
+                logging.debug("Requested shutdown...")
+                pipeline_manager.shutdown()
+                sys.exit(0)
             case "program":
                 program_data, invalid_message = messages.validate_program_message_data(received_object.data)
                 if program_data is None:
