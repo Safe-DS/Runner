@@ -179,8 +179,9 @@ def main() -> None:  # pragma: no cover
 
     parser = argparse.ArgumentParser(description="Start Safe-DS Runner on a specific port.")
     parser.add_argument("--port", type=int, default=5000, help="Port on which to run the python server.")
-    parser.add_argument("-V", "--version", action="version",
-                        version='%(prog)s {version}'.format(version=version("safe-ds-runner")))
+    parser.add_argument(
+        "-V", "--version", action="version", version="%(prog)s {version}".format(version=version("safe-ds-runner")),
+    )
     args = parser.parse_args()
     logging.info("Starting Safe-DS Runner on port %s", str(args.port))
     # Only bind to host=127.0.0.1. Connections from other devices should not be accepted
