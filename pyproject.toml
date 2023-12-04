@@ -13,7 +13,7 @@ packages = [
 ]
 
 [tool.poetry.scripts]
-safe-ds-runner = "safeds_runner.server.main:main"
+safe-ds-runner = "safeds_runner.main:main"
 
 [tool.poetry.dependencies]
 python = "^3.11,<3.13"

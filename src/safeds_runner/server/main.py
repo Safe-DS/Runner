@@ -1,9 +1,7 @@
 """Module containing the main entry point, for starting the Safe-DS runner."""
 
-import argparse
 import json
 import logging
-from importlib.metadata import version
 
 import flask.app
 import flask_sock
@@ -162,12 +160,8 @@ def send_websocket_message(connection: simple_websocket.Server, message: Message
     connection.send(json.dumps(message.to_dict()))
 
 
-def main() -> None:  # pragma: no cover
-    """
-    Execute the runner application.
-
-    Main entry point of the runner application.
-    """
+def start_server(port: int) -> None:  # pragma: no cover
+    """Start the Safe-DS Runner server."""
     # Allow prints to be unbuffered by default
     import builtins
     import functools
@@ -177,19 +171,6 @@ def main() -> None:  # pragma: no cover
     logging.getLogger().setLevel(logging.DEBUG)
     from gevent.pywsgi import WSGIServer
 
-    parser = argparse.ArgumentParser(description="Start Safe-DS Runner on a specific port.")
-    parser.add_argument("--port", type=int, default=5000, help="Port on which to run the python server.")
-    parser.add_argument(
-        "-V",
-        "--version",
-        action="version",
-        version="%(prog)s {version}".format(version=version("safe-ds-runner")),
-    )
-    args = parser.parse_args()
-    logging.info("Starting Safe-DS Runner on port %s", str(args.port))
+    logging.info("Starting Safe-DS Runner on port %s", str(port))
     # Only bind to host=127.0.0.1. Connections from other devices should not be accepted
-    WSGIServer(("127.0.0.1", args.port), app).serve_forever()
-
-
-if __name__ == "__main__":
-    main()  # pragma: no cover
+    WSGIServer(("127.0.0.1", port), app).serve_forever()
