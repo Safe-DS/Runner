@@ -22,7 +22,7 @@ message_types = [
     message_type_placeholder_value,
     message_type_runtime_error,
     message_type_runtime_progress,
-    message_type_shutdown
+    message_type_shutdown,
 ]
 
 
