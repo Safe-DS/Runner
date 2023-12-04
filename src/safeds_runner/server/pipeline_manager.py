@@ -41,7 +41,7 @@ class PipelineManager:
 
     @cached_property
     def _multiprocessing_manager(self) -> SyncManager:
-        multiprocessing.set_start_method('spawn')
+        multiprocessing.set_start_method("spawn")
         return multiprocessing.Manager()
 
     @cached_property
