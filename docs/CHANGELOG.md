@@ -1,3 +1,10 @@
+## [0.3.0](https://github.com/Safe-DS/Runner/compare/v0.2.1...v0.3.0) (2023-12-04)
+
+
+### Features
+
+* add cli argument to display runner version ([#21](https://github.com/Safe-DS/Runner/issues/21)) ([3917c5f](https://github.com/Safe-DS/Runner/commit/3917c5f7491711367c872d907800e869de255cd8)), closes [#19](https://github.com/Safe-DS/Runner/issues/19)
+
 ## [0.2.1](https://github.com/Safe-DS/Runner/compare/v0.2.0...v0.2.1) (2023-11-30)
 
 
