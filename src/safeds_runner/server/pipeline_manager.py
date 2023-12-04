@@ -35,13 +35,14 @@ class PipelineManager:
     """
 
     def __init__(self) -> None:
-        """Create a new PipelineManager object, which needs to be started by calling startup()."""
+        """Create a new PipelineManager object, which is lazily started, when needed."""
         self._placeholder_map: dict = {}
         self._websocket_target: simple_websocket.Server | None = None
 
     @cached_property
     def _multiprocessing_manager(self) -> SyncManager:
-        multiprocessing.set_start_method('spawn')
+        if multiprocessing.get_start_method() != 'spawn':
+            multiprocessing.set_start_method('spawn', True)
         return multiprocessing.Manager()
 
     @cached_property
