@@ -17,10 +17,10 @@ pip install safe-ds-runner
 
 ## Usage
 
-Launch the runner:
+Start the runner server:
 
 ```shell
-safe-ds-runner
+safe-ds-runner start
 ```
 
 ## Documentation
