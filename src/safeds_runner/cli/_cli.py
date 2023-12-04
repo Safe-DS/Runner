@@ -2,7 +2,7 @@ import argparse
 import logging
 from importlib.metadata import version
 
-from ..server.main import start_server
+from safeds_runner.server.main import start_server
 
 
 class Commands:
@@ -10,9 +10,7 @@ class Commands:
 
 
 def cli() -> None:
-    """
-    The command line interface of the application.
-    """
+    """Run the application via the command line."""
     args = _get_args()
 
     # Set logging level
