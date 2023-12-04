@@ -9,7 +9,7 @@ class Commands:
     START = "start"
 
 
-def cli() -> None:
+def cli() -> None:  # pragma: no cover
     """Run the application via the command line."""
     args = _get_args()
 
