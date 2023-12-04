@@ -1,3 +1,5 @@
+"""The main entry point of the application."""
+
 from safeds_runner.cli import cli
 
 

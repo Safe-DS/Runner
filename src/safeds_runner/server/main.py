@@ -161,9 +161,7 @@ def send_websocket_message(connection: simple_websocket.Server, message: Message
 
 
 def start_server(port: int) -> None:  # pragma: no cover
-    """
-    Start the Safe-DS Runner server.
-    """
+    """Start the Safe-DS Runner server."""
     # Allow prints to be unbuffered by default
     import builtins
     import functools
