@@ -25,7 +25,7 @@ def cli() -> None:  # pragma: no cover
             start_server(args.port)
 
 
-def _get_args() -> argparse.Namespace:
+def _get_args() -> argparse.Namespace:  # pragma: no cover
     parser = argparse.ArgumentParser(description="Execute Safe-DS programs that were compiled to Python.")
     parser.add_argument(
         "-V",
@@ -42,6 +42,6 @@ def _get_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _add_start_subparser(subparsers: argparse._SubParsersAction) -> None:
+def _add_start_subparser(subparsers: argparse._SubParsersAction) -> None:  # pragma: no cover
     parser = subparsers.add_parser(Commands.START, help="start the Safe-DS Runner server")
     parser.add_argument("-p", "--port", type=int, default=5000, help="the port to use")
