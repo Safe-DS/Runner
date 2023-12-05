@@ -396,4 +396,4 @@ def helper_should_shut_itself_down_run_in_subprocess(sub_messages: list[str]) ->
     ws_main(mock_connection, PipelineManager())
 
 
-helper_should_shut_itself_down_run_in_subprocess.__test__ = False
+helper_should_shut_itself_down_run_in_subprocess.__test__ = False  # type: ignore
