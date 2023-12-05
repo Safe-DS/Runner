@@ -1,3 +1,15 @@
+## [0.4.0](https://github.com/Safe-DS/Runner/compare/v0.3.0...v0.4.0) (2023-12-05)
+
+
+### Features
+
+* shutdown messages ([#25](https://github.com/Safe-DS/Runner/issues/25)) ([93fcb85](https://github.com/Safe-DS/Runner/commit/93fcb85de9adff9b4206627447ad79347c43dfaa)), closes [#24](https://github.com/Safe-DS/Runner/issues/24)
+
+
+### Bug Fixes
+
+* race condition when initializing multiprocessing manager ([#26](https://github.com/Safe-DS/Runner/issues/26)) ([fc5934f](https://github.com/Safe-DS/Runner/commit/fc5934f7ad1c5d91aedb439a0f91396d519afd2b)), closes [#18](https://github.com/Safe-DS/Runner/issues/18)
+
 ## [0.3.0](https://github.com/Safe-DS/Runner/compare/v0.2.1...v0.3.0) (2023-12-04)
 
 
