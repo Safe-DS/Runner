@@ -145,6 +145,14 @@ class PipelineManager:
         value = self._placeholder_map[execution_id][placeholder_name]
         return _get_placeholder_type(value), value
 
+    def shutdown(self) -> None:
+        """
+        Shut down the multiprocessing manager to end the used subprocess.
+
+        This should only be called if this PipelineManager is not intended to be reused again.
+        """
+        self._multiprocessing_manager.shutdown()
+
 
 class PipelineProcess:
     """A process that executes a Safe-DS pipeline."""

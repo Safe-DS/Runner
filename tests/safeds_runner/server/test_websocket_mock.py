@@ -1,4 +1,5 @@
 import json
+import multiprocessing
 import os
 import sys
 import threading
@@ -15,6 +16,7 @@ from safeds_runner.server.messages import (
     message_type_runtime_error,
     message_type_runtime_progress,
 )
+from safeds_runner.server.pipeline_manager import PipelineManager
 
 
 class MockWebsocketConnection:
@@ -366,3 +368,34 @@ def test_should_successfully_execute_simple_flow(messages: list[str], expected_r
     mock_connection.wait_for_messages(1)
     query_result_invalid = Message.from_dict(json.loads(mock_connection.get_next_received_message()))
     assert query_result_invalid == expected_response
+
+
+@pytest.mark.skipif(
+    sys.platform.startswith("win") and os.getenv("COVERAGE_RCFILE") is not None,
+    reason=(
+        "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
+        "causes Manager to hang, when using multiprocessing coverage"
+    ),
+)
+@pytest.mark.parametrize(
+    argnames="messages",
+    argvalues=[
+        [
+            json.dumps({"type": "shutdown", "id": "", "data": ""}),
+        ],
+    ],
+    ids=["shutdown_message"],
+)
+def test_should_shut_itself_down(messages: list[str]) -> None:
+    process = multiprocessing.Process(target=helper_should_shut_itself_down_run_in_subprocess, args=(messages,))
+    process.start()
+    process.join(30)
+    assert process.exitcode == 0
+
+
+def helper_should_shut_itself_down_run_in_subprocess(sub_messages: list[str]) -> None:
+    mock_connection = MockWebsocketConnection(sub_messages)
+    ws_main(mock_connection, PipelineManager())
+
+
+helper_should_shut_itself_down_run_in_subprocess.__test__ = False  # type: ignore[attr-defined]

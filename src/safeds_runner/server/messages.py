@@ -13,6 +13,7 @@ message_type_placeholder_type = "placeholder_type"
 message_type_placeholder_value = "placeholder_value"
 message_type_runtime_error = "runtime_error"
 message_type_runtime_progress = "runtime_progress"
+message_type_shutdown = "shutdown"
 
 message_types = [
     message_type_program,
@@ -21,6 +22,7 @@ message_types = [
     message_type_placeholder_value,
     message_type_runtime_error,
     message_type_runtime_progress,
+    message_type_shutdown,
 ]
 
 
