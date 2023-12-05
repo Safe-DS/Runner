@@ -1,11 +1,10 @@
 import json
+import multiprocessing
 import os
 import sys
 import threading
 
 import pytest
-import multiprocessing
-
 from safeds_runner.server.main import app_pipeline_manager, ws_main
 from safeds_runner.server.messages import (
     Message,
@@ -370,8 +369,8 @@ def test_should_successfully_execute_simple_flow(messages: list[str], expected_r
 @pytest.mark.skipif(
     sys.platform.startswith("win") and os.getenv("COVERAGE_RCFILE") is not None,
     reason=(
-            "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
-            "causes Manager to hang, when using multiprocessing coverage"
+        "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
+        "causes Manager to hang, when using multiprocessing coverage"
     ),
 )
 @pytest.mark.parametrize(
@@ -384,8 +383,7 @@ def test_should_successfully_execute_simple_flow(messages: list[str], expected_r
     ids=["shutdown_message"],
 )
 def test_should_shut_itself_down(messages: list[str]) -> None:
-    process = multiprocessing.Process(target=helper_should_shut_itself_down_run_in_subprocess,
-                                      args=(messages,))
+    process = multiprocessing.Process(target=helper_should_shut_itself_down_run_in_subprocess, args=(messages,))
     process.start()
     process.join(30)
     assert process.exitcode == 0
