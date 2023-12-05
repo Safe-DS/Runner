@@ -42,7 +42,7 @@ class PipelineManager:
     @cached_property
     def _multiprocessing_manager(self) -> SyncManager:
         if multiprocessing.get_start_method() != "spawn":
-            multiprocessing.set_start_method("spawn", True)
+            multiprocessing.set_start_method("spawn", force=True)
         return multiprocessing.Manager()
 
     @cached_property
@@ -67,6 +67,7 @@ class PipelineManager:
 
         This method should not be called during the bootstrap phase of the python interpreter, as it leads to a crash.
         """
+        _mq = self._messages_queue  # Initialize it here before starting a thread to avoid potential race condition
         if not self._messages_queue_thread.is_alive():
             self._messages_queue_thread.start()
 

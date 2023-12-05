@@ -23,11 +23,11 @@ class MockWebsocketConnection:
         self.received: list[str] = []
         self.close_reason: int | None = None
         self.close_message: str | None = None
-        self.condition_variable = threading.Condition()
+        self.condition_variable = threading.Condition(lock=threading.Lock())
 
     def send(self, msg: str) -> None:
-        self.received.append(msg)
         with self.condition_variable:
+            self.received.append(msg)
             self.condition_variable.notify_all()
 
     def receive(self) -> str | None:
@@ -45,6 +45,10 @@ class MockWebsocketConnection:
                 if len(self.received) >= wait_for_messages:
                     return
                 self.condition_variable.wait(1.0)  # this should not be needed, but it seems the process can get stuck
+
+    def get_next_received_message(self) -> str:
+        with self.condition_variable:
+            return self.received.pop(0)
 
 
 @pytest.mark.parametrize(
@@ -208,7 +212,7 @@ def test_should_execute_pipeline_return_exception(
     mock_connection = MockWebsocketConnection(messages)
     ws_main(mock_connection, app_pipeline_manager)
     mock_connection.wait_for_messages(1)
-    exception_message = Message.from_dict(json.loads(mock_connection.received.pop(0)))
+    exception_message = Message.from_dict(json.loads(mock_connection.get_next_received_message()))
 
     assert exception_message.type == expected_response_runtime_error.type
     assert exception_message.id == expected_response_runtime_error.id
@@ -293,7 +297,7 @@ def test_should_execute_pipeline_return_valid_placeholder(
     # And compare with expected responses
     while len(expected_responses) > 0:
         mock_connection.wait_for_messages(1)
-        next_message = Message.from_dict(json.loads(mock_connection.received.pop(0)))
+        next_message = Message.from_dict(json.loads(mock_connection.get_next_received_message()))
         assert next_message == expected_responses.pop(0)
 
 
@@ -360,5 +364,5 @@ def test_should_successfully_execute_simple_flow(messages: list[str], expected_r
     mock_connection = MockWebsocketConnection(messages)
     ws_main(mock_connection, app_pipeline_manager)
     mock_connection.wait_for_messages(1)
-    query_result_invalid = Message.from_dict(json.loads(mock_connection.received.pop(0)))
+    query_result_invalid = Message.from_dict(json.loads(mock_connection.get_next_received_message()))
     assert query_result_invalid == expected_response
