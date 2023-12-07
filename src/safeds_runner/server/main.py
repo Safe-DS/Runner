@@ -12,6 +12,7 @@ from flask_cors import CORS
 from flask_sock import Sock
 
 from safeds_runner.server import messages
+from safeds_runner.server.json_encoder import SafeDSEncoder
 from safeds_runner.server.messages import (
     Message,
     create_placeholder_value,
@@ -127,14 +128,25 @@ def ws_main(ws: simple_websocket.Server, pipeline_manager: PipelineManager) -> N
                 )
                 # send back a value message
                 if placeholder_type is not None:
-                    send_websocket_message(
-                        ws,
-                        Message(
-                            message_type_placeholder_value,
-                            received_object.id,
-                            create_placeholder_value(placeholder_query_data, placeholder_type, placeholder_value),
-                        ),
-                    )
+                    try:
+                        send_websocket_message(
+                            ws,
+                            Message(
+                                message_type_placeholder_value,
+                                received_object.id,
+                                create_placeholder_value(placeholder_query_data, placeholder_type, placeholder_value),
+                            ),
+                        )
+                    except TypeError as _encoding_error:
+                        # if the value can't be encoded send back that the value exists but is not displayable
+                        send_websocket_message(
+                            ws,
+                            Message(
+                                message_type_placeholder_value,
+                                received_object.id,
+                                create_placeholder_value(placeholder_query_data, placeholder_type, "<Not displayable>"),
+                            ),
+                        )
                 else:
                     # Send back empty type / value, to communicate that no placeholder exists (yet)
                     # Use name from query to allow linking a response to a request on the peer
@@ -162,7 +174,7 @@ def send_websocket_message(connection: simple_websocket.Server, message: Message
     message : Message
         Object that will be sent.
     """
-    connection.send(json.dumps(message.to_dict()))
+    connection.send(json.dumps(message.to_dict(), cls=SafeDSEncoder))
 
 
 def start_server(port: int) -> None:  # pragma: no cover

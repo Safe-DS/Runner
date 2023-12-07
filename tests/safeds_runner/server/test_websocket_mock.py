@@ -250,7 +250,8 @@ def test_should_execute_pipeline_return_exception(
                                 "gen_test_a": (
                                     "import safeds_runner.server.pipeline_manager\n\ndef pipe():\n\tvalue1 ="
                                     " 1\n\tsafeds_runner.server.pipeline_manager.runner_save_placeholder('value1',"
-                                    " value1)\n"
+                                    " value1)\n\tsafeds_runner.server.pipeline_manager.runner_save_placeholder('obj',"
+                                    " object())\n"
                                 ),
                                 "gen_test_a_pipe": (
                                     "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()"
@@ -265,16 +266,22 @@ def test_should_execute_pipeline_return_exception(
             [
                 # Query Placeholder
                 json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": "value1"}),
+                # Query not displayable Placeholder
+                json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": "obj"}),
                 # Query invalid placeholder
                 json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": "value2"}),
             ],
             [
                 # Validate Placeholder Information
                 Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("value1", "Int")),
+                Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("obj", "object")),
                 # Validate Progress Information
                 Message(message_type_runtime_progress, "abcdefg", create_runtime_progress_done()),
                 # Query Result Valid
                 Message(message_type_placeholder_value, "abcdefg", create_placeholder_value("value1", "Int", 1)),
+                # Query Result not displayable
+                Message(message_type_placeholder_value, "abcdefg", create_placeholder_value("obj", "object",
+                                                                                            "<Not displayable>")),
                 # Query Result Invalid
                 Message(message_type_placeholder_value, "abcdefg", create_placeholder_value("value2", "", "")),
             ],
