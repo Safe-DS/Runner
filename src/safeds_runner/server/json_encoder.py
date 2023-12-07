@@ -14,8 +14,11 @@ class SafeDSEncoder(json.JSONEncoder):
 
     def default(self, o: Any) -> Any:
         """
-        Check if values are custom Safe-DS types (such as Table or Image) convert them to a serializable representation.
+        Convert specific Safe-DS types to a JSON-serializable representation.
+
+        If values are custom Safe-DS types (such as Table or Image) they are converted to a serializable representation.
         If a value is not handled here, the default encoding implementation is called.
+        In case of Tables, note that NaN values are converted to JSON null values.
 
         Parameters
         ----------
@@ -39,5 +42,4 @@ class SafeDSEncoder(json.JSONEncoder):
                     return {"format": o.format.value, "bytes": str(base64.encodebytes(o._repr_jpeg_()), "utf-8")}
                 case ImageFormat.PNG:
                     return {"format": o.format.value, "bytes": str(base64.encodebytes(o._repr_png_()), "utf-8")}
-            return ""
         return json.JSONEncoder.default(self, o)
