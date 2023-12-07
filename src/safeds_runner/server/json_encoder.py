@@ -1,6 +1,7 @@
 """Module containing JSON encoding utilities for Safe-DS types."""
-import json
+
 import base64
+import json
 import math
 from typing import Any
 
@@ -33,8 +34,13 @@ class SafeDSEncoder(json.JSONEncoder):
         if isinstance(o, Table):
             dict_with_nan_infinity = o.to_dict()
             # Convert NaN / Infinity to None, as the JSON encoder generates invalid JSON otherwise
-            return {key: [value if not isinstance(value, float) or math.isfinite(value) else None for value in
-                          dict_with_nan_infinity[key]] for key in dict_with_nan_infinity}
+            return {
+                key: [
+                    value if not isinstance(value, float) or math.isfinite(value) else None
+                    for value in dict_with_nan_infinity[key]
+                ]
+                for key in dict_with_nan_infinity
+            }
         if isinstance(o, Image):
             # Send images together with their format
             match o.format:

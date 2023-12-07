@@ -280,8 +280,11 @@ def test_should_execute_pipeline_return_exception(
                 # Query Result Valid
                 Message(message_type_placeholder_value, "abcdefg", create_placeholder_value("value1", "Int", 1)),
                 # Query Result not displayable
-                Message(message_type_placeholder_value, "abcdefg", create_placeholder_value("obj", "object",
-                                                                                            "<Not displayable>")),
+                Message(
+                    message_type_placeholder_value,
+                    "abcdefg",
+                    create_placeholder_value("obj", "object", "<Not displayable>"),
+                ),
                 # Query Result Invalid
                 Message(message_type_placeholder_value, "abcdefg", create_placeholder_value("value2", "", "")),
             ],
