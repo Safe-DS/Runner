@@ -9,7 +9,7 @@ from safeds.data.image.typing import ImageFormat
 from safeds.data.tabular.containers import Table
 import json
 
-from safeds_runner.server.json_encoder import SafeDSEncoder
+from safeds_runner.server.json_encoder import SafeDsEncoder
 
 
 @pytest.mark.parametrize(argnames="data,expected_string", argvalues=[(
@@ -30,11 +30,11 @@ from safeds_runner.server.json_encoder import SafeDSEncoder
      '+Tl5ufo6erx8vP09fb3+Pn6/9oACAEBAAA/AEr/2Q==\\n"}')],
                          ids=["encode_table", "encode_image_png", "encode_image_jpeg"])
 def test_encoding_custom_types(data: Any, expected_string: str) -> None:
-    assert json.dumps(data, cls=SafeDSEncoder) == expected_string
+    assert json.dumps(data, cls=SafeDsEncoder) == expected_string
 
 
 @pytest.mark.parametrize(argnames="data", argvalues=[(object())],
                          ids=["encode_object"])
 def test_encoding_unsupported_types(data: Any) -> None:
     with pytest.raises(TypeError):
-        json.dumps(data, cls=SafeDSEncoder)
+        json.dumps(data, cls=SafeDsEncoder)

@@ -12,7 +12,7 @@ from flask_cors import CORS
 from flask_sock import Sock
 
 from safeds_runner.server import messages
-from safeds_runner.server.json_encoder import SafeDSEncoder
+from safeds_runner.server.json_encoder import SafeDsEncoder
 from safeds_runner.server.messages import (
     Message,
     create_placeholder_value,
@@ -174,7 +174,7 @@ def send_websocket_message(connection: simple_websocket.Server, message: Message
     message : Message
         Object that will be sent.
     """
-    connection.send(json.dumps(message.to_dict(), cls=SafeDSEncoder))
+    connection.send(json.dumps(message.to_dict(), cls=SafeDsEncoder))
 
 
 def start_server(port: int) -> None:  # pragma: no cover

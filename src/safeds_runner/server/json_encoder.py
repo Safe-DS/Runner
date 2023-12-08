@@ -9,7 +9,7 @@ from safeds.data.image.typing import ImageFormat
 from safeds.data.tabular.containers import Table
 
 
-class SafeDSEncoder(json.JSONEncoder):
+class SafeDsEncoder(json.JSONEncoder):
     """JSON Encoder for custom Safe-DS types."""
 
     def default(self, o: Any) -> Any:
