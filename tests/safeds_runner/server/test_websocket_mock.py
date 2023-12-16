@@ -4,6 +4,7 @@ import multiprocessing
 import os
 import sys
 import threading
+import time
 
 import pytest
 import safeds_runner.server.main
@@ -418,7 +419,6 @@ def helper_should_shut_itself_down_run_in_subprocess(sub_messages: list[str]) ->
 helper_should_shut_itself_down_run_in_subprocess.__test__ = False  # type: ignore[attr-defined]
 
 
-@pytest.mark.skip()
 @pytest.mark.timeout(45)
 def test_should_accept_at_least_2_parallel_connections_in_subprocess() -> None:
     port = 6000
@@ -437,13 +437,16 @@ def test_should_accept_at_least_2_parallel_connections_in_subprocess() -> None:
             break
     connected = False
     client1 = None
-    try:
-        client1 = simple_websocket.Client.connect(f"ws://127.0.0.1:{port}/WSMain")
-        client2 = simple_websocket.Client.connect(f"ws://127.0.0.1:{port}/WSMain")
-        connected = client1.connected and client2.connected
-    except ConnectionRefusedError as e:
-        logging.warning("Connection refused: %s", e)
-        connected = False
+    for _i in range(0, 10):
+        try:
+            client1 = simple_websocket.Client.connect(f"ws://127.0.0.1:{port}/WSMain")
+            client2 = simple_websocket.Client.connect(f"ws://127.0.0.1:{port}/WSMain")
+            connected = client1.connected and client2.connected
+            break
+        except ConnectionRefusedError as e:
+            logging.warning("Connection refused: %s", e)
+            connected = False
+            time.sleep(0.5)
     if client1 is not None and client1.connected:
         client1.send('{"id": "", "type": "shutdown", "data": ""}')
         process.join(5)
