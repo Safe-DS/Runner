@@ -1,4 +1,5 @@
 import json
+import logging
 import multiprocessing
 import os
 import sys
@@ -432,19 +433,26 @@ def test_should_accept_at_least_2_parallel_connections_in_subprocess() -> None:
         # Wait for first line of log
         if process_line.startswith("INFO:root:Starting Safe-DS Runner"):
             break
-
-    client1 = simple_websocket.Client.connect(f"ws://127.0.0.1:{port}/WSMain")
-    client2 = simple_websocket.Client.connect(f"ws://127.0.0.1:{port}/WSMain")
-    connected = client1.connected and client2.connected
-    client1.send('{"id": "", "type": "shutdown", "data": ""}')
-    process.join(5)
+    connected = False
+    client1 = None
+    try:
+        client1 = simple_websocket.Client.connect(f"ws://127.0.0.1:{port}/WSMain")
+        client2 = simple_websocket.Client.connect(f"ws://127.0.0.1:{port}/WSMain")
+        connected = client1.connected and client2.connected
+    except ConnectionRefusedError as e:
+        logging.warning(f"Connection refused: {e}")
+        connected = False
+    if client1 is not None and client1.connected:
+        client1.send('{"id": "", "type": "shutdown", "data": ""}')
+        process.join(5)
     if process.is_alive():
         process.kill()
     assert connected
 
 
 def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(port: int, pipe: multiprocessing.connection.Connection) -> None:
-    sys.stderr.write = lambda value: pipe.send(value)
+    sys.stderr.write = lambda value: pipe.send(value)  # type: ignore[method-assign, assignment]
+    sys.stdout.write = lambda value: pipe.send(value)  # type: ignore[method-assign, assignment]
     safeds_runner.server.main.start_server(port)
 
 
