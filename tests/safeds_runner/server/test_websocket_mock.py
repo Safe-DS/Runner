@@ -6,9 +6,8 @@ import sys
 import threading
 
 import pytest
-import simple_websocket
-
 import safeds_runner.server.main
+import simple_websocket
 from safeds_runner.server.main import app_pipeline_manager, ws_main
 from safeds_runner.server.messages import (
     Message,
@@ -69,87 +68,86 @@ class MockWebsocketConnection:
         (json.dumps({"type": "program", "id": "1234", "data": "a"}), "Message data is not a JSON object"),
         (json.dumps({"type": "placeholder_query", "id": "123", "data": {"a": "v"}}), "Message data is not a string"),
         (
-                json.dumps({
-                    "type": "program",
-                    "id": "1234",
-                    "data": {"main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
-                }),
-                "No 'code' parameter given",
+            json.dumps({
+                "type": "program",
+                "id": "1234",
+                "data": {"main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
+            }),
+            "No 'code' parameter given",
         ),
         (
-                json.dumps({"type": "program", "id": "1234", "data": {"code": {"": {"entry": ""}}}}),
-                "No 'main' parameter given",
+            json.dumps({"type": "program", "id": "1234", "data": {"code": {"": {"entry": ""}}}}),
+            "No 'main' parameter given",
         ),
         (
-                json.dumps({
-                    "type": "program",
-                    "id": "1234",
-                    "data": {"code": {"": {"entry": ""}}, "main": {"modulepath": "1", "module": "2"}},
-                }),
-                "Invalid 'main' parameter given",
+            json.dumps({
+                "type": "program",
+                "id": "1234",
+                "data": {"code": {"": {"entry": ""}}, "main": {"modulepath": "1", "module": "2"}},
+            }),
+            "Invalid 'main' parameter given",
         ),
         (
-                json.dumps({
-                    "type": "program",
-                    "id": "1234",
-                    "data": {"code": {"": {"entry": ""}}, "main": {"modulepath": "1", "pipeline": "3"}},
-                }),
-                "Invalid 'main' parameter given",
+            json.dumps({
+                "type": "program",
+                "id": "1234",
+                "data": {"code": {"": {"entry": ""}}, "main": {"modulepath": "1", "pipeline": "3"}},
+            }),
+            "Invalid 'main' parameter given",
         ),
         (
-                json.dumps({
-                    "type": "program",
-                    "id": "1234",
-                    "data": {"code": {"": {"entry": ""}}, "main": {"module": "2", "pipeline": "3"}},
-                }),
-                "Invalid 'main' parameter given",
+            json.dumps({
+                "type": "program",
+                "id": "1234",
+                "data": {"code": {"": {"entry": ""}}, "main": {"module": "2", "pipeline": "3"}},
+            }),
+            "Invalid 'main' parameter given",
         ),
         (
-                json.dumps({
-                    "type": "program",
-                    "id": "1234",
-                    "data": {
-                        "code": {"": {"entry": ""}},
-                        "main": {"modulepath": "1", "module": "2", "pipeline": "3", "other": "4"},
-                    },
-                }),
-                "Invalid 'main' parameter given",
+            json.dumps({
+                "type": "program",
+                "id": "1234",
+                "data": {
+                    "code": {"": {"entry": ""}},
+                    "main": {"modulepath": "1", "module": "2", "pipeline": "3", "other": "4"},
+                },
+            }),
+            "Invalid 'main' parameter given",
         ),
         (
-                json.dumps({
-                    "type": "program",
-                    "id": "1234",
-                    "data": {
-                        "code": {"": {"entry": ""}},
-                        "main": {"modulepath": "1", "module": "2", "pipeline": "3", "other": {"4": "a"}},
-                    },
-                }),
-                "Invalid 'main' parameter given",
+            json.dumps({
+                "type": "program",
+                "id": "1234",
+                "data": {
+                    "code": {"": {"entry": ""}},
+                    "main": {"modulepath": "1", "module": "2", "pipeline": "3", "other": {"4": "a"}},
+                },
+            }),
+            "Invalid 'main' parameter given",
         ),
         (
-                json.dumps({
-                    "type": "program",
-                    "id": "1234",
-                    "data": {"code": "a", "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
-                }),
-                "Invalid 'code' parameter given",
+            json.dumps({
+                "type": "program",
+                "id": "1234",
+                "data": {"code": "a", "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
+            }),
+            "Invalid 'code' parameter given",
         ),
         (
-                json.dumps({
-                    "type": "program",
-                    "id": "1234",
-                    "data": {"code": {"": "a"}, "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
-                }),
-                "Invalid 'code' parameter given",
+            json.dumps({
+                "type": "program",
+                "id": "1234",
+                "data": {"code": {"": "a"}, "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
+            }),
+            "Invalid 'code' parameter given",
         ),
         (
-                json.dumps({
-                    "type": "program",
-                    "id": "1234",
-                    "data": {"code": {"": {"a": {"b": "c"}}},
-                             "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
-                }),
-                "Invalid 'code' parameter given",
+            json.dumps({
+                "type": "program",
+                "id": "1234",
+                "data": {"code": {"": {"a": {"b": "c"}}}, "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
+            }),
+            "Invalid 'code' parameter given",
         ),
     ],
     ids=[
@@ -183,39 +181,39 @@ def test_should_fail_message_validation(websocket_message: str, exception_messag
 @pytest.mark.skipif(
     sys.platform.startswith("win") and os.getenv("COVERAGE_RCFILE") is not None,
     reason=(
-            "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
-            "causes Manager to hang, when using multiprocessing coverage"
+        "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
+        "causes Manager to hang, when using multiprocessing coverage"
     ),
 )
 @pytest.mark.parametrize(
     argnames="messages,expected_response_runtime_error",
     argvalues=[
         (
-                [
-                    json.dumps({
-                        "type": "program",
-                        "id": "abcdefgh",
-                        "data": {
-                            "code": {
-                                "": {
-                                    "gen_test_a": "def pipe():\n\traise Exception('Test Exception')\n",
-                                    "gen_test_a_pipe": (
-                                            "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()"
-                                    ),
-                                },
+            [
+                json.dumps({
+                    "type": "program",
+                    "id": "abcdefgh",
+                    "data": {
+                        "code": {
+                            "": {
+                                "gen_test_a": "def pipe():\n\traise Exception('Test Exception')\n",
+                                "gen_test_a_pipe": (
+                                    "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()"
+                                ),
                             },
-                            "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
                         },
-                    }),
-                ],
-                Message(message_type_runtime_error, "abcdefgh", {"message": "Test Exception"}),
+                        "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
+                    },
+                }),
+            ],
+            Message(message_type_runtime_error, "abcdefgh", {"message": "Test Exception"}),
         ),
     ],
     ids=["raise_exception"],
 )
 def test_should_execute_pipeline_return_exception(
-        messages: list[str],
-        expected_response_runtime_error: Message,
+    messages: list[str],
+    expected_response_runtime_error: Message,
 ) -> None:
     mock_connection = MockWebsocketConnection(messages)
     app_pipeline_manager.set_new_websocket_target(mock_connection)
@@ -239,71 +237,71 @@ def test_should_execute_pipeline_return_exception(
 @pytest.mark.skipif(
     sys.platform.startswith("win") and os.getenv("COVERAGE_RCFILE") is not None,
     reason=(
-            "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
-            "causes Manager to hang, when using multiprocessing coverage"
+        "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
+        "causes Manager to hang, when using multiprocessing coverage"
     ),
 )
 @pytest.mark.parametrize(
     argnames="initial_messages,initial_execution_message_wait,appended_messages,expected_responses",
     argvalues=[
         (
-                [
-                    json.dumps({
-                        "type": "program",
-                        "id": "abcdefg",
-                        "data": {
-                            "code": {
-                                "": {
-                                    "gen_test_a": (
-                                            "import safeds_runner.server.pipeline_manager\n\ndef pipe():\n\tvalue1 ="
-                                            " 1\n\tsafeds_runner.server.pipeline_manager.runner_save_placeholder('value1',"
-                                            " value1)\n\tsafeds_runner.server.pipeline_manager.runner_save_placeholder('obj',"
-                                            " object())\n"
-                                    ),
-                                    "gen_test_a_pipe": (
-                                            "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()"
-                                    ),
-                                },
+            [
+                json.dumps({
+                    "type": "program",
+                    "id": "abcdefg",
+                    "data": {
+                        "code": {
+                            "": {
+                                "gen_test_a": (
+                                    "import safeds_runner.server.pipeline_manager\n\ndef pipe():\n\tvalue1 ="
+                                    " 1\n\tsafeds_runner.server.pipeline_manager.runner_save_placeholder('value1',"
+                                    " value1)\n\tsafeds_runner.server.pipeline_manager.runner_save_placeholder('obj',"
+                                    " object())\n"
+                                ),
+                                "gen_test_a_pipe": (
+                                    "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()"
+                                ),
                             },
-                            "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
                         },
-                    }),
-                ],
-                2,
-                [
-                    # Query Placeholder
-                    json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": "value1"}),
-                    # Query not displayable Placeholder
-                    json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": "obj"}),
-                    # Query invalid placeholder
-                    json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": "value2"}),
-                ],
-                [
-                    # Validate Placeholder Information
-                    Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("value1", "Int")),
-                    Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("obj", "object")),
-                    # Validate Progress Information
-                    Message(message_type_runtime_progress, "abcdefg", create_runtime_progress_done()),
-                    # Query Result Valid
-                    Message(message_type_placeholder_value, "abcdefg", create_placeholder_value("value1", "Int", 1)),
-                    # Query Result not displayable
-                    Message(
-                        message_type_placeholder_value,
-                        "abcdefg",
-                        create_placeholder_value("obj", "object", "<Not displayable>"),
-                    ),
-                    # Query Result Invalid
-                    Message(message_type_placeholder_value, "abcdefg", create_placeholder_value("value2", "", "")),
-                ],
+                        "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
+                    },
+                }),
+            ],
+            2,
+            [
+                # Query Placeholder
+                json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": "value1"}),
+                # Query not displayable Placeholder
+                json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": "obj"}),
+                # Query invalid placeholder
+                json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": "value2"}),
+            ],
+            [
+                # Validate Placeholder Information
+                Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("value1", "Int")),
+                Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("obj", "object")),
+                # Validate Progress Information
+                Message(message_type_runtime_progress, "abcdefg", create_runtime_progress_done()),
+                # Query Result Valid
+                Message(message_type_placeholder_value, "abcdefg", create_placeholder_value("value1", "Int", 1)),
+                # Query Result not displayable
+                Message(
+                    message_type_placeholder_value,
+                    "abcdefg",
+                    create_placeholder_value("obj", "object", "<Not displayable>"),
+                ),
+                # Query Result Invalid
+                Message(message_type_placeholder_value, "abcdefg", create_placeholder_value("value2", "", "")),
+            ],
         ),
     ],
     ids=["query_valid_query_invalid"],
 )
 def test_should_execute_pipeline_return_valid_placeholder(
-        initial_messages: list[str],
-        initial_execution_message_wait: int,
-        appended_messages: list[str],
-        expected_responses: list[Message],
+    initial_messages: list[str],
+    initial_execution_message_wait: int,
+    appended_messages: list[str],
+    expected_responses: list[Message],
 ) -> None:
     # Initial execution
     mock_connection = MockWebsocketConnection(initial_messages)
@@ -324,58 +322,58 @@ def test_should_execute_pipeline_return_valid_placeholder(
 @pytest.mark.skipif(
     sys.platform.startswith("win") and os.getenv("COVERAGE_RCFILE") is not None,
     reason=(
-            "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
-            "causes Manager to hang, when using multiprocessing coverage"
+        "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
+        "causes Manager to hang, when using multiprocessing coverage"
     ),
 )
 @pytest.mark.parametrize(
     argnames="messages,expected_response",
     argvalues=[
         (
-                [
-                    json.dumps({
-                        "type": "program",
-                        "id": "123456789",
-                        "data": {
-                            "code": {
-                                "": {
-                                    "gen_b": (
-                                            "import safeds_runner.codegen\n"
-                                            "from a.stub import u\n"
-                                            "from v.u.s.testing import add1\n"
-                                            "\n"
-                                            "def c():\n"
-                                            "\ta1 = 1\n"
-                                            "\ta2 = safeds_runner.codegen.eager_or(True, False)\n"
-                                            "\tprint('test2')\n"
-                                            "\tprint('new dynamic output')\n"
-                                            "\tprint(f'Add1: {add1(1, 2)}')\n"
-                                            "\treturn a1 + a2\n"
-                                    ),
-                                    "gen_b_c": "from gen_b import c\n\nif __name__ == '__main__':\n\tc()",
-                                },
-                                "a": {"stub": "def u():\n\treturn 1"},
-                                "v.u.s": {
-                                    "testing": "import a.stub;\n\ndef add1(v1, v2):\n\treturn v1 + v2 + a.stub.u()\n",
-                                },
+            [
+                json.dumps({
+                    "type": "program",
+                    "id": "123456789",
+                    "data": {
+                        "code": {
+                            "": {
+                                "gen_b": (
+                                    "import safeds_runner.codegen\n"
+                                    "from a.stub import u\n"
+                                    "from v.u.s.testing import add1\n"
+                                    "\n"
+                                    "def c():\n"
+                                    "\ta1 = 1\n"
+                                    "\ta2 = safeds_runner.codegen.eager_or(True, False)\n"
+                                    "\tprint('test2')\n"
+                                    "\tprint('new dynamic output')\n"
+                                    "\tprint(f'Add1: {add1(1, 2)}')\n"
+                                    "\treturn a1 + a2\n"
+                                ),
+                                "gen_b_c": "from gen_b import c\n\nif __name__ == '__main__':\n\tc()",
                             },
-                            "main": {"modulepath": "", "module": "b", "pipeline": "c"},
+                            "a": {"stub": "def u():\n\treturn 1"},
+                            "v.u.s": {
+                                "testing": "import a.stub;\n\ndef add1(v1, v2):\n\treturn v1 + v2 + a.stub.u()\n",
+                            },
                         },
-                    }),
-                ],
-                Message(message_type_runtime_progress, "123456789", create_runtime_progress_done()),
+                        "main": {"modulepath": "", "module": "b", "pipeline": "c"},
+                    },
+                }),
+            ],
+            Message(message_type_runtime_progress, "123456789", create_runtime_progress_done()),
         ),
         (
-                # Query Result Invalid (no pipeline exists)
-                [
-                    json.dumps({"type": "invalid_message_type", "id": "unknown-code-id-never-generated", "data": ""}),
-                    json.dumps({"type": "placeholder_query", "id": "unknown-code-id-never-generated", "data": "v"}),
-                ],
-                Message(
-                    message_type_placeholder_value,
-                    "unknown-code-id-never-generated",
-                    create_placeholder_value("v", "", ""),
-                ),
+            # Query Result Invalid (no pipeline exists)
+            [
+                json.dumps({"type": "invalid_message_type", "id": "unknown-code-id-never-generated", "data": ""}),
+                json.dumps({"type": "placeholder_query", "id": "unknown-code-id-never-generated", "data": "v"}),
+            ],
+            Message(
+                message_type_placeholder_value,
+                "unknown-code-id-never-generated",
+                create_placeholder_value("v", "", ""),
+            ),
         ),
     ],
     ids=["progress_message_done", "invalid_message_invalid_placeholder_query"],
@@ -392,8 +390,8 @@ def test_should_successfully_execute_simple_flow(messages: list[str], expected_r
 @pytest.mark.skipif(
     sys.platform.startswith("win") and os.getenv("COVERAGE_RCFILE") is not None,
     reason=(
-            "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
-            "causes Manager to hang, when using multiprocessing coverage"
+        "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
+        "causes Manager to hang, when using multiprocessing coverage"
     ),
 )
 @pytest.mark.parametrize(
@@ -420,13 +418,15 @@ def helper_should_shut_itself_down_run_in_subprocess(sub_messages: list[str]) ->
 helper_should_shut_itself_down_run_in_subprocess.__test__ = False  # type: ignore[attr-defined]
 
 
-@pytest.mark.skip
+@pytest.mark.skip()
 @pytest.mark.timeout(45)
 def test_should_accept_at_least_2_parallel_connections_in_subprocess() -> None:
     port = 6000
     server_output_pipes_stderr_r, server_output_pipes_stderr_w = multiprocessing.Pipe()
-    process = multiprocessing.Process(target=helper_should_accept_at_least_2_parallel_connections_in_subprocess_server,
-                                      args=(port, server_output_pipes_stderr_w))
+    process = multiprocessing.Process(
+        target=helper_should_accept_at_least_2_parallel_connections_in_subprocess_server,
+        args=(port, server_output_pipes_stderr_w),
+    )
     process.start()
     while process.is_alive():
         if not server_output_pipes_stderr_r.poll(0.1):
@@ -452,8 +452,9 @@ def test_should_accept_at_least_2_parallel_connections_in_subprocess() -> None:
     assert connected
 
 
-def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(port: int,
-                                                                              pipe: multiprocessing.connection.Connection) -> None:
+def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
+    port: int, pipe: multiprocessing.connection.Connection,
+) -> None:
     sys.stderr.write = lambda value: pipe.send(value)  # type: ignore[method-assign, assignment]
     sys.stdout.write = lambda value: pipe.send(value)  # type: ignore[method-assign, assignment]
     safeds_runner.server.main.start_server(port)
