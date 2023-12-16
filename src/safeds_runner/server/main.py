@@ -194,8 +194,9 @@ def start_server(port: int) -> None:  # pragma: no cover
     logging.getLogger().setLevel(logging.DEBUG)
     # Startup early, so our multiprocessing setup works
     app_pipeline_manager.startup()
-    from gevent.pywsgi import WSGIServer
     from gevent.monkey import patch_all
+    from gevent.pywsgi import WSGIServer
+
     # Patch WebSockets to work in parallel
     patch_all()
     logging.info("Starting Safe-DS Runner on port %s", str(port))
