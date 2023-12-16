@@ -5,6 +5,9 @@ import sys
 import threading
 
 import pytest
+import simple_websocket
+
+import safeds_runner.server.main
 from safeds_runner.server.main import app_pipeline_manager, ws_main
 from safeds_runner.server.messages import (
     Message,
@@ -413,3 +416,36 @@ def helper_should_shut_itself_down_run_in_subprocess(sub_messages: list[str]) ->
 
 
 helper_should_shut_itself_down_run_in_subprocess.__test__ = False  # type: ignore[attr-defined]
+
+
+@pytest.mark.timeout(45)
+def test_should_accept_at_least_2_parallel_connections_in_subprocess() -> None:
+    port = 6000
+    server_output_pipes_stderr_r, server_output_pipes_stderr_w = multiprocessing.Pipe()
+    process = multiprocessing.Process(target=helper_should_accept_at_least_2_parallel_connections_in_subprocess_server,
+                                      args=(port, server_output_pipes_stderr_w))
+    process.start()
+    while process.is_alive():
+        if not server_output_pipes_stderr_r.poll(0.1):
+            continue
+        process_line = str(server_output_pipes_stderr_r.recv()).strip()
+        # Wait for first line of log
+        if process_line.startswith("INFO:root:Starting Safe-DS Runner"):
+            break
+
+    client1 = simple_websocket.Client.connect(f"ws://127.0.0.1:{port}/WSMain")
+    client2 = simple_websocket.Client.connect(f"ws://127.0.0.1:{port}/WSMain")
+    connected = client1.connected and client2.connected
+    client1.send('{"id": "", "type": "shutdown", "data": ""}')
+    process.join(5)
+    if process.is_alive():
+        process.kill()
+    assert connected
+
+
+def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(port: int, pipe: multiprocessing.connection.Connection) -> None:
+    sys.stderr.write = lambda value: pipe.send(value)
+    safeds_runner.server.main.start_server(port)
+
+
+helper_should_accept_at_least_2_parallel_connections_in_subprocess_server.__test__ = False  # type: ignore[attr-defined]
