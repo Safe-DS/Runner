@@ -81,7 +81,8 @@ class PipelineManager:
             while self._messages_queue is not None:
                 message = self._messages_queue.get()
                 message_encoded = json.dumps(message.to_dict())
-                for connection in self._websocket_target:
+                # only send messages to the same connection once
+                for connection in set(self._websocket_target):
                     connection.send(message_encoded)
         except BaseException as error:  # noqa: BLE001  # pragma: no cover
             logging.warning("Message queue terminated: %s", error.__repr__())  # pragma: no cover
