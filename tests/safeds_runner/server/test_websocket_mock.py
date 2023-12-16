@@ -416,9 +416,6 @@ def helper_should_shut_itself_down_run_in_subprocess(sub_messages: list[str]) ->
     ws_main(mock_connection, PipelineManager())
 
 
-helper_should_shut_itself_down_run_in_subprocess.__test__ = False  # type: ignore[attr-defined]
-
-
 @pytest.mark.timeout(45)
 def test_should_accept_at_least_2_parallel_connections_in_subprocess() -> None:
     port = 6000
@@ -463,5 +460,3 @@ def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
     sys.stdout.write = lambda value: pipe.send(value)  # type: ignore[method-assign, assignment]
     safeds_runner.server.main.start_server(port)
 
-
-helper_should_accept_at_least_2_parallel_connections_in_subprocess_server.__test__ = False  # type: ignore[attr-defined]
