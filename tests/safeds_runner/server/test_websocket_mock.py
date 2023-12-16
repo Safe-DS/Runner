@@ -459,4 +459,3 @@ def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
     sys.stderr.write = lambda value: pipe.send(value)  # type: ignore[method-assign, assignment]
     sys.stdout.write = lambda value: pipe.send(value)  # type: ignore[method-assign, assignment]
     safeds_runner.server.main.start_server(port)
-
