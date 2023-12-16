@@ -453,7 +453,8 @@ def test_should_accept_at_least_2_parallel_connections_in_subprocess() -> None:
 
 
 def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
-    port: int, pipe: multiprocessing.connection.Connection,
+    port: int,
+    pipe: multiprocessing.connection.Connection,
 ) -> None:
     sys.stderr.write = lambda value: pipe.send(value)  # type: ignore[method-assign, assignment]
     sys.stdout.write = lambda value: pipe.send(value)  # type: ignore[method-assign, assignment]
