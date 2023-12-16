@@ -87,7 +87,7 @@ class PipelineManager:
         except BaseException as error:  # noqa: BLE001  # pragma: no cover
             logging.warning("Message queue terminated: %s", error.__repr__())  # pragma: no cover
 
-    def set_new_websocket_target(self, websocket_connection: simple_websocket.Server) -> None:
+    def connect(self, websocket_connection: simple_websocket.Server) -> None:
         """
         Add a websocket connection to relay event messages to, which are occurring during pipeline execution.
 
@@ -98,7 +98,7 @@ class PipelineManager:
         """
         self._websocket_target.append(websocket_connection)
 
-    def remove_websocket_target(self, websocket_connection: simple_websocket.Server) -> None:
+    def disconnect(self, websocket_connection: simple_websocket.Server) -> None:
         """
         Remove a websocket target connection to no longer receive messages.
 
