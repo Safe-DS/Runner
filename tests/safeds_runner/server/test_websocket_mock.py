@@ -437,7 +437,7 @@ def test_should_accept_at_least_2_parallel_connections_in_subprocess() -> None:
             break
     connected = False
     client1 = None
-    for _i in range(0, 10):
+    for _i in range(10):
         try:
             client1 = simple_websocket.Client.connect(f"ws://127.0.0.1:{port}/WSMain")
             client2 = simple_websocket.Client.connect(f"ws://127.0.0.1:{port}/WSMain")
