@@ -56,7 +56,7 @@ class PipelineManager:
             daemon=True,
         )
 
-    def _startup(self) -> None:
+    def startup(self) -> None:
         """
         Prepare the runner for running Safe-DS pipelines.
 
@@ -111,7 +111,7 @@ class PipelineManager:
         execution_id : str
             Unique ID to identify this execution.
         """
-        self._startup()
+        self.startup()
         if execution_id not in self._placeholder_map:
             self._placeholder_map[execution_id] = self._multiprocessing_manager.dict()
         process = PipelineProcess(

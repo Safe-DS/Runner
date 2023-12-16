@@ -186,8 +186,12 @@ def start_server(port: int) -> None:  # pragma: no cover
     builtins.print = functools.partial(print, flush=True)  # type: ignore[assignment]
 
     logging.getLogger().setLevel(logging.DEBUG)
+    # Startup early, so our multiprocessing setup works
+    app_pipeline_manager.startup()
     from gevent.pywsgi import WSGIServer
-
+    from gevent.monkey import patch_all
+    # Patch WebSockets to work in parallel
+    patch_all()
     logging.info("Starting Safe-DS Runner on port %s", str(port))
     # Only bind to host=127.0.0.1. Connections from other devices should not be accepted
-    WSGIServer(("127.0.0.1", port), app).serve_forever()
+    WSGIServer(("127.0.0.1", port), app, spawn=8).serve_forever()
