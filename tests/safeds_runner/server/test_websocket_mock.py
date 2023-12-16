@@ -1,10 +1,14 @@
 import json
+import logging
 import multiprocessing
 import os
 import sys
 import threading
+import time
 
 import pytest
+import safeds_runner.server.main
+import simple_websocket
 from safeds_runner.server.main import app_pipeline_manager, ws_main
 from safeds_runner.server.messages import (
     Message,
@@ -170,6 +174,7 @@ class MockWebsocketConnection:
 )
 def test_should_fail_message_validation(websocket_message: str, exception_message: str) -> None:
     mock_connection = MockWebsocketConnection([websocket_message])
+    app_pipeline_manager.connect(mock_connection)
     ws_main(mock_connection, app_pipeline_manager)
     assert str(mock_connection.close_message) == exception_message
 
@@ -212,6 +217,7 @@ def test_should_execute_pipeline_return_exception(
     expected_response_runtime_error: Message,
 ) -> None:
     mock_connection = MockWebsocketConnection(messages)
+    app_pipeline_manager.connect(mock_connection)
     ws_main(mock_connection, app_pipeline_manager)
     mock_connection.wait_for_messages(1)
     exception_message = Message.from_dict(json.loads(mock_connection.get_next_received_message()))
@@ -300,6 +306,7 @@ def test_should_execute_pipeline_return_valid_placeholder(
 ) -> None:
     # Initial execution
     mock_connection = MockWebsocketConnection(initial_messages)
+    app_pipeline_manager.connect(mock_connection)
     ws_main(mock_connection, app_pipeline_manager)
     # Wait for at least enough messages to successfully execute pipeline
     mock_connection.wait_for_messages(initial_execution_message_wait)
@@ -374,6 +381,7 @@ def test_should_execute_pipeline_return_valid_placeholder(
 )
 def test_should_successfully_execute_simple_flow(messages: list[str], expected_response: Message) -> None:
     mock_connection = MockWebsocketConnection(messages)
+    app_pipeline_manager.connect(mock_connection)
     ws_main(mock_connection, app_pipeline_manager)
     mock_connection.wait_for_messages(1)
     query_result_invalid = Message.from_dict(json.loads(mock_connection.get_next_received_message()))
@@ -408,4 +416,46 @@ def helper_should_shut_itself_down_run_in_subprocess(sub_messages: list[str]) ->
     ws_main(mock_connection, PipelineManager())
 
 
-helper_should_shut_itself_down_run_in_subprocess.__test__ = False  # type: ignore[attr-defined]
+@pytest.mark.timeout(45)
+def test_should_accept_at_least_2_parallel_connections_in_subprocess() -> None:
+    port = 6000
+    server_output_pipes_stderr_r, server_output_pipes_stderr_w = multiprocessing.Pipe()
+    process = multiprocessing.Process(
+        target=helper_should_accept_at_least_2_parallel_connections_in_subprocess_server,
+        args=(port, server_output_pipes_stderr_w),
+    )
+    process.start()
+    while process.is_alive():
+        if not server_output_pipes_stderr_r.poll(0.1):
+            continue
+        process_line = str(server_output_pipes_stderr_r.recv()).strip()
+        # Wait for first line of log
+        if process_line.startswith("INFO:root:Starting Safe-DS Runner"):
+            break
+    connected = False
+    client1 = None
+    for _i in range(10):
+        try:
+            client1 = simple_websocket.Client.connect(f"ws://127.0.0.1:{port}/WSMain")
+            client2 = simple_websocket.Client.connect(f"ws://127.0.0.1:{port}/WSMain")
+            connected = client1.connected and client2.connected
+            break
+        except ConnectionRefusedError as e:
+            logging.warning("Connection refused: %s", e)
+            connected = False
+            time.sleep(0.5)
+    if client1 is not None and client1.connected:
+        client1.send('{"id": "", "type": "shutdown", "data": ""}')
+        process.join(5)
+    if process.is_alive():
+        process.kill()
+    assert connected
+
+
+def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
+    port: int,
+    pipe: multiprocessing.connection.Connection,
+) -> None:
+    sys.stderr.write = lambda value: pipe.send(value)  # type: ignore[method-assign, assignment]
+    sys.stdout.write = lambda value: pipe.send(value)  # type: ignore[method-assign, assignment]
+    safeds_runner.server.main.start_server(port)
