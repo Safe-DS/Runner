@@ -93,12 +93,14 @@ def ws_main(ws: simple_websocket.Server, pipeline_manager: PipelineManager) -> N
         received_message: str = ws.receive()
         if received_message is None:
             logging.debug("Received EOF, closing connection")
+            pipeline_manager.remove_websocket_target(ws)
             ws.close()
             return
         logging.debug("Received Message: %s", received_message)
         received_object, error_detail, error_short = parse_validate_message(received_message)
         if received_object is None:
             logging.error(error_detail)
+            pipeline_manager.remove_websocket_target(ws)
             ws.close(message=error_short)
             return
         match received_object.type:
@@ -110,6 +112,7 @@ def ws_main(ws: simple_websocket.Server, pipeline_manager: PipelineManager) -> N
                 program_data, invalid_message = messages.validate_program_message_data(received_object.data)
                 if program_data is None:
                     logging.error("Invalid message data specified in: %s (%s)", received_message, invalid_message)
+                    pipeline_manager.remove_websocket_target(ws)
                     ws.close(None, invalid_message)
                     return
                 # This should only be called from the extension as it is a security risk
@@ -120,6 +123,7 @@ def ws_main(ws: simple_websocket.Server, pipeline_manager: PipelineManager) -> N
                 )
                 if placeholder_query_data is None:
                     logging.error("Invalid message data specified in: %s (%s)", received_message, invalid_message)
+                    pipeline_manager.remove_websocket_target(ws)
                     ws.close(None, invalid_message)
                     return
                 placeholder_type, placeholder_value = pipeline_manager.get_placeholder(
@@ -130,7 +134,7 @@ def ws_main(ws: simple_websocket.Server, pipeline_manager: PipelineManager) -> N
                 if placeholder_type is not None:
                     try:
                         send_websocket_message(
-                            ws,
+                            [ws],
                             Message(
                                 message_type_placeholder_value,
                                 received_object.id,
@@ -140,7 +144,7 @@ def ws_main(ws: simple_websocket.Server, pipeline_manager: PipelineManager) -> N
                     except TypeError as _encoding_error:
                         # if the value can't be encoded send back that the value exists but is not displayable
                         send_websocket_message(
-                            ws,
+                            [ws],
                             Message(
                                 message_type_placeholder_value,
                                 received_object.id,
@@ -151,7 +155,7 @@ def ws_main(ws: simple_websocket.Server, pipeline_manager: PipelineManager) -> N
                     # Send back empty type / value, to communicate that no placeholder exists (yet)
                     # Use name from query to allow linking a response to a request on the peer
                     send_websocket_message(
-                        ws,
+                        [ws],
                         Message(
                             message_type_placeholder_value,
                             received_object.id,
@@ -163,18 +167,20 @@ def ws_main(ws: simple_websocket.Server, pipeline_manager: PipelineManager) -> N
                     logging.warning("Invalid message type: %s", received_object.type)
 
 
-def send_websocket_message(connection: simple_websocket.Server, message: Message) -> None:
+def send_websocket_message(connections: list[simple_websocket.Server], message: Message) -> None:
     """
     Send any message to the VS Code extension.
 
     Parameters
     ----------
-    connection : simple_websocket.Server
-        Websocket connection.
+    connections : list[simple_websocket.Server]
+        List of Websocket connections that should receive the message.
     message : Message
         Object that will be sent.
     """
-    connection.send(json.dumps(message.to_dict(), cls=SafeDsEncoder))
+    message_encoded = json.dumps(message.to_dict(), cls=SafeDsEncoder)
+    for connection in connections:
+        connection.send(message_encoded)
 
 
 def start_server(port: int) -> None:  # pragma: no cover
