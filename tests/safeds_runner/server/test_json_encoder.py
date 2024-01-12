@@ -19,15 +19,14 @@ from safeds_runner.server.json_encoder import SafeDsEncoder
         (
             Image.from_bytes(
                 base64.b64decode(
-                    "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5"
-                    "+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
-                )
+                    "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
+                ),
             ),
             (
                 '{"format": "png", "bytes": '
                 '"iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAADElEQVR4nGNgoBwAAABEAAHX40j9\\nAAAAAElFTkSuQmCC\\n"}'
             ),
-        )
+        ),
     ],
     ids=["encode_table", "encode_image_png"],
 )
