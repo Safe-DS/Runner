@@ -92,6 +92,7 @@ class SafeDsServer:
         logging.info("Starting Safe-DS Runner on port %s", str(port))
         # Only bind to host=127.0.0.1. Connections from other devices should not be accepted
         from gevent.pywsgi import WSGIServer
+
         WSGIServer(("127.0.0.1", port), self.app, spawn=8).serve_forever()
 
     @staticmethod
@@ -161,8 +162,9 @@ class SafeDsServer:
                                 Message(
                                     message_type_placeholder_value,
                                     received_object.id,
-                                    create_placeholder_value(placeholder_query_data, placeholder_type,
-                                                             placeholder_value),
+                                    create_placeholder_value(
+                                        placeholder_query_data, placeholder_type, placeholder_value,
+                                    ),
                                 ),
                             )
                         except TypeError as _encoding_error:
@@ -172,8 +174,9 @@ class SafeDsServer:
                                 Message(
                                     message_type_placeholder_value,
                                     received_object.id,
-                                    create_placeholder_value(placeholder_query_data, placeholder_type,
-                                                             "<Not displayable>"),
+                                    create_placeholder_value(
+                                        placeholder_query_data, placeholder_type, "<Not displayable>",
+                                    ),
                                 ),
                             )
                     else:
