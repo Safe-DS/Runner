@@ -64,9 +64,7 @@ def create_flask_websocket(flask_app: flask.app.App) -> flask_sock.Sock:
 
 
 class SafeDsServer:
-    """
-    Server containing the flask app, websocket handler and endpoints.
-    """
+    """Server containing the flask app, websocket handler and endpoints."""
 
     def __init__(self, app_pipeline_manager: PipelineManager) -> None:
         """
