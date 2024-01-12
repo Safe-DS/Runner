@@ -163,7 +163,9 @@ class SafeDsServer:
                                     message_type_placeholder_value,
                                     received_object.id,
                                     create_placeholder_value(
-                                        placeholder_query_data, placeholder_type, placeholder_value,
+                                        placeholder_query_data,
+                                        placeholder_type,
+                                        placeholder_value,
                                     ),
                                 ),
                             )
@@ -175,7 +177,9 @@ class SafeDsServer:
                                     message_type_placeholder_value,
                                     received_object.id,
                                     create_placeholder_value(
-                                        placeholder_query_data, placeholder_type, "<Not displayable>",
+                                        placeholder_query_data,
+                                        placeholder_type,
+                                        "<Not displayable>",
                                     ),
                                 ),
                             )
