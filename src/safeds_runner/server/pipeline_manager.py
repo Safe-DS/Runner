@@ -39,7 +39,7 @@ class PipelineManager:
     def __init__(self) -> None:
         """Create a new PipelineManager object, which is lazily started, when needed."""
         self._placeholder_map: dict = {}
-        self._websocket_target: simple_websocket.Server | None = None
+        self._websocket_target: list[simple_websocket.Server] = []
 
     @cached_property
     def _multiprocessing_manager(self) -> SyncManager:
@@ -62,7 +62,7 @@ class PipelineManager:
     def _memoization_map(self) -> dict[typing.Tuple[str, list[Any], list[Any]], Any]:
         return self._multiprocessing_manager.dict()
 
-    def _startup(self) -> None:
+    def startup(self) -> None:
         """
         Prepare the runner for running Safe-DS pipelines.
 
@@ -86,21 +86,34 @@ class PipelineManager:
         try:
             while self._messages_queue is not None:
                 message = self._messages_queue.get()
-                if self._websocket_target is not None:
-                    self._websocket_target.send(json.dumps(message.to_dict()))
+                message_encoded = json.dumps(message.to_dict())
+                # only send messages to the same connection once
+                for connection in set(self._websocket_target):
+                    connection.send(message_encoded)
         except BaseException as error:  # noqa: BLE001  # pragma: no cover
             logging.warning("Message queue terminated: %s", error.__repr__())  # pragma: no cover
 
-    def set_new_websocket_target(self, websocket_connection: simple_websocket.Server) -> None:
+    def connect(self, websocket_connection: simple_websocket.Server) -> None:
         """
-        Change the websocket connection to relay messages to, which are occurring during pipeline execution.
+        Add a websocket connection to relay event messages to, which are occurring during pipeline execution.
 
         Parameters
         ----------
         websocket_connection : simple_websocket.Server
             New websocket connection.
         """
-        self._websocket_target = websocket_connection
+        self._websocket_target.append(websocket_connection)
+
+    def disconnect(self, websocket_connection: simple_websocket.Server) -> None:
+        """
+        Remove a websocket target connection to no longer receive messages.
+
+        Parameters
+        ----------
+        websocket_connection : simple_websocket.Server
+            Websocket connection to be removed.
+        """
+        self._websocket_target.remove(websocket_connection)
 
     def execute_pipeline(
         self,
@@ -117,7 +130,7 @@ class PipelineManager:
         execution_id : str
             Unique ID to identify this execution.
         """
-        self._startup()
+        self.startup()
         if execution_id not in self._placeholder_map:
             self._placeholder_map[execution_id] = self._multiprocessing_manager.dict()
         process = PipelineProcess(

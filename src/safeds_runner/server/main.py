@@ -87,18 +87,20 @@ def ws_main(ws: simple_websocket.Server, pipeline_manager: PipelineManager) -> N
         Manager used to execute pipelines on, and retrieve placeholders from
     """
     logging.debug("Request to WSRunProgram")
-    pipeline_manager.set_new_websocket_target(ws)
+    pipeline_manager.connect(ws)
     while True:
         # This would be a JSON message
         received_message: str = ws.receive()
         if received_message is None:
             logging.debug("Received EOF, closing connection")
+            pipeline_manager.disconnect(ws)
             ws.close()
             return
         logging.debug("Received Message: %s", received_message)
         received_object, error_detail, error_short = parse_validate_message(received_message)
         if received_object is None:
             logging.error(error_detail)
+            pipeline_manager.disconnect(ws)
             ws.close(message=error_short)
             return
         match received_object.type:
@@ -110,16 +112,19 @@ def ws_main(ws: simple_websocket.Server, pipeline_manager: PipelineManager) -> N
                 program_data, invalid_message = messages.validate_program_message_data(received_object.data)
                 if program_data is None:
                     logging.error("Invalid message data specified in: %s (%s)", received_message, invalid_message)
+                    pipeline_manager.disconnect(ws)
                     ws.close(None, invalid_message)
                     return
                 # This should only be called from the extension as it is a security risk
                 pipeline_manager.execute_pipeline(program_data, received_object.id)
             case "placeholder_query":
+                # For this query, a response can be directly sent to the requesting connection
                 placeholder_query_data, invalid_message = messages.validate_placeholder_query_message_data(
                     received_object.data,
                 )
                 if placeholder_query_data is None:
                     logging.error("Invalid message data specified in: %s (%s)", received_message, invalid_message)
+                    pipeline_manager.disconnect(ws)
                     ws.close(None, invalid_message)
                     return
                 placeholder_type, placeholder_value = pipeline_manager.get_placeholder(
@@ -129,8 +134,8 @@ def ws_main(ws: simple_websocket.Server, pipeline_manager: PipelineManager) -> N
                 # send back a value message
                 if placeholder_type is not None:
                     try:
-                        send_websocket_message(
-                            ws,
+                        broadcast_message(
+                            [ws],
                             Message(
                                 message_type_placeholder_value,
                                 received_object.id,
@@ -139,8 +144,8 @@ def ws_main(ws: simple_websocket.Server, pipeline_manager: PipelineManager) -> N
                         )
                     except TypeError as _encoding_error:
                         # if the value can't be encoded send back that the value exists but is not displayable
-                        send_websocket_message(
-                            ws,
+                        broadcast_message(
+                            [ws],
                             Message(
                                 message_type_placeholder_value,
                                 received_object.id,
@@ -150,8 +155,8 @@ def ws_main(ws: simple_websocket.Server, pipeline_manager: PipelineManager) -> N
                 else:
                     # Send back empty type / value, to communicate that no placeholder exists (yet)
                     # Use name from query to allow linking a response to a request on the peer
-                    send_websocket_message(
-                        ws,
+                    broadcast_message(
+                        [ws],
                         Message(
                             message_type_placeholder_value,
                             received_object.id,
@@ -163,18 +168,20 @@ def ws_main(ws: simple_websocket.Server, pipeline_manager: PipelineManager) -> N
                     logging.warning("Invalid message type: %s", received_object.type)
 
 
-def send_websocket_message(connection: simple_websocket.Server, message: Message) -> None:
+def broadcast_message(connections: list[simple_websocket.Server], message: Message) -> None:
     """
-    Send any message to the VS Code extension.
+    Send any message to all the provided connections (to the VS Code extension).
 
     Parameters
     ----------
-    connection : simple_websocket.Server
-        Websocket connection.
+    connections : list[simple_websocket.Server]
+        List of Websocket connections that should receive the message.
     message : Message
         Object that will be sent.
     """
-    connection.send(json.dumps(message.to_dict(), cls=SafeDsEncoder))
+    message_encoded = json.dumps(message.to_dict(), cls=SafeDsEncoder)
+    for connection in connections:
+        connection.send(message_encoded)
 
 
 def start_server(port: int) -> None:  # pragma: no cover
@@ -186,8 +193,13 @@ def start_server(port: int) -> None:  # pragma: no cover
     builtins.print = functools.partial(print, flush=True)  # type: ignore[assignment]
 
     logging.getLogger().setLevel(logging.DEBUG)
+    # Startup early, so our multiprocessing setup works
+    app_pipeline_manager.startup()
+    from gevent.monkey import patch_all
     from gevent.pywsgi import WSGIServer
 
+    # Patch WebSockets to work in parallel
+    patch_all()
     logging.info("Starting Safe-DS Runner on port %s", str(port))
     # Only bind to host=127.0.0.1. Connections from other devices should not be accepted
-    WSGIServer(("127.0.0.1", port), app).serve_forever()
+    WSGIServer(("127.0.0.1", port), app, spawn=8).serve_forever()
