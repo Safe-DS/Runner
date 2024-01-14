@@ -9,7 +9,6 @@ import time
 import pytest
 import safeds_runner.server.main
 import simple_websocket
-from safeds_runner.server.main import app_pipeline_manager, ws_main
 from safeds_runner.server.messages import (
     Message,
     create_placeholder_description,
@@ -21,6 +20,9 @@ from safeds_runner.server.messages import (
     message_type_runtime_progress,
 )
 from safeds_runner.server.pipeline_manager import PipelineManager
+from safeds_runner.server.server import SafeDsServer
+
+app_pipeline_manager = PipelineManager()
 
 
 class MockWebsocketConnection:
@@ -175,7 +177,7 @@ class MockWebsocketConnection:
 def test_should_fail_message_validation(websocket_message: str, exception_message: str) -> None:
     mock_connection = MockWebsocketConnection([websocket_message])
     app_pipeline_manager.connect(mock_connection)
-    ws_main(mock_connection, app_pipeline_manager)
+    SafeDsServer._ws_main(mock_connection, app_pipeline_manager)
     assert str(mock_connection.close_message) == exception_message
 
 
@@ -218,7 +220,7 @@ def test_should_execute_pipeline_return_exception(
 ) -> None:
     mock_connection = MockWebsocketConnection(messages)
     app_pipeline_manager.connect(mock_connection)
-    ws_main(mock_connection, app_pipeline_manager)
+    SafeDsServer._ws_main(mock_connection, app_pipeline_manager)
     mock_connection.wait_for_messages(1)
     exception_message = Message.from_dict(json.loads(mock_connection.get_next_received_message()))
 
@@ -307,12 +309,12 @@ def test_should_execute_pipeline_return_valid_placeholder(
     # Initial execution
     mock_connection = MockWebsocketConnection(initial_messages)
     app_pipeline_manager.connect(mock_connection)
-    ws_main(mock_connection, app_pipeline_manager)
+    SafeDsServer._ws_main(mock_connection, app_pipeline_manager)
     # Wait for at least enough messages to successfully execute pipeline
     mock_connection.wait_for_messages(initial_execution_message_wait)
     # Now send queries
     mock_connection.messages.extend(appended_messages)
-    ws_main(mock_connection, app_pipeline_manager)
+    SafeDsServer._ws_main(mock_connection, app_pipeline_manager)
     # And compare with expected responses
     while len(expected_responses) > 0:
         mock_connection.wait_for_messages(1)
@@ -382,7 +384,7 @@ def test_should_execute_pipeline_return_valid_placeholder(
 def test_should_successfully_execute_simple_flow(messages: list[str], expected_response: Message) -> None:
     mock_connection = MockWebsocketConnection(messages)
     app_pipeline_manager.connect(mock_connection)
-    ws_main(mock_connection, app_pipeline_manager)
+    SafeDsServer._ws_main(mock_connection, app_pipeline_manager)
     mock_connection.wait_for_messages(1)
     query_result_invalid = Message.from_dict(json.loads(mock_connection.get_next_received_message()))
     assert query_result_invalid == expected_response
@@ -413,7 +415,9 @@ def test_should_shut_itself_down(messages: list[str]) -> None:
 
 def helper_should_shut_itself_down_run_in_subprocess(sub_messages: list[str]) -> None:
     mock_connection = MockWebsocketConnection(sub_messages)
-    ws_main(mock_connection, PipelineManager())
+    pipeline_manager = PipelineManager()
+    pipeline_manager.startup()
+    SafeDsServer._ws_main(mock_connection, pipeline_manager)
 
 
 @pytest.mark.timeout(45)

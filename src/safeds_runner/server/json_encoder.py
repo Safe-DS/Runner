@@ -6,7 +6,6 @@ import math
 from typing import Any
 
 from safeds.data.image.containers import Image
-from safeds.data.image.typing import ImageFormat
 from safeds.data.tabular.containers import Table
 
 
@@ -42,10 +41,6 @@ class SafeDsEncoder(json.JSONEncoder):
                 for key in dict_with_nan_infinity
             }
         if isinstance(o, Image):
-            # Send images together with their format
-            match o.format:
-                case ImageFormat.JPEG:
-                    return {"format": o.format.value, "bytes": str(base64.encodebytes(o._repr_jpeg_()), "utf-8")}
-                case ImageFormat.PNG:
-                    return {"format": o.format.value, "bytes": str(base64.encodebytes(o._repr_png_()), "utf-8")}
+            # Send images together with their format, by default images are encoded only as PNG
+            return {"format": "png", "bytes": str(base64.encodebytes(o._repr_png_()), "utf-8")}
         return json.JSONEncoder.default(self, o)
