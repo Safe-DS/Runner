@@ -1,5 +1,6 @@
 from queue import Queue
 from typing import Any
+import typing
 
 import pytest
 
@@ -32,7 +33,7 @@ def test_memoization_already_present_values(function_name: str, params: list, hi
     ],
     ids=["function_pure", "function_impure_readfile"],
 )
-def test_memoization_not_present_values(function_name: str, function: callable, params: list, hidden_params: list, expected_result: Any) -> None:
+def test_memoization_not_present_values(function_name: str, function: typing.Callable, params: list, hidden_params: list, expected_result: Any) -> None:
     pipeline_manager.current_pipeline = PipelineProcess(MessageDataProgram({}, ProgramMainInformation("", "", "")), "",
                                                         Queue(), {}, {})
     # Save value in map

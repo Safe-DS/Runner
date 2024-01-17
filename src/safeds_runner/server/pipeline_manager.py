@@ -3,13 +3,13 @@
 import json
 import logging
 import multiprocessing
-import os.path
 import queue
 import runpy
 import threading
 import typing
 from functools import cached_property
 from multiprocessing.managers import SyncManager
+from pathlib import Path
 from typing import Any
 
 import simple_websocket
@@ -183,7 +183,7 @@ class PipelineProcess:
         execution_id: str,
         messages_queue: queue.Queue[Message],
         placeholder_map: dict[str, Any],
-        memoization_map: dict[typing.Tuple[str, list[Any], list[Any]], Any]
+        memoization_map: dict[typing.Tuple[str, typing.Tuple[Any], typing.Tuple[Any]], Any]
     ):
         """
         Create a new process which will execute the given pipeline, when started.
@@ -198,7 +198,7 @@ class PipelineProcess:
             A queue to write outgoing messages to.
         placeholder_map : dict[str, Any]
             A map to save calculated placeholders in.
-        memoization_map : dict[typing.Tuple[str, list[Any], list[Any]], Any]
+        memoization_map : dict[typing.Tuple[str, typing.Tuple[Any], typing.Tuple[Any]], Any]
             A map to save memoizable functions in.
         """
         self._pipeline = pipeline
@@ -233,13 +233,13 @@ class PipelineProcess:
             create_placeholder_description(placeholder_name, placeholder_type),
         )
 
-    def get_memoization_map(self) -> dict[typing.Tuple[str, list[Any], list[Any]], Any]:
+    def get_memoization_map(self) -> dict[typing.Tuple[str, typing.Tuple[Any], typing.Tuple[Any]], Any]:
         """
         Get the shared memoization map.
 
         Returns
         -------
-        dict[typing.Tuple[str, list[Any], list[Any]], Any]
+        dict[typing.Tuple[str, typing.Tuple[Any], typing.Tuple[Any]], Any]
             Memoization Map
         """
         return self._memoization_map
@@ -300,8 +300,8 @@ def runner_save_placeholder(placeholder_name: str, value: Any) -> None:
         current_pipeline.save_placeholder(placeholder_name, value)
 
 
-def runner_memoized_function_call(function_name: str, function_callable: callable, parameters: list[Any],
-                                  hidden_parameters: list[Any] = []) -> Any:
+def runner_memoized_function_call(function_name: str, function_callable: typing.Callable, parameters: list[Any],
+                                  hidden_parameters: list[Any]) -> Any:
     """
     Call a function that can be memoized and save the result.
 
@@ -311,7 +311,7 @@ def runner_memoized_function_call(function_name: str, function_callable: callabl
     ----------
     function_name : str
         Fully qualified function name
-    function_callable : callable
+    function_callable : typing.Callable
         Function that is called and memoized if the result was not found in the memoization map
     parameters : list[Any]
         List of parameters for the function
@@ -366,7 +366,7 @@ def runner_filemtime(filename: str) -> int | None:
         Last modification timestamp if the provided file exists, otherwise None
     """
     try:
-        return os.stat(filename).st_mtime_ns
+        return Path(filename).stat().st_mtime_ns
     except FileNotFoundError:
         return None
 
