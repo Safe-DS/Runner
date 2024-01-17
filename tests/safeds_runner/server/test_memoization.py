@@ -19,10 +19,17 @@ from safeds_runner.server.pipeline_manager import PipelineProcess
     ids=["function_pure", "function_impure_readfile"],
 )
 def test_memoization_already_present_values(
-    function_name: str, params: list, hidden_params: list, expected_result: Any,
+    function_name: str,
+    params: list,
+    hidden_params: list,
+    expected_result: Any,
 ) -> None:
     pipeline_manager.current_pipeline = PipelineProcess(
-        MessageDataProgram({}, ProgramMainInformation("", "", "")), "", Queue(), {}, {},
+        MessageDataProgram({}, ProgramMainInformation("", "", "")),
+        "",
+        Queue(),
+        {},
+        {},
     )
     pipeline_manager.current_pipeline.get_memoization_map()[
         (
@@ -44,10 +51,18 @@ def test_memoization_already_present_values(
     ids=["function_pure", "function_impure_readfile"],
 )
 def test_memoization_not_present_values(
-    function_name: str, function: typing.Callable, params: list, hidden_params: list, expected_result: Any,
+    function_name: str,
+    function: typing.Callable,
+    params: list,
+    hidden_params: list,
+    expected_result: Any,
 ) -> None:
     pipeline_manager.current_pipeline = PipelineProcess(
-        MessageDataProgram({}, ProgramMainInformation("", "", "")), "", Queue(), {}, {},
+        MessageDataProgram({}, ProgramMainInformation("", "", "")),
+        "",
+        Queue(),
+        {},
+        {},
     )
     # Save value in map
     result = pipeline_manager.runner_memoized_function_call(function_name, function, params, hidden_params)

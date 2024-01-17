@@ -134,7 +134,11 @@ class PipelineManager:
         if execution_id not in self._placeholder_map:
             self._placeholder_map[execution_id] = self._multiprocessing_manager.dict()
         process = PipelineProcess(
-            pipeline, execution_id, self._messages_queue, self._placeholder_map[execution_id], self._memoization_map,
+            pipeline,
+            execution_id,
+            self._messages_queue,
+            self._placeholder_map[execution_id],
+            self._memoization_map,
         )
         process.execute()
 
@@ -297,7 +301,10 @@ def runner_save_placeholder(placeholder_name: str, value: Any) -> None:
 
 
 def runner_memoized_function_call(
-    function_name: str, function_callable: typing.Callable, parameters: list[Any], hidden_parameters: list[Any],
+    function_name: str,
+    function_callable: typing.Callable,
+    parameters: list[Any],
+    hidden_parameters: list[Any],
 ) -> Any:
     """
     Call a function that can be memoized and save the result.
