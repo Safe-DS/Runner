@@ -325,13 +325,30 @@ def runner_memoized_function_call(function_name: str, function_callable: callabl
     """
     if current_pipeline is not None:
         memoization_map = current_pipeline.get_memoization_map()
-        key = (function_name, parameters, hidden_parameters)
+        key = (function_name, _convert_list_to_tuple(parameters), _convert_list_to_tuple(hidden_parameters))
         if key in memoization_map:
             return memoization_map[key]
         result = function_callable(*parameters)
         memoization_map[key] = result
         return result
-    return None
+    return None  # pragma: no cover
+
+
+def _convert_list_to_tuple(values: list) -> tuple:
+    """
+    Recursively convert a mutable list of values to an immutable tuple containing the same values, to make the values hashable.
+
+    Parameters
+    ----------
+    values : list
+        Values that should be converted to a tuple
+
+    Returns
+    -------
+    tuple
+        Converted list containing all the elements of the provided list
+    """
+    return tuple([_convert_list_to_tuple(value) if isinstance(value, list) else value for value in values])
 
 
 def runner_filemtime(filename: str) -> int | None:
