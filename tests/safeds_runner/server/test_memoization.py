@@ -47,11 +47,11 @@ def test_memoization_not_present_values(function_name: str, function: typing.Cal
 
 
 def test_file_mtime_exists() -> None:
-    with tempfile.TemporaryFile() as file:
+    with tempfile.NamedTemporaryFile() as file:
         file_mtime = pipeline_manager.runner_filemtime(file.name)
         assert file_mtime is not None
 
 
 def test_file_mtime_not_exists() -> None:
-    file_mtime = pipeline_manager.runner_filemtime(f"file_not_exists.{datetime.now().timestamp()}")
+    file_mtime = pipeline_manager.runner_filemtime(f"file_not_exists.{datetime.utcnow().timestamp()}")
     assert file_mtime is None
