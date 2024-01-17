@@ -1,5 +1,5 @@
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone
 from queue import Queue
 from typing import Any
 import typing
@@ -53,5 +53,5 @@ def test_file_mtime_exists() -> None:
 
 
 def test_file_mtime_not_exists() -> None:
-    file_mtime = pipeline_manager.runner_filemtime(f"file_not_exists.{datetime.utcnow().timestamp()}")
+    file_mtime = pipeline_manager.runner_filemtime(f"file_not_exists.{datetime.now(tz=timezone.utc).timestamp()}")
     assert file_mtime is None
