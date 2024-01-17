@@ -59,7 +59,7 @@ class PipelineManager:
         )
 
     @cached_property
-    def _memoization_map(self) -> dict[typing.Tuple[str, typing.Tuple[Any], typing.Tuple[Any]], Any]:
+    def _memoization_map(self) -> dict[tuple[str, tuple[Any], tuple[Any]], Any]:
         return self._multiprocessing_manager.dict()  # type: ignore[return-value]
 
     def startup(self) -> None:
@@ -134,11 +134,7 @@ class PipelineManager:
         if execution_id not in self._placeholder_map:
             self._placeholder_map[execution_id] = self._multiprocessing_manager.dict()
         process = PipelineProcess(
-            pipeline,
-            execution_id,
-            self._messages_queue,
-            self._placeholder_map[execution_id],
-            self._memoization_map
+            pipeline, execution_id, self._messages_queue, self._placeholder_map[execution_id], self._memoization_map,
         )
         process.execute()
 
@@ -183,7 +179,7 @@ class PipelineProcess:
         execution_id: str,
         messages_queue: queue.Queue[Message],
         placeholder_map: dict[str, Any],
-        memoization_map: dict[typing.Tuple[str, typing.Tuple[Any], typing.Tuple[Any]], Any]
+        memoization_map: dict[tuple[str, tuple[Any], tuple[Any]], Any],
     ):
         """
         Create a new process which will execute the given pipeline, when started.
@@ -233,7 +229,7 @@ class PipelineProcess:
             create_placeholder_description(placeholder_name, placeholder_type),
         )
 
-    def get_memoization_map(self) -> dict[typing.Tuple[str, typing.Tuple[Any], typing.Tuple[Any]], Any]:
+    def get_memoization_map(self) -> dict[tuple[str, tuple[Any], tuple[Any]], Any]:
         """
         Get the shared memoization map.
 
@@ -300,8 +296,9 @@ def runner_save_placeholder(placeholder_name: str, value: Any) -> None:
         current_pipeline.save_placeholder(placeholder_name, value)
 
 
-def runner_memoized_function_call(function_name: str, function_callable: typing.Callable, parameters: list[Any],
-                                  hidden_parameters: list[Any]) -> Any:
+def runner_memoized_function_call(
+    function_name: str, function_callable: typing.Callable, parameters: list[Any], hidden_parameters: list[Any],
+) -> Any:
     """
     Call a function that can be memoized and save the result.
 
