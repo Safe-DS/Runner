@@ -1,3 +1,5 @@
+import tempfile
+from datetime import datetime
 from queue import Queue
 from typing import Any
 import typing
@@ -42,3 +44,14 @@ def test_memoization_not_present_values(function_name: str, function: typing.Cal
     # Test if value is actually saved by calling another function that does not return the expected result
     result2 = pipeline_manager.runner_memoized_function_call(function_name, lambda *_: None, params, hidden_params)
     assert result2 == expected_result
+
+
+def test_file_mtime_exists() -> None:
+    with tempfile.TemporaryFile() as file:
+        file_mtime = pipeline_manager.runner_filemtime(file.name)
+        assert file_mtime is not None
+
+
+def test_file_mtime_not_exists() -> None:
+    file_mtime = pipeline_manager.runner_filemtime(f"file_not_exists.{datetime.now().timestamp()}")
+    assert file_mtime is None
