@@ -244,6 +244,7 @@ def create_placeholder_description(name: str, type_: str) -> dict[str, str]:
 def create_placeholder_value(placeholder_query: MessageQueryInformation, type_: str, value: Any) -> dict[str, Any]:
     """
     Create the message data of a placeholder value message containing name, type and the actual value.
+
     If the query only requests a subset of the data and the placeholder type supports this,
     the response will contain only a subset and the information about the subset.
 
@@ -261,7 +262,7 @@ def create_placeholder_value(placeholder_query: MessageQueryInformation, type_: 
     dict[str, str]
         Message data of "placeholder_value" messages.
     """
-    message = {"name": placeholder_query.name, "type": type_}
+    message: dict[str, Any] = {"name": placeholder_query.name, "type": type_}
     # Start Index >= 0
     start_index = max(placeholder_query.window_begin if placeholder_query.window_begin is not None else 0, 0)
     # End Index >= Start Index
