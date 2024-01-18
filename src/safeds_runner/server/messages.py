@@ -185,6 +185,7 @@ class MessageQueryInformation:
     window_size : int | None
         Max. amount of entries that should be sent. Should be present if a windowed query is required.
     """
+
     name: str
     window_begin: int | None
     window_size: int | None
@@ -266,8 +267,12 @@ def create_placeholder_value(placeholder_query: MessageQueryInformation, type_: 
     # Start Index >= 0
     start_index = max(placeholder_query.window_begin if placeholder_query.window_begin is not None else 0, 0)
     # End Index >= Start Index
-    end_index = (start_index + max(placeholder_query.window_size, 0)) if placeholder_query.window_size is not None else None
-    if isinstance(value, safeds.data.tabular.containers.Table) and (placeholder_query.window_begin is not None or placeholder_query.window_size is not None):
+    end_index = (
+        (start_index + max(placeholder_query.window_size, 0)) if placeholder_query.window_size is not None else None
+    )
+    if isinstance(value, safeds.data.tabular.containers.Table) and (
+        placeholder_query.window_begin is not None or placeholder_query.window_size is not None
+    ):
         max_index = value.number_of_rows
         # End Index <= Number Of Rows
         end_index = min(end_index, value.number_of_rows) if end_index is not None else None
@@ -384,7 +389,9 @@ def validate_program_message_data(message_data: dict[str, Any] | str) -> tuple[M
     return MessageDataProgram.from_dict(message_data), None
 
 
-def validate_placeholder_query_message_data(message_data: dict[str, Any] | str) -> tuple[MessageQueryInformation | None, str | None]:
+def validate_placeholder_query_message_data(
+    message_data: dict[str, Any] | str,
+) -> tuple[MessageQueryInformation | None, str | None]:
     """
     Validate the message data of a placeholder query message.
 
