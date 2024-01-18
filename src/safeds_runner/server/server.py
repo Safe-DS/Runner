@@ -152,7 +152,7 @@ class SafeDsServer:
                         return
                     placeholder_type, placeholder_value = pipeline_manager.get_placeholder(
                         received_object.id,
-                        placeholder_query_data,
+                        placeholder_query_data.name,
                     )
                     # send back a value message
                     if placeholder_type is not None:
