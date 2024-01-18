@@ -395,7 +395,9 @@ def test_should_execute_pipeline_return_valid_placeholder(
             [
                 json.dumps({"type": "invalid_message_type", "id": "unknown-code-id-never-generated", "data": ""}),
                 json.dumps({
-                    "type": "placeholder_query", "id": "unknown-code-id-never-generated", "data": {"name": "v"},
+                    "type": "placeholder_query",
+                    "id": "unknown-code-id-never-generated",
+                    "data": {"name": "v"},
                 }),
             ],
             Message(
