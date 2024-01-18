@@ -185,8 +185,8 @@ class MessageQueryInformation:
     """
 
     name: str
-    window_begin: int | None
-    window_size: int | None
+    window_begin: int | None = None
+    window_size: int | None = None
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> MessageQueryInformation:
@@ -203,10 +203,6 @@ class MessageQueryInformation:
         MessageQueryInformation
             Dataclass which contains information copied from the provided dictionary.
         """
-        if "window_begin" not in d:
-            d["window_begin"] = None
-        if "window_size" not in d:
-            d["window_size"] = None
         return MessageQueryInformation(**d)
 
     def to_dict(self) -> dict[str, Any]:
