@@ -262,6 +262,7 @@ def create_placeholder_value(placeholder_query: MessageQueryInformation, type_: 
         Message data of "placeholder_value" messages.
     """
     import safeds.data.tabular.containers
+
     message: dict[str, Any] = {"name": placeholder_query.name, "type": type_}
     # Start Index >= 0
     start_index = max(placeholder_query.window_begin if placeholder_query.window_begin is not None else 0, 0)
