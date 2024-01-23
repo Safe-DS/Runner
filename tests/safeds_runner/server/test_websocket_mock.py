@@ -15,13 +15,14 @@ from safeds_runner.server.json_encoder import SafeDsEncoder
 from safeds_runner.server.messages import (
     Message,
     MessageQueryInformation,
+    QueryWindow,
     create_placeholder_description,
     create_placeholder_value,
     create_runtime_progress_done,
     message_type_placeholder_type,
     message_type_placeholder_value,
     message_type_runtime_error,
-    message_type_runtime_progress, QueryWindow,
+    message_type_runtime_progress,
 )
 from safeds_runner.server.pipeline_manager import PipelineManager
 from safeds_runner.server.server import SafeDsServer
@@ -507,7 +508,8 @@ def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
             "Table",
             Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
             (
-                '{"name": "name", "type": "Table", "window": {"begin": 0, "size": 1, "max": 7}, "value": {"a": [1], "b": [3]}}'
+                '{"name": "name", "type": "Table", "window": {"begin": 0, "size": 1, "max": 7}, "value": {"a": [1],'
+                ' "b": [3]}}'
             ),
         ),
         (
@@ -515,7 +517,8 @@ def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
             "Table",
             Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
             (
-                '{"name": "name", "type": "Table", "window": {"begin": 4, "size": 3, "max": 7}, "value": {"a": [3, 2, 1], "b": [1, 2, 3]}}'
+                '{"name": "name", "type": "Table", "window": {"begin": 4, "size": 3, "max": 7}, "value": {"a": [3, 2,'
+                ' 1], "b": [1, 2, 3]}}'
             ),
         ),
         (
@@ -523,7 +526,8 @@ def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
             "Table",
             Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
             (
-                '{"name": "name", "type": "Table", "window": {"begin": 0, "size": 0, "max": 7}, "value": {"a": [], "b": []}}'
+                '{"name": "name", "type": "Table", "window": {"begin": 0, "size": 0, "max": 7}, "value": {"a": [], "b":'
+                " []}}"
             ),
         ),
         (
@@ -531,7 +535,8 @@ def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
             "Table",
             Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
             (
-                '{"name": "name", "type": "Table", "window": {"begin": 4, "size": 3, "max": 7}, "value": {"a": [3, 2, 1], "b": [1, 2, 3]}}'
+                '{"name": "name", "type": "Table", "window": {"begin": 4, "size": 3, "max": 7}, "value": {"a": [3, 2,'
+                ' 1], "b": [1, 2, 3]}}'
             ),
         ),
         (
@@ -539,7 +544,8 @@ def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
             "Table",
             Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
             (
-                '{"name": "name", "type": "Table", "window": {"begin": 4, "size": 3, "max": 7}, "value": {"a": [3, 2, 1], "b": [1, 2, 3]}}'
+                '{"name": "name", "type": "Table", "window": {"begin": 4, "size": 3, "max": 7}, "value": {"a": [3, 2,'
+                ' 1], "b": [1, 2, 3]}}'
             ),
         ),
         (
@@ -547,7 +553,8 @@ def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
             "Table",
             Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
             (
-                '{"name": "name", "type": "Table", "window": {"begin": 0, "size": 0, "max": 7}, "value": {"a": [], "b": []}}'
+                '{"name": "name", "type": "Table", "window": {"begin": 0, "size": 0, "max": 7}, "value": {"a": [], "b":'
+                " []}}"
             ),
         ),
         (
@@ -555,7 +562,8 @@ def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
             "Table",
             Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
             (
-                '{"name": "name", "type": "Table", "window": {"begin": 0, "size": 7, "max": 7}, "value": {"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}}'
+                '{"name": "name", "type": "Table", "window": {"begin": 0, "size": 7, "max": 7}, "value": {"a": [1, 2,'
+                ' 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}}'
             ),
         ),
     ],
