@@ -172,6 +172,8 @@ class ProgramMainInformation:
 @dataclass(frozen=True)
 class QueryWindow:
     """
+    Information that is used to create a subset of the data of a placeholder.
+
     Parameters
     ----------
     begin : int | None
@@ -225,7 +227,7 @@ class MessageQueryInformation:
     """
 
     name: str
-    window: QueryWindow = QueryWindow()
+    window: QueryWindow = dataclasses.field(default_factory=QueryWindow)
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> MessageQueryInformation:
