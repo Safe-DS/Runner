@@ -170,6 +170,48 @@ class ProgramMainInformation:
 
 
 @dataclass(frozen=True)
+class QueryWindow:
+    """
+    Parameters
+    ----------
+    begin : int | None
+        Index of the first entry that should be sent. May be present if a windowed query is required.
+    size : int | None
+        Max. amount of entries that should be sent. May be present if a windowed query is required.
+    """
+    begin: int | None = None
+    size: int | None = None
+
+    @staticmethod
+    def from_dict(d: dict[str, Any]) -> QueryWindow:
+        """
+        Create a new QueryWindow object from a dictionary.
+
+        Parameters
+        ----------
+        d : dict[str, Any]
+            Dictionary which should contain all needed fields.
+
+        Returns
+        -------
+        QueryWindow
+            Dataclass which contains information copied from the provided dictionary.
+        """
+        return QueryWindow(**d)
+
+    def to_dict(self) -> dict[str, Any]:
+        """
+        Convert this dataclass to a dictionary.
+
+        Returns
+        -------
+        dict[str, Any]
+            Dictionary containing all the fields which are part of this dataclass.
+        """
+        return dataclasses.asdict(self)  # pragma: no cover
+
+
+@dataclass(frozen=True)
 class MessageQueryInformation:
     """
     Information used to query a placeholder with optional window bounds. Only complex types like tables are affected by window bounds.
@@ -177,16 +219,13 @@ class MessageQueryInformation:
     Parameters
     ----------
     name : str
-        Placeholder name that is queried
-    window_begin : int | None
-        Index of the first entry that should be sent. Should be present if a windowed query is required.
-    window_size : int | None
-        Max. amount of entries that should be sent. Should be present if a windowed query is required.
+        Placeholder name that is queried.
+    window : QueryWindow
+        Window bounds for requesting only a subset of the available data.
     """
 
     name: str
-    window_begin: int | None = None
-    window_size: int | None = None
+    window: QueryWindow = QueryWindow()
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> MessageQueryInformation:
@@ -203,7 +242,7 @@ class MessageQueryInformation:
         MessageQueryInformation
             Dataclass which contains information copied from the provided dictionary.
         """
-        return MessageQueryInformation(**d)
+        return MessageQueryInformation(name=d["name"], window=QueryWindow.from_dict(d["window"]))
 
     def to_dict(self) -> dict[str, Any]:
         """
@@ -261,22 +300,20 @@ def create_placeholder_value(placeholder_query: MessageQueryInformation, type_: 
 
     message: dict[str, Any] = {"name": placeholder_query.name, "type": type_}
     # Start Index >= 0
-    start_index = max(placeholder_query.window_begin if placeholder_query.window_begin is not None else 0, 0)
+    start_index = max(placeholder_query.window.begin if placeholder_query.window.begin is not None else 0, 0)
     # End Index >= Start Index
     end_index = (
-        (start_index + max(placeholder_query.window_size, 0)) if placeholder_query.window_size is not None else None
+        (start_index + max(placeholder_query.window.size, 0)) if placeholder_query.window.size is not None else None
     )
     if isinstance(value, safeds.data.tabular.containers.Table) and (
-        placeholder_query.window_begin is not None or placeholder_query.window_size is not None
+        placeholder_query.window.begin is not None or placeholder_query.window.size is not None
     ):
         max_index = value.number_of_rows
         # End Index <= Number Of Rows
         end_index = min(end_index, value.number_of_rows) if end_index is not None else None
         value = value.slice_rows(start=start_index, end=end_index)
-        message["windowed"] = True
-        message["window_begin"] = start_index
-        message["window_size"] = value.number_of_rows
-        message["window_max"] = max_index
+        window_information: dict[str, int] = {"begin": start_index, "size": value.number_of_rows, "max": max_index}
+        message["window"] = window_information
     message["value"] = value
     return message
 
@@ -405,8 +442,10 @@ def validate_placeholder_query_message_data(
         return None, "Message data is not a JSON object"
     if "name" not in message_data:
         return None, "No 'name' parameter given"
-    if "window_begin" in message_data and not isinstance(message_data["window_begin"], int):
-        return None, "Invalid 'window_begin' parameter given"
-    if "window_size" in message_data and not isinstance(message_data["window_size"], int):
-        return None, "Invalid 'window_size' parameter given"
+    if "window" in message_data and "begin" in message_data["window"] and not isinstance(
+        message_data["window"]["begin"], int):
+        return None, "Invalid 'window'.'begin' parameter given"
+    if "window" in message_data and "size" in message_data["window"] and not isinstance(message_data["window"]["size"],
+                                                                                        int):
+        return None, "Invalid 'window'.'size' parameter given"
     return MessageQueryInformation.from_dict(message_data), None
