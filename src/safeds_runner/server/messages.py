@@ -371,15 +371,16 @@ def parse_validate_message(message: str) -> tuple[Message | None, str | None, st
         return None, f"Invalid message received: {message}", "Invalid Message: not JSON"
     if "type" not in message_dict:
         return None, f"No message type specified in: {message}", "Invalid Message: no type"
-    if "id" not in message_dict:
+    elif "id" not in message_dict:
         return None, f"No message id specified in: {message}", "Invalid Message: no id"
-    if "data" not in message_dict:
+    elif "data" not in message_dict:
         return None, f"No message data specified in: {message}", "Invalid Message: no data"
-    if not isinstance(message_dict["type"], str):
+    elif not isinstance(message_dict["type"], str):
         return None, f"Message type is not a string: {message}", "Invalid Message: invalid type"
-    if not isinstance(message_dict["id"], str):
+    elif not isinstance(message_dict["id"], str):
         return None, f"Message id is not a string: {message}", "Invalid Message: invalid id"
-    return Message.from_dict(message_dict), None, None
+    else:
+        return Message.from_dict(message_dict), None, None
 
 
 def validate_program_message_data(message_data: dict[str, Any] | str) -> tuple[MessageDataProgram | None, str | None]:
@@ -398,30 +399,31 @@ def validate_program_message_data(message_data: dict[str, Any] | str) -> tuple[M
     """
     if not isinstance(message_data, dict):
         return None, "Message data is not a JSON object"
-    if "code" not in message_data:
+    elif "code" not in message_data:
         return None, "No 'code' parameter given"
-    if "main" not in message_data:
+    elif "main" not in message_data:
         return None, "No 'main' parameter given"
-    if (
+    elif (
         not isinstance(message_data["main"], dict)
         or "modulepath" not in message_data["main"]
         or "module" not in message_data["main"]
         or "pipeline" not in message_data["main"]
     ):
         return None, "Invalid 'main' parameter given"
-    if len(message_data["main"]) != 3:
+    elif len(message_data["main"]) != 3:
         return None, "Invalid 'main' parameter given"
-    if not isinstance(message_data["code"], dict):
+    elif not isinstance(message_data["code"], dict):
         return None, "Invalid 'code' parameter given"
-    code: dict = message_data["code"]
-    for key in code:
-        if not isinstance(code[key], dict):
-            return None, "Invalid 'code' parameter given"
-        next_dict: dict = code[key]
-        for next_key in next_dict:
-            if not isinstance(next_dict[next_key], str):
+    else:
+        code: dict = message_data["code"]
+        for key in code:
+            if not isinstance(code[key], dict):
                 return None, "Invalid 'code' parameter given"
-    return MessageDataProgram.from_dict(message_data), None
+            next_dict: dict = code[key]
+            for next_key in next_dict:
+                if not isinstance(next_dict[next_key], str):
+                    return None, "Invalid 'code' parameter given"
+        return MessageDataProgram.from_dict(message_data), None
 
 
 def validate_placeholder_query_message_data(
@@ -442,12 +444,13 @@ def validate_placeholder_query_message_data(
     """
     if not isinstance(message_data, dict):
         return None, "Message data is not a JSON object"
-    if "name" not in message_data:
+    elif "name" not in message_data:
         return None, "No 'name' parameter given"
-    if "window" in message_data and "begin" in message_data["window"] and not isinstance(
+    elif "window" in message_data and "begin" in message_data["window"] and not isinstance(
         message_data["window"]["begin"], int):
         return None, "Invalid 'window'.'begin' parameter given"
-    if "window" in message_data and "size" in message_data["window"] and not isinstance(message_data["window"]["size"],
+    elif "window" in message_data and "size" in message_data["window"] and not isinstance(message_data["window"]["size"],
                                                                                         int):
         return None, "Invalid 'window'.'size' parameter given"
-    return MessageQueryInformation.from_dict(message_data), None
+    else:
+        return MessageQueryInformation.from_dict(message_data), None
