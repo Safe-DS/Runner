@@ -409,9 +409,8 @@ def validate_program_message_data(message_data: dict[str, Any] | str) -> tuple[M
         or "modulepath" not in message_data["main"]
         or "module" not in message_data["main"]
         or "pipeline" not in message_data["main"]
+        or len(message_data["main"]) != 3
     ):
-        return None, "Invalid 'main' parameter given"
-    elif len(message_data["main"]) != 3:
         return None, "Invalid 'main' parameter given"
     elif not isinstance(message_data["code"], dict):
         return None, "Invalid 'code' parameter given"
