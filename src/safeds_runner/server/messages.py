@@ -181,6 +181,7 @@ class QueryWindow:
     size : int | None
         Max. amount of entries that should be sent. May be present if a windowed query is required.
     """
+
     begin: int | None = None
     size: int | None = None
 
@@ -444,10 +445,16 @@ def validate_placeholder_query_message_data(
         return None, "Message data is not a JSON object"
     if "name" not in message_data:
         return None, "No 'name' parameter given"
-    if "window" in message_data and "begin" in message_data["window"] and not isinstance(
-        message_data["window"]["begin"], int):
+    if (
+        "window" in message_data
+        and "begin" in message_data["window"]
+        and not isinstance(message_data["window"]["begin"], int)
+    ):
         return None, "Invalid 'window'.'begin' parameter given"
-    if "window" in message_data and "size" in message_data["window"] and not isinstance(message_data["window"]["size"],
-                                                                                        int):
+    if (
+        "window" in message_data
+        and "size" in message_data["window"]
+        and not isinstance(message_data["window"]["size"], int)
+    ):
         return None, "Invalid 'window'.'size' parameter given"
     return MessageQueryInformation.from_dict(message_data), None
