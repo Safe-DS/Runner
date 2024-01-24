@@ -169,6 +169,96 @@ class ProgramMainInformation:
         return dataclasses.asdict(self)  # pragma: no cover
 
 
+@dataclass(frozen=True)
+class QueryWindow:
+    """
+    Information that is used to create a subset of the data of a placeholder.
+
+    Parameters
+    ----------
+    begin : int | None
+        Index of the first entry that should be sent. May be present if a windowed query is required.
+    size : int | None
+        Max. amount of entries that should be sent. May be present if a windowed query is required.
+    """
+
+    begin: int | None = None
+    size: int | None = None
+
+    @staticmethod
+    def from_dict(d: dict[str, Any]) -> QueryWindow:
+        """
+        Create a new QueryWindow object from a dictionary.
+
+        Parameters
+        ----------
+        d : dict[str, Any]
+            Dictionary which should contain all needed fields.
+
+        Returns
+        -------
+        QueryWindow
+            Dataclass which contains information copied from the provided dictionary.
+        """
+        return QueryWindow(**d)
+
+    def to_dict(self) -> dict[str, Any]:
+        """
+        Convert this dataclass to a dictionary.
+
+        Returns
+        -------
+        dict[str, Any]
+            Dictionary containing all the fields which are part of this dataclass.
+        """
+        return dataclasses.asdict(self)  # pragma: no cover
+
+
+@dataclass(frozen=True)
+class MessageQueryInformation:
+    """
+    Information used to query a placeholder with optional window bounds. Only complex types like tables are affected by window bounds.
+
+    Parameters
+    ----------
+    name : str
+        Placeholder name that is queried.
+    window : QueryWindow
+        Window bounds for requesting only a subset of the available data.
+    """
+
+    name: str
+    window: QueryWindow = dataclasses.field(default_factory=QueryWindow)
+
+    @staticmethod
+    def from_dict(d: dict[str, Any]) -> MessageQueryInformation:
+        """
+        Create a new MessageQueryInformation object from a dictionary.
+
+        Parameters
+        ----------
+        d : dict[str, Any]
+            Dictionary which should contain all needed fields.
+
+        Returns
+        -------
+        MessageQueryInformation
+            Dataclass which contains information copied from the provided dictionary.
+        """
+        return MessageQueryInformation(name=d["name"], window=QueryWindow.from_dict(d["window"]))
+
+    def to_dict(self) -> dict[str, Any]:
+        """
+        Convert this dataclass to a dictionary.
+
+        Returns
+        -------
+        dict[str, Any]
+            Dictionary containing all the fields which are part of this dataclass.
+        """
+        return dataclasses.asdict(self)  # pragma: no cover
+
+
 def create_placeholder_description(name: str, type_: str) -> dict[str, str]:
     """
     Create the message data of a placeholder description message containing only name and type.
@@ -188,14 +278,17 @@ def create_placeholder_description(name: str, type_: str) -> dict[str, str]:
     return {"name": name, "type": type_}
 
 
-def create_placeholder_value(name: str, type_: str, value: Any) -> dict[str, Any]:
+def create_placeholder_value(placeholder_query: MessageQueryInformation, type_: str, value: Any) -> dict[str, Any]:
     """
     Create the message data of a placeholder value message containing name, type and the actual value.
 
+    If the query only requests a subset of the data and the placeholder type supports this,
+    the response will contain only a subset and the information about the subset.
+
     Parameters
     ----------
-    name : str
-        Name of the placeholder.
+    placeholder_query : MessageQueryInformation
+        Query of the placeholder.
     type_ : str
         Type of the placeholder.
     value : Any
@@ -206,7 +299,26 @@ def create_placeholder_value(name: str, type_: str, value: Any) -> dict[str, Any
     dict[str, str]
         Message data of "placeholder_value" messages.
     """
-    return {"name": name, "type": type_, "value": value}
+    import safeds.data.tabular.containers
+
+    message: dict[str, Any] = {"name": placeholder_query.name, "type": type_}
+    # Start Index >= 0
+    start_index = max(placeholder_query.window.begin if placeholder_query.window.begin is not None else 0, 0)
+    # End Index >= Start Index
+    end_index = (
+        (start_index + max(placeholder_query.window.size, 0)) if placeholder_query.window.size is not None else None
+    )
+    if isinstance(value, safeds.data.tabular.containers.Table) and (
+        placeholder_query.window.begin is not None or placeholder_query.window.size is not None
+    ):
+        max_index = value.number_of_rows
+        # End Index <= Number Of Rows
+        end_index = min(end_index, value.number_of_rows) if end_index is not None else None
+        value = value.slice_rows(start=start_index, end=end_index)
+        window_information: dict[str, int] = {"begin": start_index, "size": value.number_of_rows, "max": max_index}
+        message["window"] = window_information
+    message["value"] = value
+    return message
 
 
 def create_runtime_error_description(message: str, backtrace: list[dict[str, Any]]) -> dict[str, Any]:
@@ -260,15 +372,16 @@ def parse_validate_message(message: str) -> tuple[Message | None, str | None, st
         return None, f"Invalid message received: {message}", "Invalid Message: not JSON"
     if "type" not in message_dict:
         return None, f"No message type specified in: {message}", "Invalid Message: no type"
-    if "id" not in message_dict:
+    elif "id" not in message_dict:
         return None, f"No message id specified in: {message}", "Invalid Message: no id"
-    if "data" not in message_dict:
+    elif "data" not in message_dict:
         return None, f"No message data specified in: {message}", "Invalid Message: no data"
-    if not isinstance(message_dict["type"], str):
+    elif not isinstance(message_dict["type"], str):
         return None, f"Message type is not a string: {message}", "Invalid Message: invalid type"
-    if not isinstance(message_dict["id"], str):
+    elif not isinstance(message_dict["id"], str):
         return None, f"Message id is not a string: {message}", "Invalid Message: invalid id"
-    return Message.from_dict(message_dict), None, None
+    else:
+        return Message.from_dict(message_dict), None, None
 
 
 def validate_program_message_data(message_data: dict[str, Any] | str) -> tuple[MessageDataProgram | None, str | None]:
@@ -287,33 +400,35 @@ def validate_program_message_data(message_data: dict[str, Any] | str) -> tuple[M
     """
     if not isinstance(message_data, dict):
         return None, "Message data is not a JSON object"
-    if "code" not in message_data:
+    elif "code" not in message_data:
         return None, "No 'code' parameter given"
-    if "main" not in message_data:
+    elif "main" not in message_data:
         return None, "No 'main' parameter given"
-    if (
+    elif (
         not isinstance(message_data["main"], dict)
         or "modulepath" not in message_data["main"]
         or "module" not in message_data["main"]
         or "pipeline" not in message_data["main"]
+        or len(message_data["main"]) != 3
     ):
         return None, "Invalid 'main' parameter given"
-    if len(message_data["main"]) != 3:
-        return None, "Invalid 'main' parameter given"
-    if not isinstance(message_data["code"], dict):
+    elif not isinstance(message_data["code"], dict):
         return None, "Invalid 'code' parameter given"
-    code: dict = message_data["code"]
-    for key in code:
-        if not isinstance(code[key], dict):
-            return None, "Invalid 'code' parameter given"
-        next_dict: dict = code[key]
-        for next_key in next_dict:
-            if not isinstance(next_dict[next_key], str):
+    else:
+        code: dict = message_data["code"]
+        for key in code:
+            if not isinstance(code[key], dict):
                 return None, "Invalid 'code' parameter given"
-    return MessageDataProgram.from_dict(message_data), None
+            next_dict: dict = code[key]
+            for next_key in next_dict:
+                if not isinstance(next_dict[next_key], str):
+                    return None, "Invalid 'code' parameter given"
+        return MessageDataProgram.from_dict(message_data), None
 
 
-def validate_placeholder_query_message_data(message_data: dict[str, Any] | str) -> tuple[str | None, str | None]:
+def validate_placeholder_query_message_data(
+    message_data: dict[str, Any] | str,
+) -> tuple[MessageQueryInformation | None, str | None]:
     """
     Validate the message data of a placeholder query message.
 
@@ -324,9 +439,24 @@ def validate_placeholder_query_message_data(message_data: dict[str, Any] | str) 
 
     Returns
     -------
-    tuple[str | None, str | None]
-        A tuple containing either a validated message data as a string or an error message.
+    tuple[MessageQueryInformation | None, str | None]
+        A tuple containing either the validated message data or an error message.
     """
-    if not isinstance(message_data, str):
-        return None, "Message data is not a string"
-    return message_data, None
+    if not isinstance(message_data, dict):
+        return None, "Message data is not a JSON object"
+    elif "name" not in message_data:
+        return None, "No 'name' parameter given"
+    elif (
+        "window" in message_data
+        and "begin" in message_data["window"]
+        and not isinstance(message_data["window"]["begin"], int)
+    ):
+        return None, "Invalid 'window'.'begin' parameter given"
+    elif (
+        "window" in message_data
+        and "size" in message_data["window"]
+        and not isinstance(message_data["window"]["size"], int)
+    ):
+        return None, "Invalid 'window'.'size' parameter given"
+    else:
+        return MessageQueryInformation.from_dict(message_data), None
