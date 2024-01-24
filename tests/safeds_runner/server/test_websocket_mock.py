@@ -5,12 +5,17 @@ import os
 import sys
 import threading
 import time
+import typing
 
 import pytest
 import safeds_runner.server.main
 import simple_websocket
+from safeds.data.tabular.containers import Table
+from safeds_runner.server.json_encoder import SafeDsEncoder
 from safeds_runner.server.messages import (
     Message,
+    MessageQueryInformation,
+    QueryWindow,
     create_placeholder_description,
     create_placeholder_value,
     create_runtime_progress_done,
@@ -69,7 +74,16 @@ class MockWebsocketConnection:
         (json.dumps({"type": {"program": "2"}, "id": "123", "data": "a"}), "Invalid Message: invalid type"),
         (json.dumps({"type": "c", "id": {"": "1233"}, "data": "a"}), "Invalid Message: invalid id"),
         (json.dumps({"type": "program", "id": "1234", "data": "a"}), "Message data is not a JSON object"),
-        (json.dumps({"type": "placeholder_query", "id": "123", "data": {"a": "v"}}), "Message data is not a string"),
+        (json.dumps({"type": "placeholder_query", "id": "123", "data": "abc"}), "Message data is not a JSON object"),
+        (json.dumps({"type": "placeholder_query", "id": "123", "data": {"a": "v"}}), "No 'name' parameter given"),
+        (
+            json.dumps({"type": "placeholder_query", "id": "123", "data": {"name": "v", "window": {"begin": "a"}}}),
+            "Invalid 'window'.'begin' parameter given",
+        ),
+        (
+            json.dumps({"type": "placeholder_query", "id": "123", "data": {"name": "v", "window": {"size": "a"}}}),
+            "Invalid 'window'.'size' parameter given",
+        ),
         (
             json.dumps({
                 "type": "program",
@@ -161,7 +175,10 @@ class MockWebsocketConnection:
         "any_invalid_type",
         "any_invalid_id",
         "program_invalid_data",
-        "placeholder_query_invalid_data",
+        "placeholder_query_invalid_data1",
+        "placeholder_query_invalid_data2",
+        "placeholder_query_invalid_data3",
+        "placeholder_query_invalid_data4",
         "program_no_code",
         "program_no_main",
         "program_invalid_main1",
@@ -273,11 +290,11 @@ def test_should_execute_pipeline_return_exception(
             2,
             [
                 # Query Placeholder
-                json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": "value1"}),
+                json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": {"name": "value1", "window": {}}}),
                 # Query not displayable Placeholder
-                json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": "obj"}),
+                json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": {"name": "obj", "window": {}}}),
                 # Query invalid placeholder
-                json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": "value2"}),
+                json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": {"name": "value2", "window": {}}}),
             ],
             [
                 # Validate Placeholder Information
@@ -286,15 +303,23 @@ def test_should_execute_pipeline_return_exception(
                 # Validate Progress Information
                 Message(message_type_runtime_progress, "abcdefg", create_runtime_progress_done()),
                 # Query Result Valid
-                Message(message_type_placeholder_value, "abcdefg", create_placeholder_value("value1", "Int", 1)),
+                Message(
+                    message_type_placeholder_value,
+                    "abcdefg",
+                    create_placeholder_value(MessageQueryInformation("value1"), "Int", 1),
+                ),
                 # Query Result not displayable
                 Message(
                     message_type_placeholder_value,
                     "abcdefg",
-                    create_placeholder_value("obj", "object", "<Not displayable>"),
+                    create_placeholder_value(MessageQueryInformation("obj"), "object", "<Not displayable>"),
                 ),
                 # Query Result Invalid
-                Message(message_type_placeholder_value, "abcdefg", create_placeholder_value("value2", "", "")),
+                Message(
+                    message_type_placeholder_value,
+                    "abcdefg",
+                    create_placeholder_value(MessageQueryInformation("value2"), "", ""),
+                ),
             ],
         ),
     ],
@@ -370,12 +395,16 @@ def test_should_execute_pipeline_return_valid_placeholder(
             # Query Result Invalid (no pipeline exists)
             [
                 json.dumps({"type": "invalid_message_type", "id": "unknown-code-id-never-generated", "data": ""}),
-                json.dumps({"type": "placeholder_query", "id": "unknown-code-id-never-generated", "data": "v"}),
+                json.dumps({
+                    "type": "placeholder_query",
+                    "id": "unknown-code-id-never-generated",
+                    "data": {"name": "v", "window": {}},
+                }),
             ],
             Message(
                 message_type_placeholder_value,
                 "unknown-code-id-never-generated",
-                create_placeholder_value("v", "", ""),
+                create_placeholder_value(MessageQueryInformation("v"), "", ""),
             ),
         ),
     ],
@@ -463,3 +492,92 @@ def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
     sys.stderr.write = lambda value: pipe.send(value)  # type: ignore[method-assign, assignment]
     sys.stdout.write = lambda value: pipe.send(value)  # type: ignore[method-assign, assignment]
     safeds_runner.server.main.start_server(port)
+
+
+@pytest.mark.parametrize(
+    argnames="query,type_,value,result",
+    argvalues=[
+        (
+            MessageQueryInformation("name"),
+            "Table",
+            Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
+            '{"name": "name", "type": "Table", "value": {"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}}',
+        ),
+        (
+            MessageQueryInformation("name", QueryWindow(0, 1)),
+            "Table",
+            Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
+            (
+                '{"name": "name", "type": "Table", "window": {"begin": 0, "size": 1, "max": 7}, "value": {"a": [1],'
+                ' "b": [3]}}'
+            ),
+        ),
+        (
+            MessageQueryInformation("name", QueryWindow(4, 3)),
+            "Table",
+            Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
+            (
+                '{"name": "name", "type": "Table", "window": {"begin": 4, "size": 3, "max": 7}, "value": {"a": [3, 2,'
+                ' 1], "b": [1, 2, 3]}}'
+            ),
+        ),
+        (
+            MessageQueryInformation("name", QueryWindow(0, 0)),
+            "Table",
+            Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
+            (
+                '{"name": "name", "type": "Table", "window": {"begin": 0, "size": 0, "max": 7}, "value": {"a": [], "b":'
+                " []}}"
+            ),
+        ),
+        (
+            MessageQueryInformation("name", QueryWindow(4, 30)),
+            "Table",
+            Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
+            (
+                '{"name": "name", "type": "Table", "window": {"begin": 4, "size": 3, "max": 7}, "value": {"a": [3, 2,'
+                ' 1], "b": [1, 2, 3]}}'
+            ),
+        ),
+        (
+            MessageQueryInformation("name", QueryWindow(4, None)),
+            "Table",
+            Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
+            (
+                '{"name": "name", "type": "Table", "window": {"begin": 4, "size": 3, "max": 7}, "value": {"a": [3, 2,'
+                ' 1], "b": [1, 2, 3]}}'
+            ),
+        ),
+        (
+            MessageQueryInformation("name", QueryWindow(0, -5)),
+            "Table",
+            Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
+            (
+                '{"name": "name", "type": "Table", "window": {"begin": 0, "size": 0, "max": 7}, "value": {"a": [], "b":'
+                " []}}"
+            ),
+        ),
+        (
+            MessageQueryInformation("name", QueryWindow(-5, None)),
+            "Table",
+            Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
+            (
+                '{"name": "name", "type": "Table", "window": {"begin": 0, "size": 7, "max": 7}, "value": {"a": [1, 2,'
+                ' 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}}'
+            ),
+        ),
+    ],
+    ids=[
+        "query_nowindow",
+        "query_windowed_0_1",
+        "query_windowed_4_3",
+        "query_windowed_empty",
+        "query_windowed_size_too_large",
+        "query_windowed_4_max",
+        "query_windowed_negative_size",
+        "query_windowed_negative_offset",
+    ],
+)
+def test_windowed_placeholder(query: MessageQueryInformation, type_: str, value: typing.Any, result: str) -> None:
+    message = create_placeholder_value(query, type_, value)
+    assert json.dumps(message, cls=SafeDsEncoder) == result
