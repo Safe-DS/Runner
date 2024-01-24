@@ -27,6 +27,8 @@ from safeds_runner.server.messages import (
 )
 from safeds_runner.server.module_manager import InMemoryFinder
 
+MemoizationMap: typing.TypeAlias = dict[tuple[str, tuple[Any], tuple[Any]], Any]
+
 
 class PipelineManager:
     """
@@ -59,7 +61,7 @@ class PipelineManager:
         )
 
     @cached_property
-    def _memoization_map(self) -> dict[tuple[str, tuple[Any], tuple[Any]], Any]:
+    def _memoization_map(self) -> MemoizationMap:
         return self._multiprocessing_manager.dict()  # type: ignore[return-value]
 
     def startup(self) -> None:
@@ -183,7 +185,7 @@ class PipelineProcess:
         execution_id: str,
         messages_queue: queue.Queue[Message],
         placeholder_map: dict[str, Any],
-        memoization_map: dict[tuple[str, tuple[Any], tuple[Any]], Any],
+        memoization_map: MemoizationMap,
     ):
         """
         Create a new process which will execute the given pipeline, when started.
@@ -198,7 +200,7 @@ class PipelineProcess:
             A queue to write outgoing messages to.
         placeholder_map : dict[str, Any]
             A map to save calculated placeholders in.
-        memoization_map : dict[typing.Tuple[str, typing.Tuple[Any], typing.Tuple[Any]], Any]
+        memoization_map : MemoizationMap
             A map to save memoizable functions in.
         """
         self._pipeline = pipeline
@@ -233,13 +235,13 @@ class PipelineProcess:
             create_placeholder_description(placeholder_name, placeholder_type),
         )
 
-    def get_memoization_map(self) -> dict[tuple[str, tuple[Any], tuple[Any]], Any]:
+    def get_memoization_map(self) -> MemoizationMap:
         """
         Get the shared memoization map.
 
         Returns
         -------
-        dict[typing.Tuple[str, typing.Tuple[Any], typing.Tuple[Any]], Any]
+        MemoizationMap
             Memoization Map
         """
         return self._memoization_map
@@ -327,15 +329,15 @@ def runner_memoized_function_call(
     Any
         The result of the specified function, if any exists
     """
-    if current_pipeline is not None:
-        memoization_map = current_pipeline.get_memoization_map()
-        key = (function_name, _convert_list_to_tuple(parameters), _convert_list_to_tuple(hidden_parameters))
-        if key in memoization_map:
-            return memoization_map[key]
-        result = function_callable(*parameters)
-        memoization_map[key] = result
-        return result
-    return None  # pragma: no cover
+    if current_pipeline is None:
+        return None  # pragma: no cover
+    memoization_map = current_pipeline.get_memoization_map()
+    key = (function_name, _convert_list_to_tuple(parameters), _convert_list_to_tuple(hidden_parameters))
+    if key in memoization_map:
+        return memoization_map[key]
+    result = function_callable(*parameters)
+    memoization_map[key] = result
+    return result
 
 
 def _convert_list_to_tuple(values: list) -> tuple:
@@ -352,7 +354,7 @@ def _convert_list_to_tuple(values: list) -> tuple:
     tuple
         Converted list containing all the elements of the provided list
     """
-    return tuple([_convert_list_to_tuple(value) if isinstance(value, list) else value for value in values])
+    return tuple(_convert_list_to_tuple(value) if isinstance(value, list) else value for value in values)
 
 
 def runner_filemtime(filename: str) -> int | None:
