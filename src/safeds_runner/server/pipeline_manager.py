@@ -6,8 +6,10 @@ import multiprocessing
 import queue
 import runpy
 import threading
+import typing
 from functools import cached_property
 from multiprocessing.managers import SyncManager
+from pathlib import Path
 from typing import Any
 
 import simple_websocket
@@ -24,6 +26,8 @@ from safeds_runner.server.messages import (
     message_type_runtime_progress,
 )
 from safeds_runner.server.module_manager import InMemoryFinder
+
+MemoizationMap: typing.TypeAlias = dict[tuple[str, tuple[Any], tuple[Any]], Any]
 
 
 class PipelineManager:
@@ -55,6 +59,10 @@ class PipelineManager:
             target=self._handle_queue_messages,
             daemon=True,
         )
+
+    @cached_property
+    def _memoization_map(self) -> MemoizationMap:
+        return self._multiprocessing_manager.dict()  # type: ignore[return-value]
 
     def startup(self) -> None:
         """
@@ -132,6 +140,7 @@ class PipelineManager:
             execution_id,
             self._messages_queue,
             self._placeholder_map[execution_id],
+            self._memoization_map,
         )
         process.execute()
 
@@ -176,6 +185,7 @@ class PipelineProcess:
         execution_id: str,
         messages_queue: queue.Queue[Message],
         placeholder_map: dict[str, Any],
+        memoization_map: MemoizationMap,
     ):
         """
         Create a new process which will execute the given pipeline, when started.
@@ -190,11 +200,14 @@ class PipelineProcess:
             A queue to write outgoing messages to.
         placeholder_map : dict[str, Any]
             A map to save calculated placeholders in.
+        memoization_map : MemoizationMap
+            A map to save memoizable functions in.
         """
         self._pipeline = pipeline
         self._id = execution_id
         self._messages_queue = messages_queue
         self._placeholder_map = placeholder_map
+        self._memoization_map = memoization_map
         self._process = multiprocessing.Process(target=self._execute, daemon=True)
 
     def _send_message(self, message_type: str, value: dict[Any, Any] | str) -> None:
@@ -221,6 +234,17 @@ class PipelineProcess:
             message_type_placeholder_type,
             create_placeholder_description(placeholder_name, placeholder_type),
         )
+
+    def get_memoization_map(self) -> MemoizationMap:
+        """
+        Get the shared memoization map.
+
+        Returns
+        -------
+        MemoizationMap
+            Memoization Map
+        """
+        return self._memoization_map
 
     def _execute(self) -> None:
         logging.info(
@@ -276,6 +300,81 @@ def runner_save_placeholder(placeholder_name: str, value: Any) -> None:
     """
     if current_pipeline is not None:
         current_pipeline.save_placeholder(placeholder_name, value)
+
+
+def runner_memoized_function_call(
+    function_name: str,
+    function_callable: typing.Callable,
+    parameters: list[Any],
+    hidden_parameters: list[Any],
+) -> Any:
+    """
+    Call a function that can be memoized and save the result.
+
+    If a function has been previously memoized, the previous result may be reused.
+
+    Parameters
+    ----------
+    function_name : str
+        Fully qualified function name
+    function_callable : typing.Callable
+        Function that is called and memoized if the result was not found in the memoization map
+    parameters : list[Any]
+        List of parameters for the function
+    hidden_parameters : list[Any]
+        List of hidden parameters for the function. This is used for memoizing some impure functions.
+
+    Returns
+    -------
+    Any
+        The result of the specified function, if any exists
+    """
+    if current_pipeline is None:
+        return None  # pragma: no cover
+    memoization_map = current_pipeline.get_memoization_map()
+    key = (function_name, _convert_list_to_tuple(parameters), _convert_list_to_tuple(hidden_parameters))
+    if key in memoization_map:
+        return memoization_map[key]
+    result = function_callable(*parameters)
+    memoization_map[key] = result
+    return result
+
+
+def _convert_list_to_tuple(values: list) -> tuple:
+    """
+    Recursively convert a mutable list of values to an immutable tuple containing the same values, to make the values hashable.
+
+    Parameters
+    ----------
+    values : list
+        Values that should be converted to a tuple
+
+    Returns
+    -------
+    tuple
+        Converted list containing all the elements of the provided list
+    """
+    return tuple(_convert_list_to_tuple(value) if isinstance(value, list) else value for value in values)
+
+
+def runner_filemtime(filename: str) -> int | None:
+    """
+    Get the last modification timestamp of the provided file.
+
+    Parameters
+    ----------
+    filename: str
+        Name of the file
+
+    Returns
+    -------
+    int | None
+        Last modification timestamp if the provided file exists, otherwise None
+    """
+    try:
+        return Path(filename).stat().st_mtime_ns
+    except FileNotFoundError:
+        return None
 
 
 def get_backtrace_info(error: BaseException) -> list[dict[str, Any]]:
