@@ -56,7 +56,7 @@ class SafeDsServer:
         serve_config.websocket_ping_interval = 25.0
         event_loop = asyncio.get_event_loop()
         event_loop.run_until_complete(hypercorn.asyncio.serve(self.app, serve_config))
-        event_loop.run_forever()
+        event_loop.run_forever()  # pragma: no cover
 
     @staticmethod
     async def ws_main() -> None:
@@ -90,12 +90,6 @@ class SafeDsServer:
         while True:
             # This would be a JSON message
             received_message: str = await ws.receive()
-            if received_message is None:
-                logging.debug("Received EOF, closing connection")
-                await output_queue.put(None)
-                pipeline_manager.disconnect(output_queue)
-                await ws.close(code=1000)
-                return
             logging.debug("Received Message: %s", received_message)
             received_object, error_detail, error_short = parse_validate_message(received_message)
             if received_object is None:
