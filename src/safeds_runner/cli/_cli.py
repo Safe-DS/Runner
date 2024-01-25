@@ -25,10 +25,6 @@ def cli() -> None:  # pragma: no cover
             start_server(args.port)
 
 
-if __name__ == "__main__":
-    start_server(5123)
-
-
 def _get_args() -> argparse.Namespace:  # pragma: no cover
     parser = argparse.ArgumentParser(description="Execute Safe-DS programs that were compiled to Python.")
     parser.add_argument(
