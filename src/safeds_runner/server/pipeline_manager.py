@@ -12,7 +12,6 @@ from multiprocessing.managers import SyncManager
 from pathlib import Path
 from typing import Any
 
-import simple_websocket
 import stack_data
 
 from safeds_runner.server.messages import (
@@ -41,7 +40,7 @@ class PipelineManager:
     def __init__(self) -> None:
         """Create a new PipelineManager object, which is lazily started, when needed."""
         self._placeholder_map: dict = {}
-        self._websocket_target: list[simple_websocket.Server] = []
+        self._websocket_target: list = []
 
     @cached_property
     def _multiprocessing_manager(self) -> SyncManager:
@@ -95,7 +94,7 @@ class PipelineManager:
         except BaseException as error:  # noqa: BLE001  # pragma: no cover
             logging.warning("Message queue terminated: %s", error.__repr__())  # pragma: no cover
 
-    def connect(self, websocket_connection: simple_websocket.Server) -> None:
+    def connect(self, websocket_connection) -> None:
         """
         Add a websocket connection to relay event messages to, which are occurring during pipeline execution.
 
@@ -106,7 +105,7 @@ class PipelineManager:
         """
         self._websocket_target.append(websocket_connection)
 
-    def disconnect(self, websocket_connection: simple_websocket.Server) -> None:
+    def disconnect(self, websocket_connection) -> None:
         """
         Remove a websocket target connection to no longer receive messages.
 

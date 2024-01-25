@@ -1,15 +1,12 @@
 """Module containing the server, endpoints and utility functions."""
-
+import asyncio
 import json
 import logging
 import sys
 
-import flask.app
-import flask_sock
-import simple_websocket
-from flask import Flask
-from flask_cors import CORS
-from flask_sock import Sock
+import hypercorn.asyncio
+import quart.app
+from asgiref.wsgi import WsgiToAsgi
 
 from safeds_runner.server import messages
 from safeds_runner.server.json_encoder import SafeDsEncoder
@@ -22,9 +19,9 @@ from safeds_runner.server.messages import (
 from safeds_runner.server.pipeline_manager import PipelineManager
 
 
-def create_flask_app(testing: bool = False) -> flask.app.App:
+def create_flask_app(testing: bool = False) -> quart.app.Quart:
     """
-    Create a flask app, that handles all requests.
+    Create a quart app, that handles all requests.
 
     Parameters
     ----------
@@ -33,34 +30,17 @@ def create_flask_app(testing: bool = False) -> flask.app.App:
 
     Returns
     -------
-    flask.app.App
-        Flask app.
+    quart.app.Quart
+        App.
     """
-    flask_app = Flask(__name__)
+    quart_app = quart.app.Quart(__name__)
     # Websocket Configuration
-    flask_app.config["SOCK_SERVER_OPTIONS"] = {"ping_interval": 25}
-    flask_app.config["TESTING"] = testing
+    # quart_app.config["SOCK_SERVER_OPTIONS"] = {"ping_interval": 25}
+    # quart_app.config["TESTING"] = testing
 
     # Allow access from VSCode extension
-    CORS(flask_app, resources={r"/*": {"origins": "vscode-webview://*"}})
-    return flask_app
-
-
-def create_flask_websocket(flask_app: flask.app.App) -> flask_sock.Sock:
-    """
-    Create a flask websocket extension.
-
-    Parameters
-    ----------
-    flask_app: flask.app.App
-        Flask App Instance.
-
-    Returns
-    -------
-    flask_sock.Sock
-        Websocket extension for the provided flask app.
-    """
-    return Sock(flask_app)
+    # CORS(flask_app, resources={r"/*": {"origins": "vscode-webview://*"}})
+    return quart_app
 
 
 class SafeDsServer:
@@ -77,8 +57,7 @@ class SafeDsServer:
         """
         self.app_pipeline_manager = app_pipeline_manager
         self.app = create_flask_app()
-        self.sock = create_flask_websocket(self.app)
-        self.sock.route("/WSMain")(lambda ws: self._ws_main(ws, self.app_pipeline_manager))
+        self.app.websocket("/WSMain")(lambda ws: self._ws_main(ws, self.app_pipeline_manager))
 
     def listen(self, port: int) -> None:
         """
@@ -90,13 +69,14 @@ class SafeDsServer:
             Port to listen on
         """
         logging.info("Starting Safe-DS Runner on port %s", str(port))
+        asgi_app = WsgiToAsgi(self.app)
+        serve_config = hypercorn.config.Config()
         # Only bind to host=127.0.0.1. Connections from other devices should not be accepted
-        from gevent.pywsgi import WSGIServer
-
-        WSGIServer(("127.0.0.1", port), self.app, spawn=8).serve_forever()
+        serve_config.bind = f"localhost:{port}"
+        asyncio.run(hypercorn.asyncio.serve(asgi_app, serve_config))
 
     @staticmethod
-    def _ws_main(ws: simple_websocket.Server, pipeline_manager: PipelineManager) -> None:
+    def _ws_main(ws, pipeline_manager: PipelineManager) -> None:
         """
         Handle websocket requests to the WSMain endpoint.
 
@@ -199,7 +179,7 @@ class SafeDsServer:
                         logging.warning("Invalid message type: %s", received_object.type)
 
 
-def broadcast_message(connections: list[simple_websocket.Server], message: Message) -> None:
+def broadcast_message(connections: list, message: Message) -> None:
     """
     Send any message to all the provided connections (to the VS Code extension).
 

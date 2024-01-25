@@ -17,10 +17,6 @@ def start_server(port: int) -> None:
     # Startup early, so our multiprocessing setup works
     app_pipeline_manager = PipelineManager()
     app_pipeline_manager.startup()
-    from gevent.monkey import patch_all
-
-    # Patch WebSockets to work in parallel
-    patch_all()
 
     from safeds_runner.server.server import SafeDsServer
 
