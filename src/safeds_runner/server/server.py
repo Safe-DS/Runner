@@ -1,4 +1,5 @@
 """Module containing the server, endpoints and utility functions."""
+
 import asyncio
 import json
 import logging
@@ -85,8 +86,9 @@ class SafeDsServer:
         await asyncio.gather(foreground_handler, background_handler)
 
     @staticmethod
-    async def _ws_main_foreground(ws: quart.Websocket, pipeline_manager: PipelineManager,
-                                  output_queue: asyncio.Queue) -> None:
+    async def _ws_main_foreground(
+        ws: quart.Websocket, pipeline_manager: PipelineManager, output_queue: asyncio.Queue,
+    ) -> None:
         while True:
             # This would be a JSON message
             received_message: str = await ws.receive()

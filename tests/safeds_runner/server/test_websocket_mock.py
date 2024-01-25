@@ -8,10 +8,9 @@ import time
 import typing
 
 import pytest
-from quart.testing.connections import WebsocketDisconnectError
-
 import safeds_runner.server.main
 import simple_websocket
+from quart.testing.connections import WebsocketDisconnectError
 from safeds.data.tabular.containers import Table
 from safeds_runner.server.json_encoder import SafeDsEncoder
 from safeds_runner.server.messages import (
@@ -24,10 +23,13 @@ from safeds_runner.server.messages import (
     message_type_placeholder_type,
     message_type_placeholder_value,
     message_type_runtime_error,
-    message_type_runtime_progress, parse_validate_message, validate_program_message_data,
+    message_type_runtime_progress,
+    parse_validate_message,
     validate_placeholder_query_message_data,
+    validate_program_message_data,
 )
 from safeds_runner.server.server import SafeDsServer
+
 
 @pytest.mark.parametrize(
     argnames="websocket_message",
@@ -41,37 +43,29 @@ from safeds_runner.server.server import SafeDsServer
         json.dumps({"type": "program", "id": "1234", "data": "a"}),
         json.dumps({"type": "placeholder_query", "id": "123", "data": "abc"}),
         json.dumps({"type": "placeholder_query", "id": "123", "data": {"a": "v"}}),
-
         json.dumps({"type": "placeholder_query", "id": "123", "data": {"name": "v", "window": {"begin": "a"}}}),
-
         json.dumps({"type": "placeholder_query", "id": "123", "data": {"name": "v", "window": {"size": "a"}}}),
-
         json.dumps({
             "type": "program",
             "id": "1234",
             "data": {"main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
         }),
-
         json.dumps({"type": "program", "id": "1234", "data": {"code": {"": {"entry": ""}}}}),
-
         json.dumps({
             "type": "program",
             "id": "1234",
             "data": {"code": {"": {"entry": ""}}, "main": {"modulepath": "1", "module": "2"}},
         }),
-
         json.dumps({
             "type": "program",
             "id": "1234",
             "data": {"code": {"": {"entry": ""}}, "main": {"modulepath": "1", "pipeline": "3"}},
         }),
-
         json.dumps({
             "type": "program",
             "id": "1234",
             "data": {"code": {"": {"entry": ""}}, "main": {"module": "2", "pipeline": "3"}},
         }),
-
         json.dumps({
             "type": "program",
             "id": "1234",
@@ -80,7 +74,6 @@ from safeds_runner.server.server import SafeDsServer
                 "main": {"modulepath": "1", "module": "2", "pipeline": "3", "other": "4"},
             },
         }),
-
         json.dumps({
             "type": "program",
             "id": "1234",
@@ -89,25 +82,21 @@ from safeds_runner.server.server import SafeDsServer
                 "main": {"modulepath": "1", "module": "2", "pipeline": "3", "other": {"4": "a"}},
             },
         }),
-
         json.dumps({
             "type": "program",
             "id": "1234",
             "data": {"code": "a", "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
         }),
-
         json.dumps({
             "type": "program",
             "id": "1234",
             "data": {"code": {"": "a"}, "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
         }),
-
         json.dumps({
             "type": "program",
             "id": "1234",
             "data": {"code": {"": {"a": {"b": "c"}}}, "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
         }),
-
     ],
     ids=[
         "no_json",
@@ -133,10 +122,10 @@ from safeds_runner.server.server import SafeDsServer
         "program_invalid_code3",
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_should_fail_message_validation_ws(websocket_message: str) -> None:
     test_client = SafeDsServer().app.test_client()
-    async with test_client.websocket('/WSMain') as test_websocket:
+    async with test_client.websocket("/WSMain") as test_websocket:
         await test_websocket.send(websocket_message)
         disconnected = False
         try:
@@ -299,8 +288,9 @@ def test_should_fail_message_validation_reason_program(websocket_message: str, e
         "placeholder_query_invalid_data4",
     ],
 )
-def test_should_fail_message_validation_reason_placeholder_query(websocket_message: str,
-                                                                 exception_message: str) -> None:
+def test_should_fail_message_validation_reason_placeholder_query(
+    websocket_message: str, exception_message: str,
+) -> None:
     received_object, error_detail, error_short = parse_validate_message(websocket_message)
     assert received_object is not None
     program_data, invalid_message = validate_placeholder_query_message_data(received_object.data)
@@ -325,9 +315,7 @@ def test_should_fail_message_validation_reason_placeholder_query(websocket_messa
                     "code": {
                         "": {
                             "gen_test_a": "def pipe():\n\traise Exception('Test Exception')\n",
-                            "gen_test_a_pipe": (
-                                "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()"
-                            ),
+                            "gen_test_a_pipe": "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()",
                         },
                     },
                     "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
@@ -338,13 +326,13 @@ def test_should_fail_message_validation_reason_placeholder_query(websocket_messa
     ],
     ids=["raise_exception"],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_should_execute_pipeline_return_exception(
     message: str,
     expected_response_runtime_error: Message,
 ) -> None:
     test_client = SafeDsServer().app.test_client()
-    async with test_client.websocket('/WSMain') as test_websocket:
+    async with test_client.websocket("/WSMain") as test_websocket:
         await test_websocket.send(message)
         received_message = await test_websocket.receive()
         exception_message = Message.from_dict(json.loads(received_message))
@@ -432,7 +420,7 @@ async def test_should_execute_pipeline_return_exception(
     ],
     ids=["query_valid_query_invalid"],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_should_execute_pipeline_return_valid_placeholder(
     initial_messages: list[str],
     initial_execution_message_wait: int,
@@ -441,7 +429,7 @@ async def test_should_execute_pipeline_return_valid_placeholder(
 ) -> None:
     # Initial execution
     test_client = SafeDsServer().app.test_client()
-    async with test_client.websocket('/WSMain') as test_websocket:
+    async with test_client.websocket("/WSMain") as test_websocket:
         for message in initial_messages:
             await test_websocket.send(message)
         # Wait for at least enough messages to successfully execute pipeline
@@ -522,10 +510,10 @@ async def test_should_execute_pipeline_return_valid_placeholder(
     ],
     ids=["progress_message_done", "invalid_message_invalid_placeholder_query"],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_should_successfully_execute_simple_flow(messages: list[str], expected_response: Message) -> None:
     test_client = SafeDsServer().app.test_client()
-    async with test_client.websocket('/WSMain') as test_websocket:
+    async with test_client.websocket("/WSMain") as test_websocket:
         for message in messages:
             await test_websocket.send(message)
         received_message = await test_websocket.receive()
@@ -562,7 +550,7 @@ def helper_should_shut_itself_down_run_in_subprocess(sub_messages: list[str]) ->
 
 async def helper_should_shut_itself_down_run_in_subprocess_async(sub_messages: list[str]) -> None:
     test_client = SafeDsServer().app.test_client()
-    async with test_client.websocket('/WSMain') as test_websocket:
+    async with test_client.websocket("/WSMain") as test_websocket:
         for message in sub_messages:
             await test_websocket.send(message)
 
@@ -703,29 +691,30 @@ def test_windowed_placeholder(query: MessageQueryInformation, type_: str, value:
 
 @pytest.mark.parametrize(
     argnames="query,expected_response",
-    argvalues=[(
-        json.dumps({
-            "type": "program",
-            "id": "abcdefgh",
-            "data": {
-                "code": {
-                    "": {
-                        "gen_test_a": "def pipe():\n\tpass\n",
-                        "gen_test_a_pipe": (
-                            "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()"
-                        ),
+    argvalues=[
+        (
+            json.dumps({
+                "type": "program",
+                "id": "abcdefgh",
+                "data": {
+                    "code": {
+                        "": {
+                            "gen_test_a": "def pipe():\n\tpass\n",
+                            "gen_test_a_pipe": "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()",
+                        },
                     },
+                    "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
                 },
-                "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
-            },
-        }),
-        Message(message_type_runtime_progress, "abcdefgh", "done"),
-    )],
-    ids=["at_least_a_message_without_crashing"]
+            }),
+            Message(message_type_runtime_progress, "abcdefgh", "done"),
+        ),
+    ],
+    ids=["at_least_a_message_without_crashing"],
 )
 @pytest.mark.timeout(45)
-def test_should_accept_at_least_a_message_without_crashing_in_subprocess(query: str,
-                                                                         expected_response: Message) -> None:
+def test_should_accept_at_least_a_message_without_crashing_in_subprocess(
+    query: str, expected_response: Message,
+) -> None:
     port = 6000
     server_output_pipes_stderr_r, server_output_pipes_stderr_w = multiprocessing.Pipe()
     process = multiprocessing.Process(
