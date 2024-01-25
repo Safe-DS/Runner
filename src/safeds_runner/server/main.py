@@ -2,7 +2,7 @@
 
 import logging
 
-from safeds_runner.server.pipeline_manager import PipelineManager
+from safeds_runner.server.server import SafeDsServer
 
 
 def start_server(port: int) -> None:
@@ -14,11 +14,6 @@ def start_server(port: int) -> None:
     builtins.print = functools.partial(print, flush=True)  # type: ignore[assignment]
 
     logging.getLogger().setLevel(logging.DEBUG)
-    # Startup early, so our multiprocessing setup works
-    app_pipeline_manager = PipelineManager()
-    app_pipeline_manager.startup()
 
-    from safeds_runner.server.server import SafeDsServer
-
-    safeds_server = SafeDsServer(app_pipeline_manager)  # pragma: no cover
+    safeds_server = SafeDsServer()  # pragma: no cover
     safeds_server.listen(port)  # pragma: no cover

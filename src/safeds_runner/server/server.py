@@ -28,28 +28,17 @@ def create_flask_app() -> quart.app.Quart:
         App.
     """
     quart_app = quart.app.Quart(__name__)
-    # Websocket Configuration
-    # quart_app.config["SOCK_SERVER_OPTIONS"] = {"ping_interval": 25}
-    # quart_app.config["TESTING"] = testing
-
-    # Allow access from VSCode extension
-    # CORS(flask_app, resources={r"/*": {"origins": "vscode-webview://*"}})
     return quart_app
 
 
 class SafeDsServer:
     """Server containing the flask app, websocket handler and endpoints."""
 
-    def __init__(self, app_pipeline_manager: PipelineManager) -> None:
+    def __init__(self) -> None:
         """
         Create a new server object.
-
-        Parameters
-        ----------
-        app_pipeline_manager : PipelineManager
-            Manager responsible for executing pipelines sent to this server.
         """
-        self.app_pipeline_manager = app_pipeline_manager
+        self.app_pipeline_manager = PipelineManager()
         self.app = create_flask_app()
         self.app.config["pipeline_manager"] = self.app_pipeline_manager
         self.app.websocket("/WSMain")(SafeDsServer.ws_main)
@@ -67,6 +56,7 @@ class SafeDsServer:
         serve_config = hypercorn.config.Config()
         # Only bind to host=127.0.0.1. Connections from other devices should not be accepted
         serve_config.bind = f"127.0.0.1:{port}"
+        serve_config.websocket_ping_interval = 25.0
         event_loop = asyncio.get_event_loop()
         event_loop.run_until_complete(hypercorn.asyncio.serve(self.app, serve_config))
         event_loop.run_forever()
@@ -108,6 +98,7 @@ class SafeDsServer:
                 raise
             if received_message is None:
                 logging.debug("Received EOF, closing connection")
+                await output_queue.put(None)
                 pipeline_manager.disconnect(output_queue)
                 await ws.close(code=1000)
                 return
@@ -115,6 +106,7 @@ class SafeDsServer:
             received_object, error_detail, error_short = parse_validate_message(received_message)
             if received_object is None:
                 logging.error(error_detail)
+                await output_queue.put(None)
                 pipeline_manager.disconnect(output_queue)
                 await ws.close(code=1000, reason=error_short)
                 return
@@ -127,6 +119,7 @@ class SafeDsServer:
                     program_data, invalid_message = messages.validate_program_message_data(received_object.data)
                     if program_data is None:
                         logging.error("Invalid message data specified in: %s (%s)", received_message, invalid_message)
+                        await output_queue.put(None)
                         pipeline_manager.disconnect(output_queue)
                         await ws.close(code=1000, reason=invalid_message)
                         return
@@ -139,6 +132,7 @@ class SafeDsServer:
                     )
                     if placeholder_query_data is None:
                         logging.error("Invalid message data specified in: %s (%s)", received_message, invalid_message)
+                        await output_queue.put(None)
                         pipeline_manager.disconnect(output_queue)
                         await ws.close(code=1000, reason=invalid_message)
                         return
@@ -194,6 +188,8 @@ class SafeDsServer:
     async def _ws_main_background(ws: quart.Websocket, output_queue: asyncio.Queue) -> None:
         while True:
             encoded_message = await output_queue.get()
+            if encoded_message is None:
+                return
             await ws.send(encoded_message)
 
 
