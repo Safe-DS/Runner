@@ -27,17 +27,14 @@ def create_flask_app() -> quart.app.Quart:
     quart.app.Quart
         App.
     """
-    quart_app = quart.app.Quart(__name__)
-    return quart_app
+    return quart.app.Quart(__name__)
 
 
 class SafeDsServer:
     """Server containing the flask app, websocket handler and endpoints."""
 
     def __init__(self) -> None:
-        """
-        Create a new server object.
-        """
+        """Create a new server object."""
         self.app_pipeline_manager = PipelineManager()
         self.app = create_flask_app()
         self.app.config["pipeline_manager"] = self.app_pipeline_manager
@@ -81,7 +78,7 @@ class SafeDsServer:
             Pipeline Manager
         """
         logging.debug("Request to WSRunProgram")
-        output_queue = asyncio.Queue()
+        output_queue: asyncio.Queue = asyncio.Queue()
         pipeline_manager.connect(output_queue)
         foreground_handler = asyncio.create_task(SafeDsServer._ws_main_foreground(ws, pipeline_manager, output_queue))
         background_handler = asyncio.create_task(SafeDsServer._ws_main_background(ws, output_queue))
@@ -92,10 +89,7 @@ class SafeDsServer:
                                   output_queue: asyncio.Queue) -> None:
         while True:
             # This would be a JSON message
-            try:
-                received_message: str = await ws.receive()
-            except asyncio.CancelledError:
-                raise
+            received_message: str = await ws.receive()
             if received_message is None:
                 logging.debug("Received EOF, closing connection")
                 await output_queue.put(None)
