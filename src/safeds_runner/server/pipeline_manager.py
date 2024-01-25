@@ -1,4 +1,5 @@
 """Module that contains the infrastructure for pipeline execution in child processes."""
+
 import asyncio
 import json
 import logging
@@ -54,11 +55,7 @@ class PipelineManager:
 
     @cached_property
     def _messages_queue_thread(self) -> threading.Thread:
-        return threading.Thread(
-            target=self._handle_queue_messages,
-            daemon=True,
-            args=(asyncio.get_event_loop(),)
-        )
+        return threading.Thread(target=self._handle_queue_messages, daemon=True, args=(asyncio.get_event_loop(),))
 
     @cached_property
     def _memoization_map(self) -> MemoizationMap:
