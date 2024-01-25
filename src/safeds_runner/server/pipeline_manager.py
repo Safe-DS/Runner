@@ -1,5 +1,5 @@
 """Module that contains the infrastructure for pipeline execution in child processes."""
-
+import asyncio
 import json
 import logging
 import multiprocessing
@@ -40,7 +40,7 @@ class PipelineManager:
     def __init__(self) -> None:
         """Create a new PipelineManager object, which is lazily started, when needed."""
         self._placeholder_map: dict = {}
-        self._websocket_target: list = []
+        self._websocket_target: list[asyncio.Queue] = []
 
     @cached_property
     def _multiprocessing_manager(self) -> SyncManager:
@@ -57,6 +57,7 @@ class PipelineManager:
         return threading.Thread(
             target=self._handle_queue_messages,
             daemon=True,
+            args=(asyncio.get_event_loop(),)
         )
 
     @cached_property
@@ -78,11 +79,16 @@ class PipelineManager:
         if not self._messages_queue_thread.is_alive():
             self._messages_queue_thread.start()
 
-    def _handle_queue_messages(self) -> None:
+    def _handle_queue_messages(self, event_loop: asyncio.AbstractEventLoop) -> None:
         """
         Relay messages from pipeline processes to the currently connected websocket endpoint.
 
         Should be used in a dedicated thread.
+
+        Parameters
+        ----------
+        event_loop : asyncio.AbstractEventLoop
+            Event Loop that handles websocket connections.
         """
         try:
             while self._messages_queue is not None:
@@ -90,31 +96,31 @@ class PipelineManager:
                 message_encoded = json.dumps(message.to_dict())
                 # only send messages to the same connection once
                 for connection in set(self._websocket_target):
-                    connection.send(message_encoded)
+                    asyncio.run_coroutine_threadsafe(connection.put(message_encoded), event_loop)
         except BaseException as error:  # noqa: BLE001  # pragma: no cover
             logging.warning("Message queue terminated: %s", error.__repr__())  # pragma: no cover
 
-    def connect(self, websocket_connection) -> None:
+    def connect(self, websocket_connection_queue: asyncio.Queue) -> None:
         """
-        Add a websocket connection to relay event messages to, which are occurring during pipeline execution.
+        Add a websocket connection queue to relay event messages to, which are occurring during pipeline execution.
 
         Parameters
         ----------
-        websocket_connection : simple_websocket.Server
-            New websocket connection.
+        websocket_connection_queue : asyncio.Queue
+            Message Queue for a websocket connection.
         """
-        self._websocket_target.append(websocket_connection)
+        self._websocket_target.append(websocket_connection_queue)
 
-    def disconnect(self, websocket_connection) -> None:
+    def disconnect(self, websocket_connection_queue: asyncio.Queue) -> None:
         """
-        Remove a websocket target connection to no longer receive messages.
+        Remove a websocket target connection queue to no longer receive messages.
 
         Parameters
         ----------
-        websocket_connection : simple_websocket.Server
-            Websocket connection to be removed.
+        websocket_connection_queue : asyncio.Queue
+            Message Queue for a websocket connection to be removed.
         """
-        self._websocket_target.remove(websocket_connection)
+        self._websocket_target.remove(websocket_connection_queue)
 
     def execute_pipeline(
         self,
