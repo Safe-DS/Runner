@@ -87,7 +87,9 @@ class SafeDsServer:
 
     @staticmethod
     async def _ws_main_foreground(
-        ws: quart.Websocket, pipeline_manager: PipelineManager, output_queue: asyncio.Queue,
+        ws: quart.Websocket,
+        pipeline_manager: PipelineManager,
+        output_queue: asyncio.Queue,
     ) -> None:
         while True:
             # This would be a JSON message

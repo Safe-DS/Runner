@@ -289,7 +289,8 @@ def test_should_fail_message_validation_reason_program(websocket_message: str, e
     ],
 )
 def test_should_fail_message_validation_reason_placeholder_query(
-    websocket_message: str, exception_message: str,
+    websocket_message: str,
+    exception_message: str,
 ) -> None:
     received_object, error_detail, error_short = parse_validate_message(websocket_message)
     assert received_object is not None
@@ -713,7 +714,8 @@ def test_windowed_placeholder(query: MessageQueryInformation, type_: str, value:
 )
 @pytest.mark.timeout(45)
 def test_should_accept_at_least_a_message_without_crashing_in_subprocess(
-    query: str, expected_response: Message,
+    query: str,
+    expected_response: Message,
 ) -> None:
     port = 6000
     server_output_pipes_stderr_r, server_output_pipes_stderr_w = multiprocessing.Pipe()
