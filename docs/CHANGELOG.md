@@ -1,3 +1,19 @@
+## [0.5.0](https://github.com/Safe-DS/Runner/compare/v0.4.0...v0.5.0) (2024-01-26)
+
+
+### Features
+
+* added json serializer that encodes tables and images ([#29](https://github.com/Safe-DS/Runner/issues/29)) ([054cca4](https://github.com/Safe-DS/Runner/commit/054cca4cf8025932c0a73e1f734a31fb20cab99a)), closes [#20](https://github.com/Safe-DS/Runner/issues/20)
+* Memoization ([#38](https://github.com/Safe-DS/Runner/issues/38)) ([2a26b48](https://github.com/Safe-DS/Runner/commit/2a26b48405225516e550703f3f9cdce49079eaae))
+* Replace flask with quart ([#43](https://github.com/Safe-DS/Runner/issues/43)) ([5520b68](https://github.com/Safe-DS/Runner/commit/5520b68143795609513e63def569cdbec0e6df6a)), closes [#42](https://github.com/Safe-DS/Runner/issues/42)
+* support placeholder queries that only request a subset of data ([#39](https://github.com/Safe-DS/Runner/issues/39)) ([dae57dc](https://github.com/Safe-DS/Runner/commit/dae57dc93134cfe5e1ec0d1e5120c66aaf77f085))
+* update to safe-ds 0.17.1 + server refactor ([#37](https://github.com/Safe-DS/Runner/issues/37)) ([1bcad07](https://github.com/Safe-DS/Runner/commit/1bcad07fdbea1051a4334029e64dc5b4cf7e0ba0))
+
+
+### Bug Fixes
+
+* allow multiple connections to work with the runner ([#31](https://github.com/Safe-DS/Runner/issues/31)) ([64685a3](https://github.com/Safe-DS/Runner/commit/64685a36840dc5785e756a27d1b3c2396e71e47b))
+
 ## [0.4.0](https://github.com/Safe-DS/Runner/compare/v0.3.0...v0.4.0) (2023-12-05)
 
 
