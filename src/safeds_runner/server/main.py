@@ -15,5 +15,5 @@ def start_server(port: int) -> None:
 
     logging.getLogger().setLevel(logging.DEBUG)
 
-    safeds_server = SafeDsServer()  # pragma: no cover
+    safeds_server = SafeDsServer()
     safeds_server.listen(port)  # pragma: no cover
