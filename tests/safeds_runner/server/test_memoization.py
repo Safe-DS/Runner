@@ -5,7 +5,8 @@ from queue import Queue
 from typing import Any
 
 import pytest
-from safeds_runner.server import pipeline_manager
+from safeds_runner.server import pipeline_manager, memoization_map
+from safeds_runner.server.memoization_map import MemoizationMap
 from safeds_runner.server.messages import MessageDataProgram, ProgramMainInformation
 from safeds_runner.server.pipeline_manager import PipelineProcess
 
@@ -29,13 +30,13 @@ def test_memoization_already_present_values(
         "",
         Queue(),
         {},
-        {},
+        MemoizationMap({}, {}),
     )
-    pipeline_manager.current_pipeline.get_memoization_map()[
+    pipeline_manager.current_pipeline.get_memoization_map().map_values[
         (
             function_name,
-            pipeline_manager._convert_list_to_tuple(params),
-            pipeline_manager._convert_list_to_tuple(hidden_params),
+            memoization_map._convert_list_to_tuple(params),
+            memoization_map._convert_list_to_tuple(hidden_params),
         )
     ] = expected_result
     result = pipeline_manager.runner_memoized_function_call(function_name, lambda *_: None, params, hidden_params)
@@ -62,7 +63,7 @@ def test_memoization_not_present_values(
         "",
         Queue(),
         {},
-        {},
+        MemoizationMap({}, {}),
     )
     # Save value in map
     result = pipeline_manager.runner_memoized_function_call(function_name, function, params, hidden_params)
