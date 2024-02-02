@@ -1,4 +1,6 @@
+import sys
 import tempfile
+import time
 import typing
 from datetime import UTC, datetime
 from queue import Queue
@@ -6,7 +8,7 @@ from typing import Any
 
 import pytest
 from safeds_runner.server import pipeline_manager, memoization_map
-from safeds_runner.server.memoization_map import MemoizationMap
+from safeds_runner.server.memoization_map import MemoizationMap, MemoizationStats
 from safeds_runner.server.messages import MessageDataProgram, ProgramMainInformation
 from safeds_runner.server.pipeline_manager import PipelineProcess
 
@@ -39,6 +41,13 @@ def test_memoization_already_present_values(
             memoization_map._convert_list_to_tuple(hidden_params),
         )
     ] = expected_result
+    pipeline_manager.current_pipeline.get_memoization_map().map_stats[
+        (
+            function_name,
+            memoization_map._convert_list_to_tuple(params),
+            memoization_map._convert_list_to_tuple(hidden_params),
+        )
+    ] = MemoizationStats(time.perf_counter_ns(), 0, 0, sys.getsizeof(expected_result))
     result = pipeline_manager.runner_memoized_function_call(function_name, lambda *_: None, params, hidden_params)
     assert result == expected_result
 
