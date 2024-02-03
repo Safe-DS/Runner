@@ -467,13 +467,12 @@ async def test_should_execute_pipeline_return_valid_placeholder(
                         "code": {
                             "": {
                                 "gen_b": (
-                                    "import safeds_runner.codegen\n"
                                     "from a.stub import u\n"
                                     "from v.u.s.testing import add1\n"
                                     "\n"
                                     "def c():\n"
                                     "\ta1 = 1\n"
-                                    "\ta2 = safeds_runner.codegen.eager_or(True, False)\n"
+                                    "\ta2 = True or False\n"
                                     "\tprint('test2')\n"
                                     "\tprint('new dynamic output')\n"
                                     "\tprint(f'Add1: {add1(1, 2)}')\n"
