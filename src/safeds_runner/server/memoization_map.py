@@ -156,6 +156,12 @@ def _get_size_of_value(value: Any) -> int:
         return sum(map(_get_size_of_value, value.items())) + size_immediate
     elif isinstance(value, list) or isinstance(value, tuple) or isinstance(value, set) or isinstance(value, frozenset):
         return sum(map(_get_size_of_value, value)) + size_immediate
+    # elif isinstance(value, TimeSeries):
+    #     return _get_size_of_value(value._data) + _get_size_of_value(value._schema) + _get_size_of_value(
+    #         value._time) + _get_size_of_value(value._features) + _get_size_of_value(value._target) + size_immediate
+    elif isinstance(value, TaggedTable):
+        return _get_size_of_value(value._data) + _get_size_of_value(value._schema) + _get_size_of_value(
+            value._features) + _get_size_of_value(value._target) + size_immediate
     elif isinstance(value, Table):
         return _get_size_of_value(value._data) + _get_size_of_value(value._schema) + size_immediate
     elif isinstance(value, Schema):
@@ -168,11 +174,5 @@ def _get_size_of_value(value: Any) -> int:
             value._type) + size_immediate
     elif isinstance(value, Row):
         return _get_size_of_value(value._data) + _get_size_of_value(value._schema) + size_immediate
-    elif isinstance(value, TaggedTable):
-        return _get_size_of_value(value._data) + _get_size_of_value(value._schema) + _get_size_of_value(
-            value._features) + _get_size_of_value(value._target) + size_immediate
-    # elif isinstance(value, TimeSeries):
-    #     return _get_size_of_value(value._data) + _get_size_of_value(value._schema) + _get_size_of_value(
-    #         value._time) + _get_size_of_value(value._features) + _get_size_of_value(value._target) + size_immediate
     else:
         return size_immediate

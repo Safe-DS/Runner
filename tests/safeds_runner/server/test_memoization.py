@@ -5,8 +5,12 @@ import typing
 from datetime import UTC, datetime
 from queue import Queue
 from typing import Any
+import base64
 
 import pytest
+from safeds.data.image.containers import Image
+from safeds.data.tabular.containers import Table
+
 from safeds_runner.server import pipeline_manager, memoization_map
 from safeds_runner.server.memoization_map import MemoizationMap, MemoizationStats
 from safeds_runner.server.messages import MessageDataProgram, ProgramMainInformation
@@ -91,3 +95,34 @@ def test_file_mtime_exists() -> None:
 def test_file_mtime_not_exists() -> None:
     file_mtime = pipeline_manager.runner_filemtime(f"file_not_exists.{datetime.now(tz=UTC).timestamp()}")
     assert file_mtime is None
+
+
+@pytest.mark.parametrize(
+    argnames="value,expected_size",
+    argvalues=[
+        (1, 28),
+        ({}, 64),
+        ({"a": "b"}, 340),
+        ([], 56),
+        ([1, 2, 3], 172),
+        ((), 40),
+        ((1, 2, 3), 148),
+        (set(), 216),
+        ({1, 2, 3}, 300),
+        (frozenset(), 216),
+        (frozenset({1, 2, 3}), 300),
+        (Table.from_dict({"a": [1, 2], "b": [3.2, 4.0]}), 816),
+        (Table.from_dict({"a": [1, 2], "b": [3.2, 4.0]}).schema, 564),
+        (Table.from_dict({"a": [1, 2], "b": [3.2, 4.0]}).get_column("a"), 342),
+        (Table.from_dict({"a": [1, 2], "b": [3.2, 4.0]}).get_row(0), 800),
+        (Table.from_dict({"a": [1, 2], "b": [3.2, 4.0]}).tag_columns("a", ["b"]), 1796),
+        (Image.from_bytes(
+                base64.b64decode(
+                    "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
+                ),
+            ), 208)
+    ],
+    ids=["immediate", "dict_empty", "dict_values", "list_empty", "list_values", "tuple_empty", "tuple_values", "set_empty", "set_values", "frozenset_empty", "frozenset_values", "table", "schema", "column", "row", "tagged_table", "image"],
+)
+def test_memory_usage(value: Any, expected_size: int) -> None:
+    assert memoization_map._get_size_of_value(value) == expected_size
