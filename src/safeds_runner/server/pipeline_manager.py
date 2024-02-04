@@ -58,7 +58,7 @@ class PipelineManager:
 
     @cached_property
     def _memoization_map(self) -> MemoizationMap:
-        return MemoizationMap(self._multiprocessing_manager.dict(), self._multiprocessing_manager.dict())  # type: ignore[return-value]
+        return MemoizationMap(self._multiprocessing_manager.dict(), self._multiprocessing_manager.dict())  # type: ignore[arg-type]
 
     def startup(self) -> None:
         """
