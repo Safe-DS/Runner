@@ -92,6 +92,9 @@ class MemoizationMap:
         time_compare_start = time.perf_counter_ns()
         try:
             potential_value = self.map_values[key]
+        except KeyError:
+            pass
+        else:
             time_compare_end = time.perf_counter_ns()
             # Use time_ns for absolute time points, as perf_counter_ns does not guarantee any fixed reference-point
             time_last_access = time.time_ns()
@@ -100,10 +103,8 @@ class MemoizationMap:
             memoization_stats = MemoizationStats(time_last_access, old_memoization_stats.computation_time,
                                                  time_compare, old_memoization_stats.memory_size)
             self.map_stats[key] = memoization_stats
-            logging.info(f"Updated memoization stats for {function_name}: {memoization_stats}")
+            logging.info("Updated memoization stats for %s: %s", function_name, memoization_stats)
             return potential_value
-        except KeyError:
-            pass
         time_compare_end = time.perf_counter_ns()
         time_compare = time_compare_end - time_compare_start
         time_compute_start = time.perf_counter_ns()
@@ -115,7 +116,7 @@ class MemoizationMap:
         value_memory = _get_size_of_value(result)
         self.map_values[key] = result
         memoization_stats = MemoizationStats(time_last_access, time_compute, time_compare, value_memory)
-        logging.info(f"New memoization stats for {function_name}: {memoization_stats}")
+        logging.info("New memoization stats for %s: %s", function_name, memoization_stats)
         self.map_stats[key] = memoization_stats
         return result
 
