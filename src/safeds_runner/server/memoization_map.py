@@ -1,12 +1,14 @@
 """Module that contains the memoization logic and stats."""
+
 import logging
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 from safeds.data.image.containers import Image
-from safeds.data.tabular.containers import Table, Column, Row, TaggedTable  # , TimeSeries
+from safeds.data.tabular.containers import Column, Row, Table, TaggedTable  # , TimeSeries
 from safeds.data.tabular.typing import Schema
 
 
@@ -26,6 +28,7 @@ class MemoizationStats:
     memory_size
         Amount of memory the memoized value takes up in bytes
     """
+
     last_access: int
     computation_time: int
     lookup_time: int
@@ -39,7 +42,10 @@ class MemoizationStats:
         -------
         Summary of stats
         """
-        return f"Last access: {self.last_access}, computation time: {self.computation_time}, lookup time: {self.lookup_time}, memory size: {self.memory_size}"
+        return (
+            f"Last access: {self.last_access}, computation time: {self.computation_time}, lookup time:"
+            f" {self.lookup_time}, memory size: {self.memory_size}"
+        )
 
 
 class MemoizationMap:
@@ -49,8 +55,11 @@ class MemoizationMap:
     This contains looking up stored values, computing new values if needed and calculating and updating statistics.
     """
 
-    def __init__(self, map_values: dict[tuple[str, tuple[Any], tuple[Any]], Any],
-                 map_stats: dict[tuple[str, tuple[Any], tuple[Any]], MemoizationStats]):
+    def __init__(
+        self,
+        map_values: dict[tuple[str, tuple[Any], tuple[Any]], Any],
+        map_stats: dict[tuple[str, tuple[Any], tuple[Any]], MemoizationStats],
+    ):
         """
         Create a new memoization map using a value store dictionary and a stats dictionary.
 
@@ -64,8 +73,9 @@ class MemoizationMap:
         self.map_values: dict[tuple[str, tuple[Any], tuple[Any]], Any] = map_values
         self.map_stats: dict[tuple[str, tuple[Any], tuple[Any]], MemoizationStats] = map_stats
 
-    def memoized_function_call(self, function_name: str, function_callable: Callable, parameters: list[Any],
-                               hidden_parameters: list[Any]) -> Any:
+    def memoized_function_call(
+        self, function_name: str, function_callable: Callable, parameters: list[Any], hidden_parameters: list[Any],
+    ) -> Any:
         """
         Handle a memoized function call.
 
@@ -100,8 +110,12 @@ class MemoizationMap:
             time_last_access = time.time_ns()
             time_compare = time_compare_end - time_compare_start
             old_memoization_stats = self.map_stats[key]
-            memoization_stats = MemoizationStats(time_last_access, old_memoization_stats.computation_time,
-                                                 time_compare, old_memoization_stats.memory_size)
+            memoization_stats = MemoizationStats(
+                time_last_access,
+                old_memoization_stats.computation_time,
+                time_compare,
+                old_memoization_stats.memory_size,
+            )
             self.map_stats[key] = memoization_stats
             logging.info("Updated memoization stats for %s: %s", function_name, memoization_stats)
             return potential_value
@@ -154,24 +168,36 @@ def _get_size_of_value(value: Any) -> int:
     size_immediate = sys.getsizeof(value)
     if isinstance(value, dict):
         return sum(map(_get_size_of_value, value.items())) + size_immediate
-    elif isinstance(value, list) or isinstance(value, tuple) or isinstance(value, set) or isinstance(value, frozenset):
+    elif isinstance(value, frozenset | list | set | tuple):
         return sum(map(_get_size_of_value, value)) + size_immediate
     # elif isinstance(value, TimeSeries):
     #     return _get_size_of_value(value._data) + _get_size_of_value(value._schema) + _get_size_of_value(
     #         value._time) + _get_size_of_value(value._features) + _get_size_of_value(value._target) + size_immediate
     elif isinstance(value, TaggedTable):
-        return _get_size_of_value(value._data) + _get_size_of_value(value._schema) + _get_size_of_value(
-            value._features) + _get_size_of_value(value._target) + size_immediate
+        return (
+            _get_size_of_value(value._data)
+            + _get_size_of_value(value._schema)
+            + _get_size_of_value(value._features)
+            + _get_size_of_value(value._target)
+            + size_immediate
+        )
     elif isinstance(value, Table):
         return _get_size_of_value(value._data) + _get_size_of_value(value._schema) + size_immediate
     elif isinstance(value, Schema):
         return _get_size_of_value(value._schema) + size_immediate
     elif isinstance(value, Image):
-        return _get_size_of_value(
-            value._image_tensor) + value._image_tensor.element_size() * value._image_tensor.nelement() + size_immediate
+        return (
+            _get_size_of_value(value._image_tensor)
+            + value._image_tensor.element_size() * value._image_tensor.nelement()
+            + size_immediate
+        )
     elif isinstance(value, Column):
-        return _get_size_of_value(value._data) + _get_size_of_value(value._name) + _get_size_of_value(
-            value._type) + size_immediate
+        return (
+            _get_size_of_value(value._data)
+            + _get_size_of_value(value._name)
+            + _get_size_of_value(value._type)
+            + size_immediate
+        )
     elif isinstance(value, Row):
         return _get_size_of_value(value._data) + _get_size_of_value(value._schema) + size_immediate
     else:
