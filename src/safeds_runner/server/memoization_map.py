@@ -1,11 +1,12 @@
 """Module that contains the memoization logic and stats."""
+import logging
 import sys
 import time
 from dataclasses import dataclass
 from typing import Any, Callable
 
 from safeds.data.image.containers import Image
-from safeds.data.tabular.containers import Table, Column, Row, TaggedTable, TimeSeries
+from safeds.data.tabular.containers import Table, Column, Row, TaggedTable  # , TimeSeries
 from safeds.data.tabular.typing import Schema
 
 
@@ -30,14 +31,24 @@ class MemoizationStats:
     lookup_time: int
     memory_size: int
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Summarizes stats contained in this object.
+
+        Returns
+        -------
+        Summary of stats
+        """
         return f"Last access: {self.last_access}, computation time: {self.computation_time}, lookup time: {self.lookup_time}, memory size: {self.memory_size}"
 
 
 class MemoizationMap:
     """
-    The memoization map handles memoized function calls, looks up stored values, computes new values if needed and calculates and updates statistics.
+    The memoization map handles memoized function calls.
+
+    This contains looking up stored values, computing new values if needed and calculating and updating statistics.
     """
+
     def __init__(self, map_values: dict[tuple[str, tuple[Any], tuple[Any]], Any],
                  map_stats: dict[tuple[str, tuple[Any], tuple[Any]], MemoizationStats]):
         """
@@ -56,7 +67,7 @@ class MemoizationMap:
     def memoized_function_call(self, function_name: str, function_callable: Callable, parameters: list[Any],
                                hidden_parameters: list[Any]) -> Any:
         """
-        Handles a memoized function call.
+        Handle a memoized function call.
 
         Looks up the stored value, determined by function name, parameters and hidden parameters and returns it if found.
         If no value is found, computes the value using the provided callable and stores it in the map.
@@ -89,11 +100,12 @@ class MemoizationMap:
             memoization_stats = MemoizationStats(time_last_access, old_memoization_stats.computation_time,
                                                  time_compare, old_memoization_stats.memory_size)
             self.map_stats[key] = memoization_stats
-            print(f"Updated memoization stats for {function_name}: {memoization_stats}")
+            logging.info(f"Updated memoization stats for {function_name}: {memoization_stats}")
             return potential_value
         except KeyError:
-            time_compare_end = time.perf_counter_ns()
-            time_compare = time_compare_end - time_compare_start
+            pass
+        time_compare_end = time.perf_counter_ns()
+        time_compare = time_compare_end - time_compare_start
         time_compute_start = time.perf_counter_ns()
         result = function_callable(*parameters)
         time_compute_end = time.perf_counter_ns()
@@ -103,7 +115,7 @@ class MemoizationMap:
         value_memory = _get_size_of_value(result)
         self.map_values[key] = result
         memoization_stats = MemoizationStats(time_last_access, time_compute, time_compare, value_memory)
-        print(f"New memoization stats for {function_name}: {memoization_stats}")
+        logging.info(f"New memoization stats for {function_name}: {memoization_stats}")
         self.map_stats[key] = memoization_stats
         return result
 
@@ -148,15 +160,18 @@ def _get_size_of_value(value: Any) -> int:
     elif isinstance(value, Schema):
         return _get_size_of_value(value._schema) + size_immediate
     elif isinstance(value, Image):
-        return _get_size_of_value(value._image_tensor) + value._image_tensor.element_size() * value._image_tensor.nelement() + size_immediate
+        return _get_size_of_value(
+            value._image_tensor) + value._image_tensor.element_size() * value._image_tensor.nelement() + size_immediate
     elif isinstance(value, Column):
-        return _get_size_of_value(value._data) + _get_size_of_value(value._name) + _get_size_of_value(value._type) + size_immediate
+        return _get_size_of_value(value._data) + _get_size_of_value(value._name) + _get_size_of_value(
+            value._type) + size_immediate
     elif isinstance(value, Row):
         return _get_size_of_value(value._data) + _get_size_of_value(value._schema) + size_immediate
     elif isinstance(value, TaggedTable):
         return _get_size_of_value(value._data) + _get_size_of_value(value._schema) + _get_size_of_value(
             value._features) + _get_size_of_value(value._target) + size_immediate
-    elif isinstance(value, TimeSeries):
-        return _get_size_of_value(value._data) + _get_size_of_value(value._schema) + _get_size_of_value(value._time) + _get_size_of_value(value._features) + _get_size_of_value(value._target) + size_immediate
+    # elif isinstance(value, TimeSeries):
+    #     return _get_size_of_value(value._data) + _get_size_of_value(value._schema) + _get_size_of_value(
+    #         value._time) + _get_size_of_value(value._features) + _get_size_of_value(value._target) + size_immediate
     else:
         return size_immediate
