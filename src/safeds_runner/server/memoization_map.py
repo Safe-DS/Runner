@@ -74,7 +74,11 @@ class MemoizationMap:
         self.map_stats: dict[tuple[str, tuple[Any], tuple[Any]], MemoizationStats] = map_stats
 
     def memoized_function_call(
-        self, function_name: str, function_callable: Callable, parameters: list[Any], hidden_parameters: list[Any],
+        self,
+        function_name: str,
+        function_callable: Callable,
+        parameters: list[Any],
+        hidden_parameters: list[Any],
     ) -> Any:
         """
         Handle a memoized function call.
