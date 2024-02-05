@@ -43,8 +43,8 @@ class MemoizationStats:
         Summary of stats
         """
         return (  # pragma: no cover
-            f"Last access: {self.last_access}, computation time: {self.computation_time}, lookup time:"  # pragma: no cover
-            f" {self.lookup_time}, memory size: {self.memory_size}"  # pragma: no cover
+            f"Last access: {self.last_access}, computation time: {self.computation_time}, lookup time:"
+            f" {self.lookup_time}, memory size: {self.memory_size}"
         )
 
 
