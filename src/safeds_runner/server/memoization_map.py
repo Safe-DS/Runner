@@ -47,26 +47,6 @@ class MemoizationStats:
         )
 
 
-def _create_memoization_key(function_name: str, parameters: list[Any], hidden_parameters: list[Any]) -> MemoizationKey:
-    """
-    Convert values provided to a memoized function call to a memoization key.
-
-    Parameters
-    ----------
-    function_name
-        Fully qualified function name
-    parameters
-        List of parameters passed to the function
-    hidden_parameters
-        List of parameters not passed to the function
-
-    Returns
-    -------
-    A memoization key, which contains the lists converted to tuples
-    """
-    return function_name, _convert_list_to_tuple(parameters), _convert_list_to_tuple(hidden_parameters)
-
-
 class MemoizationMap:
     """
     The memoization map handles memoized function calls.
@@ -129,6 +109,31 @@ class MemoizationMap:
         return self._memoize_new_value(key, function_callable, time_compare_start)
 
     def _lookup_value(self, key: MemoizationKey, time_compare_start: int) -> Any | None:
+
+    def _create_memoization_key(
+        self,
+        function_name: str,
+        parameters: list[Any],
+        hidden_parameters: list[Any],
+    ) -> MemoizationKey:
+        """
+        Convert values provided to a memoized function call to a memoization key.
+
+        Parameters
+        ----------
+        function_name
+            Fully qualified function name
+        parameters
+            List of parameters passed to the function
+        hidden_parameters
+            List of parameters not passed to the function
+
+        Returns
+        -------
+        A memoization key, which contains the lists converted to tuples
+        """
+        return function_name, _convert_list_to_tuple(parameters), _convert_list_to_tuple(hidden_parameters)
+
         """
         Lookup a potentially existing value from the memoization cache.
 
