@@ -18,20 +18,20 @@ class MemoizationStats:
 
     Parameters
     ----------
-    last_access
+    access_timestamps
         Absolute timestamp since the unix epoch of the last access to the memoized value in nanoseconds
-    lookup_time
+    lookup_times
         Duration the lookup of the value took in nanoseconds (key comparison + IPC)
-    computation_time
+    computation_times
         Duration the computation of the value took in nanoseconds
-    memory_size
+    memory_sizes
         Amount of memory the memoized value takes up in bytes
     """
 
-    last_access: list[int] = dataclasses.field(default_factory=list)
-    lookup_time: list[int] = dataclasses.field(default_factory=list)
-    computation_time: list[int] = dataclasses.field(default_factory=list)
-    memory_size: list[int] = dataclasses.field(default_factory=list)
+    access_timestamps: list[int] = dataclasses.field(default_factory=list)
+    lookup_times: list[int] = dataclasses.field(default_factory=list)
+    computation_times: list[int] = dataclasses.field(default_factory=list)
+    memory_sizes: list[int] = dataclasses.field(default_factory=list)
 
     def __str__(self) -> str:
         """
@@ -42,8 +42,8 @@ class MemoizationStats:
         Summary of stats
         """
         return (  # pragma: no cover
-            f"Last access: {self.last_access}, computation time: {self.computation_time}, lookup time:"
-            f" {self.lookup_time}, memory size: {self.memory_size}"
+            f"Last access: {self.access_timestamps}, computation time: {self.computation_times}, lookup time:"
+            f" {self.lookup_times}, memory size: {self.memory_sizes}"
         )
 
 
@@ -213,8 +213,8 @@ class MemoizationMap:
             Duration the comparison took
         """
         old_memoization_stats = self._map_stats[function_name]
-        old_memoization_stats.last_access.append(last_access)
-        old_memoization_stats.lookup_time.append(time_compare)
+        old_memoization_stats.access_timestamps.append(last_access)
+        old_memoization_stats.lookup_times.append(time_compare)
         self._map_stats[function_name] = old_memoization_stats
 
     def _update_stats_on_miss(
@@ -244,10 +244,10 @@ class MemoizationMap:
         old_memoization_stats = self._map_stats.get(function_name)
         if old_memoization_stats is None:
             old_memoization_stats = MemoizationStats()
-        old_memoization_stats.last_access.append(last_access)
-        old_memoization_stats.lookup_time.append(time_compare)
-        old_memoization_stats.computation_time.append(time_computation)
-        old_memoization_stats.memory_size.append(memory_size)
+        old_memoization_stats.access_timestamps.append(last_access)
+        old_memoization_stats.lookup_times.append(time_compare)
+        old_memoization_stats.computation_times.append(time_computation)
+        old_memoization_stats.memory_sizes.append(memory_size)
         self._map_stats[function_name] = old_memoization_stats
 
 
