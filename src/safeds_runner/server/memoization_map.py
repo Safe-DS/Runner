@@ -167,7 +167,9 @@ def _get_size_of_value(value: Any) -> int:
     """
     size_immediate = sys.getsizeof(value)
     if isinstance(value, dict):
-        return sum(map(_get_size_of_value, value.keys())) + sum(map(_get_size_of_value, value.values())) + size_immediate
+        return (
+            sum(map(_get_size_of_value, value.keys())) + sum(map(_get_size_of_value, value.values())) + size_immediate
+        )
     elif isinstance(value, frozenset | list | set | tuple):
         return sum(map(_get_size_of_value, value)) + size_immediate
     else:
