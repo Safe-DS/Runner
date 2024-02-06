@@ -7,10 +7,6 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from safeds.data.image.containers import Image
-from safeds.data.tabular.containers import Column, Row, Table, TaggedTable  # , TimeSeries
-from safeds.data.tabular.typing import Schema
-
 
 @dataclass(frozen=True)
 class MemoizationStats:
@@ -171,38 +167,8 @@ def _get_size_of_value(value: Any) -> int:
     """
     size_immediate = sys.getsizeof(value)
     if isinstance(value, dict):
-        return sum(map(_get_size_of_value, value.items())) + size_immediate
+        return sum(map(_get_size_of_value, value.keys())) + sum(map(_get_size_of_value, value.values())) + size_immediate
     elif isinstance(value, frozenset | list | set | tuple):
         return sum(map(_get_size_of_value, value)) + size_immediate
-    # elif isinstance(value, TimeSeries):
-    #     return _get_size_of_value(value._data) + _get_size_of_value(value._schema) + _get_size_of_value(
-    #         value._time) + _get_size_of_value(value._features) + _get_size_of_value(value._target) + size_immediate
-    elif isinstance(value, TaggedTable):
-        return (
-            _get_size_of_value(value._data)
-            + _get_size_of_value(value._schema)
-            + _get_size_of_value(value._features)
-            + _get_size_of_value(value._target)
-            + size_immediate
-        )
-    elif isinstance(value, Table):
-        return _get_size_of_value(value._data) + _get_size_of_value(value._schema) + size_immediate
-    elif isinstance(value, Schema):
-        return _get_size_of_value(value._schema) + size_immediate
-    elif isinstance(value, Image):
-        return (
-            _get_size_of_value(value._image_tensor)
-            + value._image_tensor.element_size() * value._image_tensor.nelement()
-            + size_immediate
-        )
-    elif isinstance(value, Column):
-        return (
-            _get_size_of_value(value._data)
-            + _get_size_of_value(value._name)
-            + _get_size_of_value(value._type)
-            + size_immediate
-        )
-    elif isinstance(value, Row):
-        return _get_size_of_value(value._data) + _get_size_of_value(value._schema) + size_immediate
     else:
         return size_immediate
