@@ -218,7 +218,12 @@ class MemoizationMap:
         self._map_stats[function_name] = old_memoization_stats
 
     def _update_stats_on_miss(
-        self, function_name: str, last_access: int, time_compare: int, time_computation: int, memory_size: int,
+        self,
+        function_name: str,
+        last_access: int,
+        time_compare: int,
+        time_computation: int,
+        memory_size: int,
     ) -> None:
         """
         Update the memoization stats on a cache miss.

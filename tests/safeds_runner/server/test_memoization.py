@@ -45,7 +45,10 @@ def test_memoization_already_present_values(
         _convert_list_to_tuple(hidden_params),
     )] = expected_result
     pipeline_manager.current_pipeline.get_memoization_map()._map_stats[function_name] = MemoizationStats(
-        [time.perf_counter_ns()], [], [], [sys.getsizeof(expected_result)],
+        [time.perf_counter_ns()],
+        [],
+        [],
+        [sys.getsizeof(expected_result)],
     )
     result = pipeline_manager.runner_memoized_function_call(function_name, lambda *_: None, params, hidden_params)
     assert result == expected_result
