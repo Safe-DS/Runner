@@ -1,11 +1,14 @@
 """Module that contains the memoization logic and stats."""
 
+import dataclasses
 import logging
 import sys
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, TypeAlias
+
+MemoizationKey: TypeAlias = tuple[str, tuple[Any], tuple[Any]]
 
 
 @dataclass(frozen=True)
@@ -17,18 +20,18 @@ class MemoizationStats:
     ----------
     last_access
         Absolute timestamp since the unix epoch of the last access to the memoized value in nanoseconds
-    computation_time
-        Duration the computation of the value took in nanoseconds
     lookup_time
         Duration the lookup of the value took in nanoseconds (key comparison + IPC)
+    computation_time
+        Duration the computation of the value took in nanoseconds
     memory_size
         Amount of memory the memoized value takes up in bytes
     """
 
-    last_access: int
-    computation_time: int
-    lookup_time: int
-    memory_size: int
+    last_access: list[int] = dataclasses.field(default_factory=list)
+    lookup_time: list[int] = dataclasses.field(default_factory=list)
+    computation_time: list[int] = dataclasses.field(default_factory=list)
+    memory_size: list[int] = dataclasses.field(default_factory=list)
 
     def __str__(self) -> str:
         """
@@ -44,6 +47,26 @@ class MemoizationStats:
         )
 
 
+def _create_memoization_key(function_name: str, parameters: list[Any], hidden_parameters: list[Any]) -> MemoizationKey:
+    """
+    Convert values provided to a memoized function call to a memoization key.
+
+    Parameters
+    ----------
+    function_name
+        Fully qualified function name
+    parameters
+        List of parameters passed to the function
+    hidden_parameters
+        List of parameters not passed to the function
+
+    Returns
+    -------
+    A memoization key, which contains the lists converted to tuples
+    """
+    return function_name, _convert_list_to_tuple(parameters), _convert_list_to_tuple(hidden_parameters)
+
+
 class MemoizationMap:
     """
     The memoization map handles memoized function calls.
@@ -53,8 +76,8 @@ class MemoizationMap:
 
     def __init__(
         self,
-        map_values: dict[tuple[str, tuple[Any], tuple[Any]], Any],
-        map_stats: dict[tuple[str, tuple[Any], tuple[Any]], MemoizationStats],
+        map_values: dict[MemoizationKey, Any],
+        map_stats: dict[str, MemoizationStats],
     ):
         """
         Create a new memoization map using a value store dictionary and a stats dictionary.
@@ -66,8 +89,8 @@ class MemoizationMap:
         map_stats
             Stats dictionary
         """
-        self.map_values: dict[tuple[str, tuple[Any], tuple[Any]], Any] = map_values
-        self.map_stats: dict[tuple[str, tuple[Any], tuple[Any]], MemoizationStats] = map_stats
+        self._map_values: dict[MemoizationKey, Any] = map_values
+        self._map_stats: dict[str, MemoizationStats] = map_stats
 
     def memoized_function_call(
         self,
@@ -98,41 +121,118 @@ class MemoizationMap:
         -------
         The result of the specified function, if any exists
         """
-        key = (function_name, _convert_list_to_tuple(parameters), _convert_list_to_tuple(hidden_parameters))
         time_compare_start = time.perf_counter_ns()
+        key = _create_memoization_key(function_name, parameters, hidden_parameters)
+        potential_value = self._lookup_value(key, time_compare_start)
+        if potential_value is not None:
+            return potential_value
+        return self._memoize_new_value(key, function_callable, time_compare_start)
+
+    def _lookup_value(self, key: MemoizationKey, time_compare_start: int) -> Any | None:
+        """
+        Lookup a potentially existing value from the memoization cache.
+
+        Parameters
+        ----------
+        key
+            Memoization Key
+        time_compare_start
+            Point in time where the comparison time started
+
+        Returns
+        -------
+        The value corresponding to the provided memoization key, if any exists.
+        """
         try:
-            potential_value = self.map_values[key]
+            potential_value = self._map_values[key]
         except KeyError:
-            pass
+            return None
         else:
             time_compare_end = time.perf_counter_ns()
             # Use time_ns for absolute time points, as perf_counter_ns does not guarantee any fixed reference-point
             time_last_access = time.time_ns()
             time_compare = time_compare_end - time_compare_start
-            old_memoization_stats = self.map_stats[key]
-            memoization_stats = MemoizationStats(
-                time_last_access,
-                old_memoization_stats.computation_time,
-                time_compare,
-                old_memoization_stats.memory_size,
-            )
-            self.map_stats[key] = memoization_stats
-            logging.info("Updated memoization stats for %s: %s", function_name, memoization_stats)
+            self._update_stats_on_hit(key[0], time_last_access, time_compare)
+            logging.info("Updated memoization stats for %s: (last_access=%s, time_compare=%s)", key[0],
+                         time_last_access, time_compare)
             return potential_value
+
+    def _memoize_new_value(self, key: MemoizationKey, function_callable: Callable, time_compare_start: int) -> Any:
+        """
+        Memoize a new function call and return computed the result.
+
+        Parameters
+        ----------
+        key
+            Memoization Key
+        function_callable
+            Function that will be called
+        time_compare_start
+            Point in time where the comparison time started
+
+        Returns
+        -------
+        The newly computed value corresponding to the provided memoization key
+        """
         time_compare_end = time.perf_counter_ns()
         time_compare = time_compare_end - time_compare_start
         time_compute_start = time.perf_counter_ns()
-        result = function_callable(*parameters)
+        result = function_callable(*key[1])
         time_compute_end = time.perf_counter_ns()
         # Use time_ns for absolute time points, as perf_counter_ns does not guarantee any fixed reference-point
         time_last_access = time.time_ns()
         time_compute = time_compute_end - time_compute_start
         value_memory = _get_size_of_value(result)
-        self.map_values[key] = result
-        memoization_stats = MemoizationStats(time_last_access, time_compute, time_compare, value_memory)
-        logging.info("New memoization stats for %s: %s", function_name, memoization_stats)
-        self.map_stats[key] = memoization_stats
+        self._map_values[key] = result
+        self._update_stats_on_miss(key[0], time_last_access, time_compare, time_compute, value_memory)
+        logging.info("New memoization stats for %s: (last_access=%s, time_compare=%s, time_compute=%s, memory=%s)",
+                     key[0], time_last_access, time_compare, time_compute, value_memory)
         return result
+
+    def _update_stats_on_hit(self, function_name: str, last_access: int, time_compare: int) -> None:
+        """
+        Update the memoization stats on a cache hit.
+
+        Parameters
+        ----------
+        function_name
+            Fully qualified function name
+        last_access
+            Timestamp where this value was last accessed
+        time_compare
+            Duration the comparison took
+        """
+        old_memoization_stats = self._map_stats[function_name]
+        old_memoization_stats.last_access.append(last_access)
+        old_memoization_stats.lookup_time.append(time_compare)
+        self._map_stats[function_name] = old_memoization_stats
+
+    def _update_stats_on_miss(self, function_name: str, last_access: int, time_compare: int, time_computation: int,
+                              memory_size: int) -> None:
+        """
+        Update the memoization stats on a cache miss.
+
+        Parameters
+        ----------
+        function_name
+            Fully qualified function name
+        last_access
+            Timestamp where this value was last accessed
+        time_compare
+            Duration the comparison took
+        time_computation
+            Duration the computation of the new value took
+        memory_size
+            Memory the newly computed value takes up
+        """
+        old_memoization_stats = self._map_stats.get(function_name)
+        if old_memoization_stats is None:
+            old_memoization_stats = MemoizationStats()
+        old_memoization_stats.last_access.append(last_access)
+        old_memoization_stats.lookup_time.append(time_compare)
+        old_memoization_stats.computation_time.append(time_computation)
+        old_memoization_stats.memory_size.append(memory_size)
+        self._map_stats[function_name] = old_memoization_stats
 
 
 def _convert_list_to_tuple(values: list) -> tuple:
@@ -167,7 +267,8 @@ def _get_size_of_value(value: Any) -> int:
     """
     size_immediate = sys.getsizeof(value)
     if isinstance(value, dict):
-        return sum(map(_get_size_of_value, value.keys())) + sum(map(_get_size_of_value, value.values())) + size_immediate
+        return sum(map(_get_size_of_value, value.keys())) + sum(
+            map(_get_size_of_value, value.values())) + size_immediate
     elif isinstance(value, frozenset | list | set | tuple):
         return sum(map(_get_size_of_value, value)) + size_immediate
     else:
