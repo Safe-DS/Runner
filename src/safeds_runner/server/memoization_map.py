@@ -153,8 +153,12 @@ class MemoizationMap:
             time_last_access = time.time_ns()
             time_compare = time_compare_end - time_compare_start
             self._update_stats_on_hit(key[0], time_last_access, time_compare)
-            logging.info("Updated memoization stats for %s: (last_access=%s, time_compare=%s)", key[0],
-                         time_last_access, time_compare)
+            logging.info(
+                "Updated memoization stats for %s: (last_access=%s, time_compare=%s)",
+                key[0],
+                time_last_access,
+                time_compare,
+            )
             return potential_value
 
     def _memoize_new_value(self, key: MemoizationKey, function_callable: Callable, time_compare_start: int) -> Any:
@@ -185,8 +189,14 @@ class MemoizationMap:
         value_memory = _get_size_of_value(result)
         self._map_values[key] = result
         self._update_stats_on_miss(key[0], time_last_access, time_compare, time_compute, value_memory)
-        logging.info("New memoization stats for %s: (last_access=%s, time_compare=%s, time_compute=%s, memory=%s)",
-                     key[0], time_last_access, time_compare, time_compute, value_memory)
+        logging.info(
+            "New memoization stats for %s: (last_access=%s, time_compare=%s, time_compute=%s, memory=%s)",
+            key[0],
+            time_last_access,
+            time_compare,
+            time_compute,
+            value_memory,
+        )
         return result
 
     def _update_stats_on_hit(self, function_name: str, last_access: int, time_compare: int) -> None:
@@ -207,8 +217,9 @@ class MemoizationMap:
         old_memoization_stats.lookup_time.append(time_compare)
         self._map_stats[function_name] = old_memoization_stats
 
-    def _update_stats_on_miss(self, function_name: str, last_access: int, time_compare: int, time_computation: int,
-                              memory_size: int) -> None:
+    def _update_stats_on_miss(
+        self, function_name: str, last_access: int, time_compare: int, time_computation: int, memory_size: int,
+    ) -> None:
         """
         Update the memoization stats on a cache miss.
 

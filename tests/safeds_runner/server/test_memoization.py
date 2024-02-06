@@ -7,10 +7,13 @@ from queue import Queue
 from typing import Any
 
 import pytest
-
 from safeds_runner.server import pipeline_manager
-from safeds_runner.server.memoization_map import MemoizationMap, MemoizationStats, _get_size_of_value, \
-    _convert_list_to_tuple
+from safeds_runner.server.memoization_map import (
+    MemoizationMap,
+    MemoizationStats,
+    _convert_list_to_tuple,
+    _get_size_of_value,
+)
 from safeds_runner.server.messages import MessageDataProgram, ProgramMainInformation
 from safeds_runner.server.pipeline_manager import PipelineProcess, runner_filemtime, runner_memoized_function_call
 
@@ -41,7 +44,9 @@ def test_memoization_already_present_values(
         _convert_list_to_tuple(params),
         _convert_list_to_tuple(hidden_params),
     )] = expected_result
-    pipeline_manager.current_pipeline.get_memoization_map()._map_stats[function_name] = MemoizationStats([time.perf_counter_ns()], [], [], [sys.getsizeof(expected_result)])
+    pipeline_manager.current_pipeline.get_memoization_map()._map_stats[function_name] = MemoizationStats(
+        [time.perf_counter_ns()], [], [], [sys.getsizeof(expected_result)],
+    )
     result = pipeline_manager.runner_memoized_function_call(function_name, lambda *_: None, params, hidden_params)
     assert result == expected_result
 
