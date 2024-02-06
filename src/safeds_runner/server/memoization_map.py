@@ -254,6 +254,10 @@ class MemoizationMap:
         stats = self._map_stats[function_name]
         stats.update_on_hit(access_timestamp, lookup_time)
 
+        # This assignment is required for multiprocessing, see
+        # https://docs.python.org/3.11/library/multiprocessing.html#proxy-objects
+        self._map_stats[function_name] = stats
+
     def _update_stats_on_miss(
         self,
         function_name: str,
