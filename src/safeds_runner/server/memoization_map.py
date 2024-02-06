@@ -135,14 +135,43 @@ class MemoizationMap:
         -------
         The result of the specified function, if any exists
         """
-        time_compare_start = time.perf_counter_ns()
-        key = _create_memoization_key(function_name, parameters, hidden_parameters)
-        potential_value = self._lookup_value(key, time_compare_start)
-        if potential_value is not None:
-            return potential_value
-        return self._memoize_new_value(key, function_callable, time_compare_start)
+        access_timestamp = time.time_ns()
 
-    def _lookup_value(self, key: MemoizationKey, time_compare_start: int) -> Any | None:
+        # Lookup memoized value
+        lookup_time_start = time.perf_counter_ns()
+        key = self._create_memoization_key(function_name, parameters, hidden_parameters)
+        memoized_value = self._lookup_value(key)
+        lookup_time = time.perf_counter_ns() - lookup_time_start
+
+        # Hit
+        if memoized_value is not None:
+            self._update_stats_on_hit(function_name, access_timestamp, lookup_time)
+            return memoized_value
+
+        # Miss
+        computation_time_start = time.perf_counter_ns()
+        computed_value = self._compute_and_memoize_value(key, function_callable, parameters)
+        computation_time = time.perf_counter_ns() - computation_time_start
+        memory_size = _get_size_of_value(computed_value)
+
+        self._update_stats_on_miss(
+            function_name,
+            access_timestamp,
+            lookup_time,
+            computation_time,
+            memory_size,
+        )
+
+        logging.info(
+            "New memoization stats for %s: (access_timestamp=%s, lookup_time=%s, computation_time=%s, memory_size=%s)",
+            key[0],
+            access_timestamp,
+            lookup_time,
+            computation_time,
+            memory_size,
+        )
+
+        return computed_value
 
     def _create_memoization_key(
         self,
@@ -168,6 +197,7 @@ class MemoizationMap:
         """
         return function_name, _convert_list_to_tuple(parameters), _convert_list_to_tuple(hidden_parameters)
 
+    def _lookup_value(self, key: MemoizationKey) -> Any | None:
         """
         Lookup a potentially existing value from the memoization cache.
 
@@ -175,32 +205,19 @@ class MemoizationMap:
         ----------
         key
             Memoization Key
-        time_compare_start
-            Point in time where the comparison time started
 
         Returns
         -------
         The value corresponding to the provided memoization key, if any exists.
         """
-        try:
-            potential_value = self._map_values[key]
-        except KeyError:
-            return None
-        else:
-            time_compare_end = time.perf_counter_ns()
-            # Use time_ns for absolute time points, as perf_counter_ns does not guarantee any fixed reference-point
-            time_last_access = time.time_ns()
-            time_compare = time_compare_end - time_compare_start
-            self._update_stats_on_hit(key[0], time_last_access, time_compare)
-            logging.info(
-                "Updated memoization stats for %s: (last_access=%s, time_compare=%s)",
-                key[0],
-                time_last_access,
-                time_compare,
-            )
-            return potential_value
+        return self._map_values.get(key)
 
-    def _memoize_new_value(self, key: MemoizationKey, function_callable: Callable, time_compare_start: int) -> Any:
+    def _compute_and_memoize_value(
+        self,
+        key: MemoizationKey,
+        function_callable: Callable,
+        parameters: list[Any],
+    ) -> Any:
         """
         Memoize a new function call and return computed the result.
 
@@ -210,32 +227,15 @@ class MemoizationMap:
             Memoization Key
         function_callable
             Function that will be called
-        time_compare_start
-            Point in time where the comparison time started
+        parameters
+            List of parameters passed to the function
 
         Returns
         -------
         The newly computed value corresponding to the provided memoization key
         """
-        time_compare_end = time.perf_counter_ns()
-        time_compare = time_compare_end - time_compare_start
-        time_compute_start = time.perf_counter_ns()
-        result = function_callable(*key[1])
-        time_compute_end = time.perf_counter_ns()
-        # Use time_ns for absolute time points, as perf_counter_ns does not guarantee any fixed reference-point
-        time_last_access = time.time_ns()
-        time_compute = time_compute_end - time_compute_start
-        value_memory = _get_size_of_value(result)
+        result = function_callable(*parameters)
         self._map_values[key] = result
-        self._update_stats_on_miss(key[0], time_last_access, time_compare, time_compute, value_memory)
-        logging.info(
-            "New memoization stats for %s: (last_access=%s, time_compare=%s, time_compute=%s, memory=%s)",
-            key[0],
-            time_last_access,
-            time_compare,
-            time_compute,
-            value_memory,
-        )
         return result
 
     def _update_stats_on_hit(self, function_name: str, access_timestamp: int, lookup_time: int) -> None:
