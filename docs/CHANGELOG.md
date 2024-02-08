@@ -1,3 +1,10 @@
+## [0.6.0](https://github.com/Safe-DS/Runner/compare/v0.5.0...v0.6.0) (2024-02-08)
+
+
+### Features
+
+* track memoization stats ([#51](https://github.com/Safe-DS/Runner/issues/51)) ([50f30a3](https://github.com/Safe-DS/Runner/commit/50f30a36cf5579f74605992c4e80fd2f6f7f5d7d)), closes [#44](https://github.com/Safe-DS/Runner/issues/44)
+
 ## [0.5.0](https://github.com/Safe-DS/Runner/compare/v0.4.0...v0.5.0) (2024-01-26)
 
 
