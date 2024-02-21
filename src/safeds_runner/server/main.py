@@ -2,7 +2,7 @@
 
 import logging
 
-from safeds_runner.server.server import SafeDsServer
+from .server import SafeDsServer
 
 
 def start_server(port: int) -> None:

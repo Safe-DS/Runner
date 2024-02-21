@@ -8,15 +8,17 @@ import sys
 import hypercorn.asyncio
 import quart.app
 
-from safeds_runner.server import messages
-from safeds_runner.server.json_encoder import SafeDsEncoder
-from safeds_runner.server.messages import (
+from .json_encoder import SafeDsEncoder
+from .messages import (
     Message,
     create_placeholder_value,
     message_type_placeholder_value,
+    message_types,
     parse_validate_message,
+    validate_placeholder_query_message_data,
+    validate_program_message_data,
 )
-from safeds_runner.server.pipeline_manager import PipelineManager
+from .pipeline_manager import PipelineManager
 
 
 def create_flask_app() -> quart.app.Quart:
@@ -108,7 +110,7 @@ class SafeDsServer:
                     pipeline_manager.shutdown()
                     sys.exit(0)
                 case "program":
-                    program_data, invalid_message = messages.validate_program_message_data(received_object.data)
+                    program_data, invalid_message = validate_program_message_data(received_object.data)
                     if program_data is None:
                         logging.error("Invalid message data specified in: %s (%s)", received_message, invalid_message)
                         await output_queue.put(None)
@@ -119,7 +121,7 @@ class SafeDsServer:
                     pipeline_manager.execute_pipeline(program_data, received_object.id)
                 case "placeholder_query":
                     # For this query, a response can be directly sent to the requesting connection
-                    placeholder_query_data, invalid_message = messages.validate_placeholder_query_message_data(
+                    placeholder_query_data, invalid_message = validate_placeholder_query_message_data(
                         received_object.data,
                     )
                     if placeholder_query_data is None:
@@ -173,7 +175,7 @@ class SafeDsServer:
                             ),
                         )
                 case _:
-                    if received_object.type not in messages.message_types:
+                    if received_object.type not in message_types:
                         logging.warning("Invalid message type: %s", received_object.type)
 
     @staticmethod

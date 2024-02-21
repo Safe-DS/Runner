@@ -15,8 +15,8 @@ from typing import Any
 
 import stack_data
 
-from safeds_runner.server.memoization_map import MemoizationMap
-from safeds_runner.server.messages import (
+from .memoization_map import MemoizationMap
+from .messages import (
     Message,
     MessageDataProgram,
     create_placeholder_description,
@@ -26,7 +26,7 @@ from safeds_runner.server.messages import (
     message_type_runtime_error,
     message_type_runtime_progress,
 )
-from safeds_runner.server.module_manager import InMemoryFinder
+from .module_manager import InMemoryFinder
 
 
 class PipelineManager:
