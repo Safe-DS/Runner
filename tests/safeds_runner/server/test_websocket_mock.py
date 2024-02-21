@@ -370,8 +370,8 @@ async def test_should_execute_pipeline_return_exception(
                             "": {
                                 "gen_test_a": (
                                     "import safeds_runner.server._pipeline_manager\n\ndef pipe():\n\tvalue1 ="
-                                    " 1\n\tsafeds_runner.server._pipeline_manager.runner_save_placeholder('value1',"
-                                    " value1)\n\tsafeds_runner.server._pipeline_manager.runner_save_placeholder('obj',"
+                                    " 1\n\tsafeds_runner.server._pipeline_manager.save_placeholder('value1',"
+                                    " value1)\n\tsafeds_runner.server._pipeline_manager.save_placeholder('obj',"
                                     " object())\n"
                                 ),
                                 "gen_test_a_pipe": (

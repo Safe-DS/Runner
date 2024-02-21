@@ -15,7 +15,7 @@ from safeds_runner.server._memoization_map import (
     _get_size_of_value,
 )
 from safeds_runner.server._messages import MessageDataProgram, ProgramMainInformation
-from safeds_runner.server._pipeline_manager import PipelineProcess, runner_filemtime, runner_memoized_function_call
+from safeds_runner.server._pipeline_manager import PipelineProcess, file_mtime, memoized_call
 
 
 @pytest.mark.parametrize(
@@ -50,7 +50,7 @@ def test_memoization_already_present_values(
         [],
         [sys.getsizeof(expected_result)],
     )
-    result = _pipeline_manager.runner_memoized_function_call(function_name, lambda *_: None, params, hidden_params)
+    result = _pipeline_manager.memoized_call(function_name, lambda *_: None, params, hidden_params)
     assert result == expected_result
 
 
@@ -77,22 +77,22 @@ def test_memoization_not_present_values(
         MemoizationMap({}, {}),
     )
     # Save value in map
-    result = runner_memoized_function_call(function_name, function, params, hidden_params)
+    result = memoized_call(function_name, function, params, hidden_params)
     assert result == expected_result
     # Test if value is actually saved by calling another function that does not return the expected result
-    result2 = runner_memoized_function_call(function_name, lambda *_: None, params, hidden_params)
+    result2 = memoized_call(function_name, lambda *_: None, params, hidden_params)
     assert result2 == expected_result
 
 
 def test_file_mtime_exists() -> None:
     with tempfile.NamedTemporaryFile() as file:
-        file_mtime = runner_filemtime(file.name)
-        assert file_mtime is not None
+        mtime = file_mtime(file.name)
+        assert mtime is not None
 
 
 def test_file_mtime_not_exists() -> None:
-    file_mtime = runner_filemtime(f"file_not_exists.{datetime.now(tz=UTC).timestamp()}")
-    assert file_mtime is None
+    mtime = file_mtime(f"file_not_exists.{datetime.now(tz=UTC).timestamp()}")
+    assert mtime is None
 
 
 @pytest.mark.parametrize(

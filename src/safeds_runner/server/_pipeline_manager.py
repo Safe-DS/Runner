@@ -288,7 +288,7 @@ class PipelineProcess:
 current_pipeline: PipelineProcess | None = None
 
 
-def runner_save_placeholder(placeholder_name: str, value: Any) -> None:
+def save_placeholder(placeholder_name: str, value: Any) -> None:
     """
     Save a placeholder for the current running pipeline.
 
@@ -303,7 +303,7 @@ def runner_save_placeholder(placeholder_name: str, value: Any) -> None:
         current_pipeline.save_placeholder(placeholder_name, value)
 
 
-def runner_memoized_function_call(
+def memoized_call(
     function_name: str,
     function_callable: typing.Callable,
     parameters: list[Any],
@@ -336,7 +336,7 @@ def runner_memoized_function_call(
     return memoization_map.memoized_function_call(function_name, function_callable, parameters, hidden_parameters)
 
 
-def runner_filemtime(filename: str) -> int | None:
+def file_mtime(filename: str) -> int | None:
     """
     Get the last modification timestamp of the provided file.
 
