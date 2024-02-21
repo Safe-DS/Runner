@@ -15,8 +15,8 @@ from typing import Any
 
 import stack_data
 
-from .memoization_map import MemoizationMap
-from .messages import (
+from ._memoization_map import MemoizationMap
+from ._messages import (
     Message,
     MessageDataProgram,
     create_placeholder_description,
@@ -26,7 +26,7 @@ from .messages import (
     message_type_runtime_error,
     message_type_runtime_progress,
 )
-from .module_manager import InMemoryFinder
+from ._module_manager import InMemoryFinder
 
 
 class PipelineManager:

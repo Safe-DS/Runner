@@ -7,15 +7,15 @@ from queue import Queue
 from typing import Any
 
 import pytest
-from safeds_runner.server import pipeline_manager
-from safeds_runner.server.memoization_map import (
+from safeds_runner.server import _pipeline_manager
+from safeds_runner.server._memoization_map import (
     MemoizationMap,
     MemoizationStats,
     _convert_list_to_tuple,
     _get_size_of_value,
 )
-from safeds_runner.server.messages import MessageDataProgram, ProgramMainInformation
-from safeds_runner.server.pipeline_manager import PipelineProcess, runner_filemtime, runner_memoized_function_call
+from safeds_runner.server._messages import MessageDataProgram, ProgramMainInformation
+from safeds_runner.server._pipeline_manager import PipelineProcess, runner_filemtime, runner_memoized_function_call
 
 
 @pytest.mark.parametrize(
@@ -32,25 +32,25 @@ def test_memoization_already_present_values(
     hidden_params: list,
     expected_result: Any,
 ) -> None:
-    pipeline_manager.current_pipeline = PipelineProcess(
+    _pipeline_manager.current_pipeline = PipelineProcess(
         MessageDataProgram({}, ProgramMainInformation("", "", "")),
         "",
         Queue(),
         {},
         MemoizationMap({}, {}),
     )
-    pipeline_manager.current_pipeline.get_memoization_map()._map_values[(
+    _pipeline_manager.current_pipeline.get_memoization_map()._map_values[(
         function_name,
         _convert_list_to_tuple(params),
         _convert_list_to_tuple(hidden_params),
     )] = expected_result
-    pipeline_manager.current_pipeline.get_memoization_map()._map_stats[function_name] = MemoizationStats(
+    _pipeline_manager.current_pipeline.get_memoization_map()._map_stats[function_name] = MemoizationStats(
         [time.perf_counter_ns()],
         [],
         [],
         [sys.getsizeof(expected_result)],
     )
-    result = pipeline_manager.runner_memoized_function_call(function_name, lambda *_: None, params, hidden_params)
+    result = _pipeline_manager.runner_memoized_function_call(function_name, lambda *_: None, params, hidden_params)
     assert result == expected_result
 
 
@@ -69,7 +69,7 @@ def test_memoization_not_present_values(
     hidden_params: list,
     expected_result: Any,
 ) -> None:
-    pipeline_manager.current_pipeline = PipelineProcess(
+    _pipeline_manager.current_pipeline = PipelineProcess(
         MessageDataProgram({}, ProgramMainInformation("", "", "")),
         "",
         Queue(),

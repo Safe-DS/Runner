@@ -8,8 +8,8 @@ import sys
 import hypercorn.asyncio
 import quart.app
 
-from .json_encoder import SafeDsEncoder
-from .messages import (
+from ._json_encoder import SafeDsEncoder
+from ._messages import (
     Message,
     create_placeholder_value,
     message_type_placeholder_value,
@@ -18,7 +18,7 @@ from .messages import (
     validate_placeholder_query_message_data,
     validate_program_message_data,
 )
-from .pipeline_manager import PipelineManager
+from ._pipeline_manager import PipelineManager
 
 
 def create_flask_app() -> quart.app.Quart:
