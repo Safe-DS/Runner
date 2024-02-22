@@ -1,7 +1,7 @@
 from typing import Any
 
 import pytest
-from safeds_runner.server.pipeline_manager import _get_placeholder_type
+from safeds_runner.server._pipeline_manager import _get_placeholder_type
 
 
 @pytest.mark.parametrize(

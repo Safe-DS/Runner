@@ -12,8 +12,8 @@ import safeds_runner.server.main
 import simple_websocket
 from quart.testing.connections import WebsocketDisconnectError
 from safeds.data.tabular.containers import Table
-from safeds_runner.server.json_encoder import SafeDsEncoder
-from safeds_runner.server.messages import (
+from safeds_runner.server._json_encoder import SafeDsEncoder
+from safeds_runner.server._messages import (
     Message,
     MessageQueryInformation,
     QueryWindow,
@@ -28,7 +28,7 @@ from safeds_runner.server.messages import (
     validate_placeholder_query_message_data,
     validate_program_message_data,
 )
-from safeds_runner.server.server import SafeDsServer
+from safeds_runner.server._server import SafeDsServer
 
 
 @pytest.mark.parametrize(
@@ -369,9 +369,9 @@ async def test_should_execute_pipeline_return_exception(
                         "code": {
                             "": {
                                 "gen_test_a": (
-                                    "import safeds_runner.server.pipeline_manager\n\ndef pipe():\n\tvalue1 ="
-                                    " 1\n\tsafeds_runner.server.pipeline_manager.runner_save_placeholder('value1',"
-                                    " value1)\n\tsafeds_runner.server.pipeline_manager.runner_save_placeholder('obj',"
+                                    "import safeds_runner\n\ndef pipe():\n\tvalue1 ="
+                                    " 1\n\tsafeds_runner.save_placeholder('value1',"
+                                    " value1)\n\tsafeds_runner.save_placeholder('obj',"
                                     " object())\n"
                                 ),
                                 "gen_test_a_pipe": (
