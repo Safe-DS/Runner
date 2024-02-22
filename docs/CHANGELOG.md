@@ -1,3 +1,10 @@
+## [0.7.0](https://github.com/Safe-DS/Runner/compare/v0.6.0...v0.7.0) (2024-02-22)
+
+
+### Features
+
+* cleaner public api ([#54](https://github.com/Safe-DS/Runner/issues/54)) ([6d8dde7](https://github.com/Safe-DS/Runner/commit/6d8dde746729ff40ad0df4a548e7d607afe27f5c)), closes [#53](https://github.com/Safe-DS/Runner/issues/53)
+
 ## [0.6.0](https://github.com/Safe-DS/Runner/compare/v0.5.0...v0.6.0) (2024-02-08)
 
 
