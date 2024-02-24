@@ -5,9 +5,6 @@ import json
 import math
 from typing import Any
 
-from safeds.data.image.containers import Image
-from safeds.data.tabular.containers import Table
-
 
 class SafeDsEncoder(json.JSONEncoder):
     """JSON Encoder for custom Safe-DS types."""
@@ -30,6 +27,10 @@ class SafeDsEncoder(json.JSONEncoder):
         Any
             The passed object represented in a way that is serializable to JSON.
         """
+        # Moving these imports to the top drastically increases startup time
+        from safeds.data.image.containers import Image
+        from safeds.data.tabular.containers import Table
+
         if isinstance(o, Table):
             dict_with_nan_infinity = o.to_dict()
             # Convert NaN / Infinity to None, as the JSON encoder generates invalid JSON otherwise
