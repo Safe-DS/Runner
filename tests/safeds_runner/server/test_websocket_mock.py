@@ -369,10 +369,11 @@ async def test_should_execute_pipeline_return_exception(
                         "code": {
                             "": {
                                 "gen_test_a": (
-                                    "import safeds_runner\n\ndef pipe():\n\tvalue1 ="
+                                    "import safeds_runner\nimport base64\nfrom safeds.data.image.containers import Image\n\ndef pipe():\n\tvalue1 ="
                                     " 1\n\tsafeds_runner.save_placeholder('value1',"
                                     " value1)\n\tsafeds_runner.save_placeholder('obj',"
-                                    " object())\n"
+                                    " object())\n\tsafeds_runner.save_placeholder('image',"
+                                    " Image.from_bytes(base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC')))\n"
                                 ),
                                 "gen_test_a_pipe": (
                                     "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()"
@@ -383,7 +384,7 @@ async def test_should_execute_pipeline_return_exception(
                     },
                 }),
             ],
-            3,
+            4,
             [
                 # Query Placeholder
                 json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": {"name": "value1", "window": {}}}),
@@ -396,6 +397,7 @@ async def test_should_execute_pipeline_return_exception(
                 # Validate Placeholder Information
                 Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("value1", "Int")),
                 Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("obj", "object")),
+                Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("image", "Image")),
                 # Validate Progress Information
                 Message(message_type_runtime_progress, "abcdefg", create_runtime_progress_done()),
                 # Query Result Valid
