@@ -229,6 +229,10 @@ class PipelineProcess:
         value : Any
             Actual value of the placeholder.
         """
+        from safeds.data.image.containers import Image
+        if isinstance(value, Image):
+            import torch
+            value = Image(value._image_tensor, torch.device("cpu"))
         self._placeholder_map[placeholder_name] = value
         placeholder_type = _get_placeholder_type(value)
         self._send_message(
