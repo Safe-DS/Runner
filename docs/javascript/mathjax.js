@@ -16,5 +16,4 @@ document$.subscribe(() => {
     MathJax.typesetClear();
     MathJax.texReset();
     MathJax.typesetPromise();
-    MathJax.typesetPromise();
 });
