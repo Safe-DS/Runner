@@ -22,10 +22,10 @@ hypercorn = "^0.16.0"
 quart = "^0.19.4"
 
 [tool.poetry.dev-dependencies]
-pytest = "^8.0.2"
-pytest-cov = "^4.1.0"
-pytest-timeout = "^2.2.0"
-pytest-asyncio = "^0.23.5"
+pytest = "^8.1.1"
+pytest-cov = "^5.0.0"
+pytest-timeout = "^2.3.1"
+pytest-asyncio = "^0.23.6"
 simple-websocket = "^1.0.0"
 
 [tool.poetry.group.docs.dependencies]
