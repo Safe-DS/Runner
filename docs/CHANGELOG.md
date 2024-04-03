@@ -1,3 +1,20 @@
+## [0.8.0](https://github.com/Safe-DS/Runner/compare/v0.7.0...v0.8.0) (2024-04-03)
+
+
+### Features
+
+* **deps:** bump safe-ds from 0.19.0 to 0.20.0 ([#74](https://github.com/Safe-DS/Runner/issues/74)) ([86cccff](https://github.com/Safe-DS/Runner/commit/86cccff7d2230075eccc443d3bd55b31d2816bb5)), closes [#573](https://github.com/Safe-DS/Runner/issues/573) [#529](https://github.com/Safe-DS/Runner/issues/529) [#522](https://github.com/Safe-DS/Runner/issues/522) [#588](https://github.com/Safe-DS/Runner/issues/588) [#548](https://github.com/Safe-DS/Runner/issues/548) [#519](https://github.com/Safe-DS/Runner/issues/519) [#550](https://github.com/Safe-DS/Runner/issues/550) [#549](https://github.com/Safe-DS/Runner/issues/549) [#572](https://github.com/Safe-DS/Runner/issues/572) [#571](https://github.com/Safe-DS/Runner/issues/571) [#567](https://github.com/Safe-DS/Runner/issues/567) [#587](https://github.com/Safe-DS/Runner/issues/587) [#582](https://github.com/Safe-DS/Runner/issues/582) [#585](https://github.com/Safe-DS/Runner/issues/585) [#573](https://github.com/Safe-DS/Runner/issues/573) [#529](https://github.com/Safe-DS/Runner/issues/529) [#522](https://github.com/Safe-DS/Runner/issues/522) [#588](https://github.com/Safe-DS/Runner/issues/588) [#548](https://github.com/Safe-DS/Runner/issues/548) [#519](https://github.com/Safe-DS/Runner/issues/519) [#550](https://github.com/Safe-DS/Runner/issues/550) [#549](https://github.com/Safe-DS/Runner/issues/549) [#572](https://github.com/Safe-DS/Runner/issues/572) [#571](https://github.com/Safe-DS/Runner/issues/571) [#567](https://github.com/Safe-DS/Runner/issues/567) [#587](https://github.com/Safe-DS/Runner/issues/587) [#582](https://github.com/Safe-DS/Runner/issues/582) [#585](https://github.com/Safe-DS/Runner/issues/585) [#605](https://github.com/Safe-DS/Runner/issues/605) [#604](https://github.com/Safe-DS/Runner/issues/604) [#603](https://github.com/Safe-DS/Runner/issues/603) [#593](https://github.com/Safe-DS/Runner/issues/593) [#598](https://github.com/Safe-DS/Runner/issues/598) [#595](https://github.com/Safe-DS/Runner/issues/595) [#594](https://github.com/Safe-DS/Runner/issues/594) [#591](https://github.com/Safe-DS/Runner/issues/591) [#590](https://github.com/Safe-DS/Runner/issues/590)
+
+
+### Bug Fixes
+
+* sending images to the vscode extension fails, if the tensor is not local to the cpu ([#63](https://github.com/Safe-DS/Runner/issues/63)) ([8cf0b57](https://github.com/Safe-DS/Runner/commit/8cf0b5702eedec1cadd2225e6665f4cdcb69b6f8))
+
+
+### Performance Improvements
+
+* faster startup ([#55](https://github.com/Safe-DS/Runner/issues/55)) ([a3fbe24](https://github.com/Safe-DS/Runner/commit/a3fbe24769254d9180c84e5085685113e49a7f6a))
+
 ## [0.7.0](https://github.com/Safe-DS/Runner/compare/v0.6.0...v0.7.0) (2024-02-22)
 
 
