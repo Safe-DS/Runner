@@ -140,7 +140,11 @@ class MemoizationMap:
         # Lookup memoized value
         lookup_time_start = time.perf_counter_ns()
         key = self._create_memoization_key(function_name, parameters, hidden_parameters)
-        memoized_value = self._lookup_value(key)
+        try:
+            memoized_value = self._lookup_value(key)
+        # Pickling may raise AttributeError, hashing may raise TypeError
+        except (AttributeError, TypeError):
+            return function_callable(*parameters)
         lookup_time = time.perf_counter_ns() - lookup_time_start
 
         # Hit

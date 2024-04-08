@@ -11,12 +11,16 @@ from safeds_runner.server import _pipeline_manager
 from safeds_runner.server._memoization_map import (
     MemoizationMap,
     MemoizationStats,
-    _convert_list_to_tuple,
     _get_size_of_value,
+    _make_serializable,
 )
 from safeds_runner.server._messages import MessageDataProgram, ProgramMainInformation
 from safeds_runner.server._pipeline_manager import PipelineProcess, file_mtime, memoized_call
 
+
+class UnhashableClass:
+    def __hash__(self) -> int:
+        raise TypeError("unhashable type")
 
 @pytest.mark.parametrize(
     argnames="function_name,params,hidden_params,expected_result",
@@ -41,8 +45,8 @@ def test_memoization_already_present_values(
     )
     _pipeline_manager.current_pipeline.get_memoization_map()._map_values[(
         function_name,
-        _convert_list_to_tuple(params),
-        _convert_list_to_tuple(hidden_params),
+        _make_serializable(params),
+        _make_serializable(hidden_params),
     )] = expected_result
     _pipeline_manager.current_pipeline.get_memoization_map()._map_stats[function_name] = MemoizationStats(
         [time.perf_counter_ns()],
@@ -82,6 +86,33 @@ def test_memoization_not_present_values(
     # Test if value is actually saved by calling another function that does not return the expected result
     result2 = memoized_call(function_name, lambda *_: None, params, hidden_params)
     assert result2 == expected_result
+
+
+@pytest.mark.parametrize(
+    argnames="function_name,function,params,hidden_params,expected_result",
+    argvalues=[
+        ("unhashable_params", lambda a: type(a).__name__, [UnhashableClass()], [], "UnhashableClass"),
+        ("unhashable_hidden_params", lambda: None, [], [UnhashableClass()], None),
+    ],
+    ids=["unhashable_params", "unhashable_hidden_params"],
+)
+def test_memoization_unserializable_values(
+    function_name: str,
+    function: typing.Callable,
+    params: list,
+    hidden_params: list,
+    expected_result: Any,
+) -> None:
+    _pipeline_manager.current_pipeline = PipelineProcess(
+        MessageDataProgram({}, ProgramMainInformation("", "", "")),
+        "",
+        Queue(),
+        {},
+        MemoizationMap({}, {}),
+    )
+
+    result = memoized_call(function_name, function, params, hidden_params)
+    assert result == expected_result
 
 
 def test_file_mtime_exists() -> None:
