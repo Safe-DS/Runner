@@ -44,11 +44,13 @@ def test_memoization_already_present_values(
         {},
         MemoizationMap({}, {}),
     )
-    _pipeline_manager.current_pipeline.get_memoization_map()._map_values[(
-        function_name,
-        _make_hashable(params),
-        _make_hashable(hidden_params),
-    )] = expected_result
+    _pipeline_manager.current_pipeline.get_memoization_map()._map_values[
+        (
+            function_name,
+            _make_hashable(params),
+            _make_hashable(hidden_params),
+        )
+    ] = expected_result
     _pipeline_manager.current_pipeline.get_memoization_map()._map_stats[function_name] = MemoizationStats(
         [time.perf_counter_ns()],
         [],
