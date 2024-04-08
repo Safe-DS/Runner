@@ -333,7 +333,7 @@ class MemoizationStats:
 
 
 # Lambda = Stat Key Extractor, Boolean = Reverse Order
-StatOrderExtractor: TypeAlias = tuple[Callable[tuple[str, MemoizationStats], Any], bool]
+StatOrderExtractor: TypeAlias = tuple[Callable[[tuple[str, MemoizationStats]], Any], bool]
 
 # Sort functions by miss-rate in reverse (max. misses first)
 STAT_ORDER_MISS_RATE: StatOrderExtractor = (lambda function_stats: len(function_stats[1].computation_times) / len(function_stats[1].lookup_times), True)
@@ -376,7 +376,7 @@ class MemoizationMap:
         self._map_values: dict[MemoizationKey, Any] = map_values
         self._map_stats: dict[str, MemoizationStats] = map_stats
         self.max_size = None
-        self.value_removal_strategy = STAT_ORDER_PRIORITY
+        self.value_removal_strategy = STAT_ORDER_PRIORITY #
 
     def get_cache_size(self) -> int:
         """
