@@ -200,7 +200,7 @@ class MemoizationMap:
         -------
         A memoization key, which contains the lists converted to tuples
         """
-        return function_name, _make_serializable(parameters), _make_serializable(hidden_parameters)
+        return function_name, _make_hashable(parameters), _make_hashable(hidden_parameters)
 
     def _lookup_value(self, key: MemoizationKey) -> Any | None:
         """
@@ -295,9 +295,9 @@ class MemoizationMap:
         self._map_stats[function_name] = stats
 
 
-def _make_serializable(value: Any) -> Any:
+def _make_hashable(value: Any) -> Any:
     """
-    Make a value serializable.
+    Make a value hashable.
 
     Parameters
     ----------
@@ -310,32 +310,15 @@ def _make_serializable(value: Any) -> Any:
         Converted value.
     """
     if isinstance(value, dict):
-        return tuple((_make_serializable(key), _make_serializable(value)) for key, value in value.items())
+        return tuple((_make_hashable(key), _make_hashable(value)) for key, value in value.items())
     elif isinstance(value, list):
-        return tuple(_make_serializable(element) for element in value)
-    elif _is_lambda(value):
-        # This is a band-aid solution to make lambdas serializable. Unfortunately, `getsource` returns more than just
-        # the source code of the lambda.
+        return tuple(_make_hashable(element) for element in value)
+    elif callable(value):
+        # This is a band-aid solution to make callables serializable. Unfortunately, `getsource` returns more than just
+        # the source code for lambdas.
         return inspect.getsource(value)
     else:
         return value
-
-
-def _is_lambda(value: Any) -> bool:
-    """
-    Check if a value is a lambda function.
-
-    Parameters
-    ----------
-    value:
-        Value to be checked.
-
-    Returns
-    -------
-    is_lambda:
-        Whether the value is a lambda function.
-    """
-    return callable(value) and value.__name__ == "<lambda>"
 
 
 def _get_size_of_value(value: Any) -> int:

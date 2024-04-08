@@ -12,7 +12,7 @@ from safeds_runner.server._memoization_map import (
     MemoizationMap,
     MemoizationStats,
     _get_size_of_value,
-    _make_serializable,
+    _make_hashable,
 )
 from safeds_runner.server._messages import MessageDataProgram, ProgramMainInformation
 from safeds_runner.server._pipeline_manager import PipelineProcess, file_mtime, memoized_call
@@ -46,8 +46,8 @@ def test_memoization_already_present_values(
     )
     _pipeline_manager.current_pipeline.get_memoization_map()._map_values[(
         function_name,
-        _make_serializable(params),
-        _make_serializable(hidden_params),
+        _make_hashable(params),
+        _make_hashable(hidden_params),
     )] = expected_result
     _pipeline_manager.current_pipeline.get_memoization_map()._map_stats[function_name] = MemoizationStats(
         [time.perf_counter_ns()],
@@ -99,7 +99,7 @@ def test_memoization_not_present_values(
     ],
     ids=["unhashable_params", "unhashable_hidden_params"],
 )
-def test_memoization_unserializable_values(
+def test_memoization_unhashable_values(
     function_name: str,
     function: typing.Callable,
     params: list,
