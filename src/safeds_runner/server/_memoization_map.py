@@ -1,6 +1,7 @@
 """Module that contains the memoization logic and stats."""
 
 import dataclasses
+import inspect
 import logging
 import sys
 import time
@@ -140,7 +141,11 @@ class MemoizationMap:
         # Lookup memoized value
         lookup_time_start = time.perf_counter_ns()
         key = self._create_memoization_key(function_name, parameters, hidden_parameters)
-        memoized_value = self._lookup_value(key)
+        try:
+            memoized_value = self._lookup_value(key)
+        # Pickling may raise AttributeError, hashing may raise TypeError
+        except (AttributeError, TypeError):
+            return function_callable(*parameters)
         lookup_time = time.perf_counter_ns() - lookup_time_start
 
         # Hit
@@ -195,7 +200,7 @@ class MemoizationMap:
         -------
         A memoization key, which contains the lists converted to tuples
         """
-        return function_name, _convert_list_to_tuple(parameters), _convert_list_to_tuple(hidden_parameters)
+        return function_name, _make_hashable(parameters), _make_hashable(hidden_parameters)
 
     def _lookup_value(self, key: MemoizationKey) -> Any | None:
         """
@@ -290,21 +295,30 @@ class MemoizationMap:
         self._map_stats[function_name] = stats
 
 
-def _convert_list_to_tuple(values: list) -> tuple:
+def _make_hashable(value: Any) -> Any:
     """
-    Recursively convert a mutable list of values to an immutable tuple containing the same values, to make the values hashable.
+    Make a value hashable.
 
     Parameters
     ----------
-    values : list
-        Values that should be converted to a tuple
+    value:
+        Value to be converted.
 
     Returns
     -------
-    tuple
-        Converted list containing all the elements of the provided list
+    converted_value:
+        Converted value.
     """
-    return tuple(_convert_list_to_tuple(value) if isinstance(value, list) else value for value in values)
+    if isinstance(value, dict):
+        return tuple((_make_hashable(key), _make_hashable(value)) for key, value in value.items())
+    elif isinstance(value, list):
+        return tuple(_make_hashable(element) for element in value)
+    elif callable(value):
+        # This is a band-aid solution to make callables serializable. Unfortunately, `getsource` returns more than just
+        # the source code for lambdas.
+        return inspect.getsource(value)
+    else:
+        return value
 
 
 def _get_size_of_value(value: Any) -> int:
