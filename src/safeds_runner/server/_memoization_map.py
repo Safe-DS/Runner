@@ -1,6 +1,7 @@
 """Module that contains the memoization logic and stats."""
 
 import dataclasses
+import inspect
 import logging
 import sys
 import time
@@ -199,7 +200,7 @@ class MemoizationMap:
         -------
         A memoization key, which contains the lists converted to tuples
         """
-        return function_name, _convert_list_to_tuple(parameters), _convert_list_to_tuple(hidden_parameters)
+        return function_name, _make_serializable(parameters), _make_serializable(hidden_parameters)
 
     def _lookup_value(self, key: MemoizationKey) -> Any | None:
         """
@@ -294,21 +295,47 @@ class MemoizationMap:
         self._map_stats[function_name] = stats
 
 
-def _convert_list_to_tuple(values: list) -> tuple:
+def _make_serializable(value: Any) -> Any:
     """
-    Recursively convert a mutable list of values to an immutable tuple containing the same values, to make the values hashable.
+    Make a value serializable.
 
     Parameters
     ----------
-    values : list
-        Values that should be converted to a tuple
+    value:
+        Value to be converted.
 
     Returns
     -------
-    tuple
-        Converted list containing all the elements of the provided list
+    converted_value:
+        Converted value.
     """
-    return tuple(_convert_list_to_tuple(value) if isinstance(value, list) else value for value in values)
+    if isinstance(value, dict):
+        return tuple((_make_serializable(key), _make_serializable(value)) for key, value in value.items())
+    elif isinstance(value, list):
+        return tuple(_make_serializable(element) for element in value)
+    elif _is_lambda(value):
+        # This is a band-aid solution to make lambdas serializable. Unfortunately, `getsource` returns more than just
+        # the source code of the lambda.
+        return inspect.getsource(value)
+    else:
+        return value
+
+
+def _is_lambda(value: Any) -> bool:
+    """
+    Check if a value is a lambda function.
+
+    Parameters
+    ----------
+    value:
+        Value to be checked.
+
+    Returns
+    -------
+    is_lambda:
+        Whether the value is a lambda function.
+    """
+    return callable(value) and value.__name__ == "<lambda>"
 
 
 def _get_size_of_value(value: Any) -> int:

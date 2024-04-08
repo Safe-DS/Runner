@@ -22,6 +22,7 @@ class UnhashableClass:
     def __hash__(self) -> int:
         raise TypeError("unhashable type")
 
+
 @pytest.mark.parametrize(
     argnames="function_name,params,hidden_params,expected_result",
     argvalues=[
@@ -63,8 +64,10 @@ def test_memoization_already_present_values(
     argvalues=[
         ("function_pure", lambda a, b, c: a + b + c, [1, 2, 3], [], 6),
         ("function_impure_readfile", lambda filename: filename.split(".")[0], ["abc.txt"], [1234567891], "abc"),
+        ("function_dict", lambda x: len(x), [{}], [], 0),
+        ("function_lambda", lambda x: x(), [lambda: 0], [], 0),
     ],
-    ids=["function_pure", "function_impure_readfile"],
+    ids=["function_pure", "function_impure_readfile", "function_dict", "function_lambda"],
 )
 def test_memoization_not_present_values(
     function_name: str,
