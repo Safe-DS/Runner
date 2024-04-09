@@ -309,7 +309,7 @@ def save_placeholder(placeholder_name: str, value: Any) -> None:
         current_pipeline.save_placeholder(placeholder_name, value)
 
 
-def memoized_call(
+def memoized_static_call(
     function_name: str,
     function_callable: typing.Callable,
     parameters: list[Any],
@@ -340,6 +340,52 @@ def memoized_call(
         return None  # pragma: no cover
     memoization_map = current_pipeline.get_memoization_map()
     return memoization_map.memoized_function_call(function_name, function_callable, parameters, hidden_parameters)
+
+
+def memoized_dynamic_call(
+    function_name: str,
+    function_callable: typing.Callable | None,
+    parameters: list[Any],
+    hidden_parameters: list[Any],
+) -> Any:
+    """
+    Dynamically call a function that can be memoized and save the result.
+
+    If a function has been previously memoized, the previous result may be reused.
+    Dynamically calling in this context means, that if a callable is provided (e.g. if default parameters are set), it will be called.
+    If no such callable is provided, the function name will be used to look up the function on the instance passed as the first parameter in the parameter list.
+
+    Parameters
+    ----------
+    function_name : str
+        Simple function name
+    function_callable : typing.Callable | None
+        Function that is called and memoized if the result was not found in the memoization map or none, if the function handle should be in the provided instance
+    parameters : list[Any]
+        List of parameters for the function, the first parameter should be the instance the function should be called on (receiver)
+    hidden_parameters : list[Any]
+        List of hidden parameters for the function. This is used for memoizing some impure functions.
+
+    Returns
+    -------
+    Any
+        The result of the specified function, if any exists
+    """
+    if current_pipeline is None:
+        return None  # pragma: no cover
+    fully_qualified_function_name = (
+        parameters[0].__class__.__module__ + "." + parameters[0].__class__.__qualname__ + "." + function_name
+    )
+    memoization_map = current_pipeline.get_memoization_map()
+    if function_callable is None:
+        function_target_bound = getattr(parameters[0], function_name)
+        function_callable = function_target_bound.__func__
+    return memoization_map.memoized_function_call(
+        fully_qualified_function_name,
+        function_callable,
+        parameters,
+        hidden_parameters,
+    )
 
 
 def file_mtime(filename: str) -> int | None:
