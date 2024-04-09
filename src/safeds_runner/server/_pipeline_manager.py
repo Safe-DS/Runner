@@ -381,7 +381,10 @@ def memoized_dynamic_call(
         function_target_bound = getattr(parameters[0], function_name)
         function_callable = function_target_bound.__func__
     return memoization_map.memoized_function_call(
-        fully_qualified_function_name, function_callable, parameters, hidden_parameters,
+        fully_qualified_function_name,
+        function_callable,
+        parameters,
+        hidden_parameters,
     )
 
 
