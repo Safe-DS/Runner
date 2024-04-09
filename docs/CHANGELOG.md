@@ -1,9 +1,22 @@
+## [0.9.0](https://github.com/Safe-DS/Runner/compare/v0.8.0...v0.9.0) (2024-04-09)
+
+
+### Features
+
+* dynamic memoization calls ([#82](https://github.com/Safe-DS/Runner/issues/82)) ([9d31292](https://github.com/Safe-DS/Runner/commit/9d31292f4eae69bb65a6c6f4b7a8bddade89cc32))
+
+
+### Bug Fixes
+
+* **deps:** bump pillow from 10.2.0 to 10.3.0 ([#77](https://github.com/Safe-DS/Runner/issues/77)) ([32974d0](https://github.com/Safe-DS/Runner/commit/32974d07acd9cc121fa4d6980c2814c9ec8d6787))
+* more robust hashing & pickling when memoizing ([#80](https://github.com/Safe-DS/Runner/issues/80)) ([25c49e2](https://github.com/Safe-DS/Runner/commit/25c49e29da2506d514485b001dd8fc27caf230f9)), closes [#75](https://github.com/Safe-DS/Runner/issues/75) [#79](https://github.com/Safe-DS/Runner/issues/79)
+
 ## [0.8.0](https://github.com/Safe-DS/Runner/compare/v0.7.0...v0.8.0) (2024-04-03)
 
 
 ### Features
 
-* **deps:** bump safe-ds from 0.19.0 to 0.20.0 ([#74](https://github.com/Safe-DS/Runner/issues/74)) ([86cccff](https://github.com/Safe-DS/Runner/commit/86cccff7d2230075eccc443d3bd55b31d2816bb5)), closes [#573](https://github.com/Safe-DS/Runner/issues/573) [#529](https://github.com/Safe-DS/Runner/issues/529) [#522](https://github.com/Safe-DS/Runner/issues/522) [#588](https://github.com/Safe-DS/Runner/issues/588) [#548](https://github.com/Safe-DS/Runner/issues/548) [#519](https://github.com/Safe-DS/Runner/issues/519) [#550](https://github.com/Safe-DS/Runner/issues/550) [#549](https://github.com/Safe-DS/Runner/issues/549) [#572](https://github.com/Safe-DS/Runner/issues/572) [#571](https://github.com/Safe-DS/Runner/issues/571) [#567](https://github.com/Safe-DS/Runner/issues/567) [#587](https://github.com/Safe-DS/Runner/issues/587) [#582](https://github.com/Safe-DS/Runner/issues/582) [#585](https://github.com/Safe-DS/Runner/issues/585) [#573](https://github.com/Safe-DS/Runner/issues/573) [#529](https://github.com/Safe-DS/Runner/issues/529) [#522](https://github.com/Safe-DS/Runner/issues/522) [#588](https://github.com/Safe-DS/Runner/issues/588) [#548](https://github.com/Safe-DS/Runner/issues/548) [#519](https://github.com/Safe-DS/Runner/issues/519) [#550](https://github.com/Safe-DS/Runner/issues/550) [#549](https://github.com/Safe-DS/Runner/issues/549) [#572](https://github.com/Safe-DS/Runner/issues/572) [#571](https://github.com/Safe-DS/Runner/issues/571) [#567](https://github.com/Safe-DS/Runner/issues/567) [#587](https://github.com/Safe-DS/Runner/issues/587) [#582](https://github.com/Safe-DS/Runner/issues/582) [#585](https://github.com/Safe-DS/Runner/issues/585) [#605](https://github.com/Safe-DS/Runner/issues/605) [#604](https://github.com/Safe-DS/Runner/issues/604) [#603](https://github.com/Safe-DS/Runner/issues/603) [#593](https://github.com/Safe-DS/Runner/issues/593) [#598](https://github.com/Safe-DS/Runner/issues/598) [#595](https://github.com/Safe-DS/Runner/issues/595) [#594](https://github.com/Safe-DS/Runner/issues/594) [#591](https://github.com/Safe-DS/Runner/issues/591) [#590](https://github.com/Safe-DS/Runner/issues/590)
+* **deps:** bump safe-ds from 0.19.0 to 0.20.0 ([#74](https://github.com/Safe-DS/Runner/issues/74)) ([86cccff](https://github.com/Safe-DS/Runner/commit/86cccff7d2230075eccc443d3bd55b31d2816bb5))
 
 
 ### Bug Fixes
