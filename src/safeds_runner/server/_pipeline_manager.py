@@ -373,12 +373,16 @@ def memoized_dynamic_call(
     """
     if current_pipeline is None:
         return None  # pragma: no cover
-    fully_qualified_function_name = parameters[0].__class__.__module__ + "." + parameters[0].__class__.__qualname__ + "." + function_name
+    fully_qualified_function_name = (
+        parameters[0].__class__.__module__ + "." + parameters[0].__class__.__qualname__ + "." + function_name
+    )
     memoization_map = current_pipeline.get_memoization_map()
     if function_callable is None:
         function_target_bound = getattr(parameters[0], function_name)
         function_callable = function_target_bound.__func__
-    return memoization_map.memoized_function_call(fully_qualified_function_name, function_callable, parameters, hidden_parameters)
+    return memoization_map.memoized_function_call(
+        fully_qualified_function_name, function_callable, parameters, hidden_parameters,
+    )
 
 
 def file_mtime(filename: str) -> int | None:
