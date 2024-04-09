@@ -15,7 +15,7 @@ from safeds_runner.server._memoization_map import (
     _make_hashable,
 )
 from safeds_runner.server._messages import MessageDataProgram, ProgramMainInformation
-from safeds_runner.server._pipeline_manager import PipelineProcess, file_mtime, memoized_call
+from safeds_runner.server._pipeline_manager import PipelineProcess, file_mtime, memoized_static_call, memoized_dynamic_call
 
 
 class UnhashableClass:
@@ -31,7 +31,7 @@ class UnhashableClass:
     ],
     ids=["function_pure", "function_impure_readfile"],
 )
-def test_memoization_already_present_values(
+def test_memoization_static_already_present_values(
     function_name: str,
     params: list,
     hidden_params: list,
@@ -57,7 +57,7 @@ def test_memoization_already_present_values(
         [],
         [sys.getsizeof(expected_result)],
     )
-    result = _pipeline_manager.memoized_call(function_name, lambda *_: None, params, hidden_params)
+    result = _pipeline_manager.memoized_static_call(function_name, lambda *_: None, params, hidden_params)
     assert result == expected_result
 
 
@@ -71,7 +71,7 @@ def test_memoization_already_present_values(
     ],
     ids=["function_pure", "function_impure_readfile", "function_dict", "function_lambda"],
 )
-def test_memoization_not_present_values(
+def test_memoization_static_not_present_values(
     function_name: str,
     function: typing.Callable,
     params: list,
@@ -86,12 +86,65 @@ def test_memoization_not_present_values(
         MemoizationMap({}, {}),
     )
     # Save value in map
-    result = memoized_call(function_name, function, params, hidden_params)
+    result = memoized_static_call(function_name, function, params, hidden_params)
     assert result == expected_result
     # Test if value is actually saved by calling another function that does not return the expected result
-    result2 = memoized_call(function_name, lambda *_: None, params, hidden_params)
+    result2 = memoized_static_call(function_name, lambda *_: None, params, hidden_params)
     assert result2 == expected_result
 
+
+class BaseClass:
+    def __init__(self):
+        pass
+
+    def method1(self) -> int:
+        return 1
+
+    def method2(self, default: int = 5) -> int:
+        return 1 * default
+
+
+class ChildClass(BaseClass):
+    def __init__(self):
+        super().__init__()
+
+    def method1(self) -> int:
+        return 2
+
+    def method2(self, default: int = 3) -> int:
+        return 2 * default
+
+
+@pytest.mark.parametrize(
+    argnames="function_name,function,params,hidden_params,expected_result",
+    argvalues=[
+        ("method1", None, [BaseClass()], [], 1),
+        ("method1", None, [ChildClass()], [], 2),
+        ("method2", lambda instance, *_: instance.method2(default=7), [BaseClass(), 7], [], 7),
+        ("method2", lambda instance, *_: instance.method2(default=7), [ChildClass(), 7], [], 14),
+    ],
+    ids=["member_call_base", "member_call_child", "member_call_base_lambda", "member_call_child_lambda"],
+)
+def test_memoization_dynamic(
+    function_name: str,
+    function: typing.Callable | None,
+    params: list,
+    hidden_params: list,
+    expected_result: Any,
+) -> None:
+    _pipeline_manager.current_pipeline = PipelineProcess(
+        MessageDataProgram({}, ProgramMainInformation("", "", "")),
+        "",
+        Queue(),
+        {},
+        MemoizationMap({}, {}),
+    )
+    # Save value in map
+    result = memoized_dynamic_call(function_name, function, params, hidden_params)
+    assert result == expected_result
+    # Test if value is actually saved by calling another function that does not return the expected result
+    result2 = memoized_dynamic_call(function_name, lambda *_: None, params, hidden_params)
+    assert result2 == expected_result
 
 @pytest.mark.parametrize(
     argnames="function_name,function,params,hidden_params,expected_result",
@@ -101,7 +154,7 @@ def test_memoization_not_present_values(
     ],
     ids=["unhashable_params", "unhashable_hidden_params"],
 )
-def test_memoization_unhashable_values(
+def test_memoization_static_unhashable_values(
     function_name: str,
     function: typing.Callable,
     params: list,
@@ -116,7 +169,7 @@ def test_memoization_unhashable_values(
         MemoizationMap({}, {}),
     )
 
-    result = memoized_call(function_name, function, params, hidden_params)
+    result = memoized_static_call(function_name, function, params, hidden_params)
     assert result == expected_result
 
 
