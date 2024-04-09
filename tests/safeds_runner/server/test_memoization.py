@@ -12,8 +12,8 @@ from safeds_runner.server._memoization_map import (
     MemoizationMap,
     MemoizationStats,
     _get_size_of_value,
-    _make_hashable,
 )
+from safeds_runner.server._memoization_utils import _make_hashable
 from safeds_runner.server._messages import MessageDataProgram, ProgramMainInformation
 from safeds_runner.server._pipeline_manager import (
     PipelineProcess,

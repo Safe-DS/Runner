@@ -1,0 +1,48 @@
+"""Module that contains different memoization strategies."""
+
+from typing import TypeAlias, Callable, Any
+
+from safeds_runner.server._memoization_stats import MemoizationStats
+
+# Callable = Stat Key Extractor, Boolean = Reverse Order
+StatOrderExtractor: TypeAlias = tuple[Callable[[tuple[str, MemoizationStats]], Any], bool]
+
+
+# Sort functions by miss-rate in reverse (max. misses first)
+def _stat_order_miss_rate(function_stats: tuple[str, MemoizationStats]) -> float:
+    return len(function_stats[1].computation_times) / len(function_stats[1].lookup_times)
+
+
+STAT_ORDER_MISS_RATE: StatOrderExtractor = (_stat_order_miss_rate, True)
+
+
+# Sort functions by LRU (last access timestamp, in ascending order, least recently used first)
+def _stat_order_lru(function_stats: tuple[str, MemoizationStats]) -> float:
+    return max(function_stats[1].access_timestamps)
+
+
+STAT_ORDER_LRU: StatOrderExtractor = (_stat_order_lru, False)
+
+
+# Sort functions by time saved (difference average computation time and average lookup time, least time saved first)
+def _stat_order_time_saved(function_stats: tuple[str, MemoizationStats]) -> float:
+    return (sum(function_stats[1].computation_times) / len(function_stats[1].computation_times)) - (sum(function_stats[1].lookup_times) / len(function_stats[1].lookup_times))
+
+
+STAT_ORDER_TIME_SAVED: StatOrderExtractor = (_stat_order_time_saved, False)
+
+
+# Sort functions by priority (ratio average computation time to average size, lowest priority first)
+def _stat_order_priority(function_stats: tuple[str, MemoizationStats]) -> float:
+    return (sum(function_stats[1].computation_times) / len(function_stats[1].computation_times)) / (sum(function_stats[1].memory_sizes) / len(function_stats[1].memory_sizes))
+
+
+STAT_ORDER_PRIORITY: StatOrderExtractor = (_stat_order_priority, False)
+
+
+# Sort functions by inverse LRU (last access timestamp, in descending order, least recently used last)
+def _stat_order_lru_inverse(function_stats: tuple[str, MemoizationStats]) -> float:
+    return -max(function_stats[1].access_timestamps)
+
+
+STAT_ORDER_LRU_INVERSE: StatOrderExtractor = (_stat_order_lru_inverse, False)
