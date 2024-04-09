@@ -146,6 +146,67 @@ def test_memoization_dynamic(
     result2 = memoized_dynamic_call(function_name, lambda *_: None, params, hidden_params)
     assert result2 == expected_result
 
+
+@pytest.mark.parametrize(
+    argnames="function_name,function,params,hidden_params,fully_qualified_function_name",
+    argvalues=[
+        ("method1", None, [BaseClass()], [], "tests.safeds_runner.server.test_memoization.BaseClass.method1"),
+        ("method1", None, [ChildClass()], [], "tests.safeds_runner.server.test_memoization.ChildClass.method1"),
+        ("method2", lambda instance, *_: instance.method2(default=7), [BaseClass(), 7], [], "tests.safeds_runner.server.test_memoization.BaseClass.method2"),
+        ("method2", lambda instance, *_: instance.method2(default=7), [ChildClass(), 7], [], "tests.safeds_runner.server.test_memoization.ChildClass.method2"),
+    ],
+    ids=["member_call_base", "member_call_child", "member_call_base_lambda", "member_call_child_lambda"],
+)
+def test_memoization_dynamic_contains_correct_fully_qualified_name(
+    function_name: str,
+    function: typing.Callable | None,
+    params: list,
+    hidden_params: list,
+    fully_qualified_function_name: Any,
+) -> None:
+    _pipeline_manager.current_pipeline = PipelineProcess(
+        MessageDataProgram({}, ProgramMainInformation("", "", "")),
+        "",
+        Queue(),
+        {},
+        MemoizationMap({}, {}),
+    )
+    # Save value in map
+    result = memoized_dynamic_call(function_name, function, params, hidden_params)
+    # Test if value is actually saved with the correct function name
+    result2 = memoized_static_call(fully_qualified_function_name, lambda *_: None, params, hidden_params)
+    assert result == result2
+
+
+@pytest.mark.parametrize(
+    argnames="function_name,function,params,hidden_params,fully_qualified_function_name",
+    argvalues=[
+        ("method1", None, [ChildClass()], [], "tests.safeds_runner.server.test_memoization.BaseClass.method1"),
+        ("method2", lambda instance, *_: instance.method2(default=7), [ChildClass(), 7], [], "tests.safeds_runner.server.test_memoization.BaseClass.method2"),
+    ],
+    ids=["member_call_child", "member_call_child_lambda"],
+)
+def test_memoization_dynamic_not_base_name(
+    function_name: str,
+    function: typing.Callable | None,
+    params: list,
+    hidden_params: list,
+    fully_qualified_function_name: Any,
+) -> None:
+    _pipeline_manager.current_pipeline = PipelineProcess(
+        MessageDataProgram({}, ProgramMainInformation("", "", "")),
+        "",
+        Queue(),
+        {},
+        MemoizationMap({}, {}),
+    )
+    # Save value in map
+    result = memoized_dynamic_call(function_name, function, params, hidden_params)
+    # Test if value is actually saved with the correct function name
+    result2 = memoized_static_call(fully_qualified_function_name, lambda *_: None, params, hidden_params)
+    assert result is not None
+    assert result2 is None
+
 @pytest.mark.parametrize(
     argnames="function_name,function,params,hidden_params,expected_result",
     argvalues=[
@@ -168,7 +229,6 @@ def test_memoization_static_unhashable_values(
         {},
         MemoizationMap({}, {}),
     )
-
     result = memoized_static_call(function_name, function, params, hidden_params)
     assert result == expected_result
 
