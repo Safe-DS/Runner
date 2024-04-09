@@ -94,7 +94,7 @@ def test_memoization_static_not_present_values(
 
 
 class BaseClass:
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     def method1(self) -> int:
@@ -105,7 +105,7 @@ class BaseClass:
 
 
 class ChildClass(BaseClass):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
     def method1(self) -> int:
