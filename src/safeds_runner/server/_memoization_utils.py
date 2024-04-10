@@ -170,7 +170,7 @@ class ExplicitIdentityWrapperLazy:
     def __getstate__(self) -> object:
         return self.memory, self.id, self.hash
 
-    def __setstate__(self, state: object) -> None:
+    def __setstate__(self, state: tuple[SharedMemory, uuid.UUID, int]) -> None:
         memory_value, id_value, hash_value = state
         object.__setattr__(self, 'value', None)
         object.__setattr__(self, 'memory', memory_value)
@@ -402,7 +402,7 @@ def _wrap_value_to_shared_memory(
         The value in a memoizable format, wrapped if needed.
     """
     if isinstance(result, tuple):
-        results = []
+        results: list[Any] = []
         for entry in result:
             if _is_deterministically_hashable(entry):
                 _set_new_explicit_identity_deterministic_hash(entry)

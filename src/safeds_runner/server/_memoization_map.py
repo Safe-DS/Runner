@@ -36,7 +36,7 @@ class MemoizationMap:
         """
         self._map_values: dict[MemoizationKey, Any] = map_values
         self._map_stats: dict[str, MemoizationStats] = map_stats
-        self.max_size = None
+        self.max_size: int | None = None
         self.value_removal_strategy = STAT_ORDER_PRIORITY
 
     def get_cache_size(self) -> int:
@@ -60,6 +60,8 @@ class MemoizationMap:
         needed_capacity
             Amount of free storage space requested, in bytes
         """
+        if self.max_size is None:
+            return
         free_size = self.max_size - self.get_cache_size()
         while free_size < needed_capacity < self.max_size:
             self.remove_worst_element(needed_capacity - free_size)
@@ -134,7 +136,7 @@ class MemoizationMap:
         # Pickling may raise AttributeError, hashing may raise TypeError
         except (AttributeError, TypeError) as exception:
             # Fallback to executing the call to continue working, but inform user about this failure
-            logging.error(f"Could not lookup value for function {function_name}, reason: {exception}. Falling back to calling the function")
+            logging.exception("Could not lookup value for function %s. Falling back to calling the function", function_name, exc_info=exception)
             return function_callable(*parameters)
         lookup_time = time.perf_counter_ns() - lookup_time_start
 
