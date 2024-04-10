@@ -1,3 +1,10 @@
+## [0.10.0](https://github.com/Safe-DS/Runner/compare/v0.9.0...v0.10.0) (2024-04-10)
+
+
+### Features
+
+* support relative paths ([#83](https://github.com/Safe-DS/Runner/issues/83)) ([a65261b](https://github.com/Safe-DS/Runner/commit/a65261b5b1e71c1949a6feb352d9ea435952a3e6)), closes [#76](https://github.com/Safe-DS/Runner/issues/76)
+
 ## [0.9.0](https://github.com/Safe-DS/Runner/compare/v0.8.0...v0.9.0) (2024-04-09)
 
 
