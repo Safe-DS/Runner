@@ -17,6 +17,7 @@ def start_server(port: int) -> None:
     logging.getLogger().setLevel(logging.DEBUG)
 
     # Set PYTHONHASHSEED environment variable to a fixed value, to make hashes of builtin types more comparable between processes
+    # Fixed values allow saving the cache to disk (in the future) and reusing it later
     os.environ["PYTHONHASHSEED"] = str(1396986624)
 
     safeds_server = SafeDsServer()
