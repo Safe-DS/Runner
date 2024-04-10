@@ -113,7 +113,7 @@ class MessageDataProgram:
         return MessageDataProgram(
             d["code"],
             ProgramMainInformation.from_dict(d["main"]),
-            d.get("cwd", None),
+            d.get("cwd"),
         )
 
     def to_dict(self) -> dict[str, Any]:
