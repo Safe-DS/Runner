@@ -413,6 +413,23 @@ def file_mtime(filename: str) -> int | None:
         return None
 
 
+def absolute_path(filename: str) -> str:
+    """
+    Get the absolute path of the provided file.
+
+    Parameters
+    ----------
+    filename:
+        Name of the file
+
+    Returns
+    -------
+    absolute_path:
+        Absolute path of the provided file
+    """
+    return str(Path(filename).resolve())
+
+
 def get_backtrace_info(error: BaseException) -> list[dict[str, Any]]:
     """
     Create a simplified backtrace from an exception.
