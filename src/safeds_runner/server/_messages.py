@@ -87,10 +87,13 @@ class MessageDataProgram:
         module name. The values of the inner dictionary is the python code for each module.
     main : ProgramMainInformation
         Information where the main pipeline (the pipeline to be executed) is located.
+    cwd:
+        Current working directory to use for execution. If not set, the default working directory is used.
     """
 
     code: dict[str, dict[str, str]]
     main: ProgramMainInformation
+    cwd: str | None = None
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> MessageDataProgram:
@@ -107,7 +110,11 @@ class MessageDataProgram:
         MessageDataProgram
             Dataclass which contains information copied from the provided dictionary.
         """
-        return MessageDataProgram(d["code"], ProgramMainInformation.from_dict(d["main"]))
+        return MessageDataProgram(
+            d["code"],
+            ProgramMainInformation.from_dict(d["main"]),
+            d.get("cwd"),
+        )
 
     def to_dict(self) -> dict[str, Any]:
         """
@@ -400,7 +407,10 @@ def validate_program_message_data(message_data: dict[str, Any] | str) -> tuple[M
     """
     if not isinstance(message_data, dict):
         return None, "Message data is not a JSON object"
-    elif "code" not in message_data:
+
+    cwd = message_data.get("cwd", None)
+
+    if "code" not in message_data:
         return None, "No 'code' parameter given"
     elif "main" not in message_data:
         return None, "No 'main' parameter given"
@@ -414,6 +424,8 @@ def validate_program_message_data(message_data: dict[str, Any] | str) -> tuple[M
         return None, "Invalid 'main' parameter given"
     elif not isinstance(message_data["code"], dict):
         return None, "Invalid 'code' parameter given"
+    elif cwd is not None and not isinstance(cwd, str):
+        return None, "Invalid 'cwd' parameter given"
     else:
         code: dict = message_data["code"]
         for key in code:
