@@ -1,14 +1,14 @@
 """Module that contains the memoization utilities and functionality related to explicit ids and shared memory."""
+
 from __future__ import annotations
 
+import inspect
+import pickle
+import sys
+import uuid
+from dataclasses import dataclass
 from multiprocessing.shared_memory import SharedMemory
 from typing import Any, TypeAlias
-import uuid
-import inspect
-import sys
-import pickle
-
-from dataclasses import dataclass
 
 MemoizationKey: TypeAlias = tuple[str, tuple[Any], tuple[Any]]
 
@@ -21,6 +21,7 @@ class ExplicitIdentityWrapper:
     This wrapper makes IPC actions more efficient, by only sending the shared memory location.
     The contained object is always unpickled at the receiving side.
     """
+
     value: Any
     memory: SharedMemory
 
@@ -65,7 +66,7 @@ class ExplicitIdentityWrapper:
     def __hash__(self) -> int:
         return hash(self.value)
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, ExplicitIdentityWrapperLazy):
             if self.value.__ex_id__ == other.id:
                 return True
@@ -84,8 +85,8 @@ class ExplicitIdentityWrapper:
         return self.memory
 
     def __setstate__(self, state: object) -> None:
-        object.__setattr__(self, 'memory', state)
-        object.__setattr__(self, 'value', pickle.loads(self.memory.buf))
+        object.__setattr__(self, "memory", state)
+        object.__setattr__(self, "value", pickle.loads(self.memory.buf))
         _set_new_explicit_memory(self.value, self.memory)
 
 
@@ -97,6 +98,7 @@ class ExplicitIdentityWrapperLazy:
     This wrapper allows to skip deserializing the contained value, if only a comparison is required, as the hash is deterministic and also sent.
     If the comparison using the explicit identity fails, the object is unpickled as a fallback solution and compared using the __eq__ function.
     """
+
     value: Any
     memory: SharedMemory
     id: uuid.UUID
@@ -140,12 +142,8 @@ class ExplicitIdentityWrapperLazy:
         """
         return cls(value, value.__ex_id_mem__, value.__ex_id__, value.__ex_hash__)
 
-    def __eq__(self, other: Any) -> bool:
-        if isinstance(other, ExplicitIdentityWrapperLazy) and self.id == other.id:
-            return True
-        elif isinstance(other, ExplicitIdentityWrapper) and self.id == other.value.__ex_id__:
-            return True
-        elif _has_explicit_identity(other) and self.id == other.__ex_id__:
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, ExplicitIdentityWrapperLazy) and self.id == other.id or isinstance(other, ExplicitIdentityWrapper) and self.id == other.value.__ex_id__ or _has_explicit_identity(other) and self.id == other.__ex_id__:
             return True
         self._unpackvalue()
         if isinstance(other, ExplicitIdentityWrapperLazy):
@@ -161,7 +159,7 @@ class ExplicitIdentityWrapperLazy:
     def _unpackvalue(self) -> None:
         """Unpack the value contained in this wrapper, if not currently present."""
         if self.value is None:
-            object.__setattr__(self, 'value', pickle.loads(self.memory.buf))
+            object.__setattr__(self, "value", pickle.loads(self.memory.buf))
             _set_new_explicit_memory(self.value, self.memory)
 
     def __sizeof__(self) -> int:
@@ -172,10 +170,10 @@ class ExplicitIdentityWrapperLazy:
 
     def __setstate__(self, state: tuple[SharedMemory, uuid.UUID, int]) -> None:
         memory_value, id_value, hash_value = state
-        object.__setattr__(self, 'value', None)
-        object.__setattr__(self, 'memory', memory_value)
-        object.__setattr__(self, 'id', id_value)
-        object.__setattr__(self, 'hash', hash_value)
+        object.__setattr__(self, "value", None)
+        object.__setattr__(self, "memory", memory_value)
+        object.__setattr__(self, "id", id_value)
+        object.__setattr__(self, "hash", hash_value)
 
 
 def _is_not_primitive(value: Any) -> bool:
@@ -323,7 +321,9 @@ def _make_hashable(value: Any) -> Any:
     """
     if _is_deterministically_hashable(value) and _has_explicit_identity_memory(value):
         return ExplicitIdentityWrapperLazy.existing(value)
-    elif not _is_deterministically_hashable(value) and _is_not_primitive(value) and _has_explicit_identity_memory(value):
+    elif (
+        not _is_deterministically_hashable(value) and _is_not_primitive(value) and _has_explicit_identity_memory(value)
+    ):
         return ExplicitIdentityWrapper.existing(value)
     elif isinstance(value, dict):
         return tuple((_make_hashable(key), _make_hashable(value)) for key, value in value.items())

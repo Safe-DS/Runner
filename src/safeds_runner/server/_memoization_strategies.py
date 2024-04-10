@@ -1,6 +1,7 @@
 """Module that contains different memoization strategies."""
 
-from typing import TypeAlias, Callable, Any
+from collections.abc import Callable
+from typing import Any, TypeAlias
 
 from safeds_runner.server._memoization_stats import MemoizationStats
 
@@ -26,7 +27,9 @@ STAT_ORDER_LRU: StatOrderExtractor = (_stat_order_lru, False)
 
 # Sort functions by time saved (difference average computation time and average lookup time, least time saved first)
 def _stat_order_time_saved(function_stats: tuple[str, MemoizationStats]) -> float:
-    return (sum(function_stats[1].computation_times) / len(function_stats[1].computation_times)) - (sum(function_stats[1].lookup_times) / len(function_stats[1].lookup_times))
+    return (sum(function_stats[1].computation_times) / len(function_stats[1].computation_times)) - (
+        sum(function_stats[1].lookup_times) / len(function_stats[1].lookup_times)
+    )
 
 
 STAT_ORDER_TIME_SAVED: StatOrderExtractor = (_stat_order_time_saved, False)
@@ -34,7 +37,9 @@ STAT_ORDER_TIME_SAVED: StatOrderExtractor = (_stat_order_time_saved, False)
 
 # Sort functions by priority (ratio average computation time to average size, lowest priority first)
 def _stat_order_priority(function_stats: tuple[str, MemoizationStats]) -> float:
-    return (sum(function_stats[1].computation_times) / len(function_stats[1].computation_times)) / (sum(function_stats[1].memory_sizes) / len(function_stats[1].memory_sizes))
+    return (sum(function_stats[1].computation_times) / len(function_stats[1].computation_times)) / (
+        sum(function_stats[1].memory_sizes) / len(function_stats[1].memory_sizes)
+    )
 
 
 STAT_ORDER_PRIORITY: StatOrderExtractor = (_stat_order_priority, False)
