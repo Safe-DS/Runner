@@ -78,7 +78,7 @@ class ExplicitIdentityWrapper:
         return self.value == other
 
     def __sizeof__(self) -> int:
-        return _get_size_of_value(self.value)
+        return self.memory.size
 
     def __getstate__(self) -> object:
         return self.memory
