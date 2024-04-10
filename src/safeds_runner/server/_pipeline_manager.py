@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import multiprocessing
+import os
 import queue
 import runpy
 import threading
@@ -265,6 +266,10 @@ class PipelineProcess:
         main_module = f"gen_{self._pipeline.main.module}_{self._pipeline.main.pipeline}"
         # Populate current_pipeline global, so child process can save placeholders in correct location
         globals()["current_pipeline"] = self
+
+        if self._pipeline.cwd is not None:
+            os.chdir(self._pipeline.cwd)  # pragma: no cover
+
         try:
             runpy.run_module(
                 (
@@ -406,6 +411,23 @@ def file_mtime(filename: str) -> int | None:
         return Path(filename).stat().st_mtime_ns
     except FileNotFoundError:
         return None
+
+
+def absolute_path(filename: str) -> str:
+    """
+    Get the absolute path of the provided file.
+
+    Parameters
+    ----------
+    filename:
+        Name of the file
+
+    Returns
+    -------
+    absolute_path:
+        Absolute path of the provided file
+    """
+    return str(Path(filename).resolve())
 
 
 def get_backtrace_info(error: BaseException) -> list[dict[str, Any]]:

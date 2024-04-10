@@ -3,6 +3,7 @@ import tempfile
 import time
 import typing
 from datetime import UTC, datetime
+from pathlib import Path
 from queue import Queue
 from typing import Any
 
@@ -17,6 +18,7 @@ from safeds_runner.server._memoization_map import (
 from safeds_runner.server._messages import MessageDataProgram, ProgramMainInformation
 from safeds_runner.server._pipeline_manager import (
     PipelineProcess,
+    absolute_path,
     file_mtime,
     memoized_dynamic_call,
     memoized_static_call,
@@ -266,6 +268,11 @@ def test_file_mtime_exists() -> None:
 def test_file_mtime_not_exists() -> None:
     mtime = file_mtime(f"file_not_exists.{datetime.now(tz=UTC).timestamp()}")
     assert mtime is None
+
+
+def test_absolute_path() -> None:
+    result = absolute_path("table.csv")
+    assert Path(result).is_absolute()
 
 
 @pytest.mark.parametrize(
