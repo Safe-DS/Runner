@@ -284,6 +284,20 @@ def test_should_fail_message_validation_reason_general(websocket_message: str, e
             ),
             "Invalid 'code' parameter given",
         ),
+        (
+            json.dumps(
+                {
+                    "type": "program",
+                    "id": "1234",
+                    "data": {
+                        "code": {},
+                        "main": {"modulepath": "1", "module": "2", "pipeline": "3"},
+                        "cwd": 1,
+                    },
+                },
+            ),
+            "Invalid 'cwd' parameter given",
+        ),
     ],
     ids=[
         "program_invalid_data",
@@ -297,6 +311,7 @@ def test_should_fail_message_validation_reason_general(websocket_message: str, e
         "program_invalid_code1",
         "program_invalid_code2",
         "program_invalid_code3",
+        "program_invalid_cwd",
     ],
 )
 def test_should_fail_message_validation_reason_program(websocket_message: str, exception_message: str) -> None:
