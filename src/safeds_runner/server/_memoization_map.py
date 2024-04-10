@@ -9,7 +9,7 @@ from typing import Any
 
 from safeds_runner.server._memoization_stats import MemoizationStats
 from safeds_runner.server._memoization_strategies import STAT_ORDER_PRIORITY
-from safeds_runner.server._memoization_utils import MemoizationKey, _get_size_of_value, ExplicitIdentityWrapper, ExplicitIdentityWrapperLazy, _create_memoization_key, _convert_value_to_memoizable_format
+from safeds_runner.server._memoization_utils import MemoizationKey, _get_size_of_value, _create_memoization_key, _unwrap_value_from_shared_memory, _wrap_value_to_shared_memory
 
 
 class MemoizationMap:
@@ -132,20 +132,16 @@ class MemoizationMap:
         try:
             memoized_value = self._lookup_value(key)
         # Pickling may raise AttributeError, hashing may raise TypeError
-        except (AttributeError, TypeError):
+        except (AttributeError, TypeError) as exception:
+            # Fallback to executing the call to continue working, but inform user about this failure
+            logging.error(f"Could not lookup value for function {function_name}, reason: {exception}. Falling back to calling the function")
             return function_callable(*parameters)
         lookup_time = time.perf_counter_ns() - lookup_time_start
 
         # Hit
         if memoized_value is not None:
             self._update_stats_on_hit(function_name, access_timestamp, lookup_time)
-            if isinstance(memoized_value, ExplicitIdentityWrapper):
-                return memoized_value.value
-            elif isinstance(memoized_value, ExplicitIdentityWrapperLazy):
-                memoized_value._unpackvalue()
-                return memoized_value.value
-            else:
-                return memoized_value
+            return memoized_value
 
         # Miss
         computation_time_start = time.perf_counter_ns()
@@ -153,7 +149,7 @@ class MemoizationMap:
         computation_time = time.perf_counter_ns() - computation_time_start
         memory_size = _get_size_of_value(computed_value)
 
-        memoizable_value = _convert_value_to_memoizable_format(computed_value)
+        memoizable_value = _wrap_value_to_shared_memory(computed_value)
         if self.max_size is not None:
             self.ensure_capacity(_get_size_of_value(memoized_value))
         self._map_values[key] = memoizable_value
@@ -175,10 +171,7 @@ class MemoizationMap:
             memory_size,
         )
 
-        if isinstance(computed_value, ExplicitIdentityWrapper):
-            return computed_value.value
-        else:
-            return computed_value
+        return computed_value
 
     def _lookup_value(self, key: MemoizationKey) -> Any | None:
         """
@@ -194,19 +187,7 @@ class MemoizationMap:
         The value corresponding to the provided memoization key, if any exists.
         """
         looked_up_value = self._map_values.get(key)
-        if isinstance(looked_up_value, tuple):
-            results = []
-            for entry in looked_up_value:
-                if isinstance(entry, ExplicitIdentityWrapperLazy):
-                    entry._unpackvalue()
-                    results.append(entry.value)
-            return tuple(results)
-        if isinstance(looked_up_value, ExplicitIdentityWrapperLazy):
-            looked_up_value._unpackvalue()
-            return looked_up_value.value
-        if isinstance(looked_up_value, ExplicitIdentityWrapper):
-            return looked_up_value.value
-        return looked_up_value
+        return _unwrap_value_from_shared_memory(looked_up_value)
 
     def _update_stats_on_hit(self, function_name: str, access_timestamp: int, lookup_time: int) -> None:
         """

@@ -6,46 +6,11 @@ from typing import Any, TypeAlias
 import uuid
 import inspect
 import sys
+import pickle
 
 from dataclasses import dataclass
 
 MemoizationKey: TypeAlias = tuple[str, tuple[Any], tuple[Any]]
-
-# Contains classes that can be lazily compared, as they implement a deterministic hash
-explicit_identity_classes = frozenset([
-    "safeds.data.tabular.containers._table.Table",
-    "safeds.data.tabular.containers._row.Row",
-    "safeds.data.tabular.containers._column.Column"
-    "safeds.data.tabular.containers._tagged_table.TaggedTable",
-    "safeds.data.tabular.containers._time_series.TimeSeries",
-    "safeds.data.tabular.transformation._discretizer.Discretizer",
-    "safeds.data.tabular.transformation._imputer.Imputer",
-    "safeds.data.tabular.transformation._invertible_table_transformer.InvertibleTableTransformer",
-    "safeds.data.tabular.transformation._label_encoder.LabelEncoder",
-    "safeds.data.tabular.transformation._one_hot_encoder.OneHotEncoder",
-    "safeds.data.tabular.transformation._range_scaler.RangeScaler",
-    "safeds.data.tabular.transformation._standard_scaler.StandardScaler",
-    "safeds.data.tabular.transformation._table_transformer.TableTransformer",
-    "safeds.ml.classical.classification._ada_boost.AdaBoost",
-    "safeds.ml.classical.classification._classifier.Classifier",
-    "safeds.ml.classical.classification._decision_tree.DecisionTree",
-    "safeds.ml.classical.classification._gradient_boosting.GradientBoosting",
-    "safeds.ml.classical.classification._k_nearest_neighbors.KNearestNeighbors",
-    "safeds.ml.classical.classification._logistic_regression.LogisticRegression",
-    "safeds.ml.classical.classification._random_forest.RandomForest",
-    "safeds.ml.classical.classification._support_vector_machine.SupportVectorMachine",
-    "safeds.ml.classical.regression._ada_boost.AdaBoost",
-    "safeds.ml.classical.regression._decision_tree.DecisionTree",
-    "safeds.ml.classical.regression._elastic_net_regression.ElasticNetRegression",
-    "safeds.ml.classical.regression._gradient_boosting.GradientBoosting",
-    "safeds.ml.classical.regression._k_nearest_neighbors.KNearestNeighbors",
-    "safeds.ml.classical.regression._lasso_regression.LassoRegression",
-    "safeds.ml.classical.regression._linear_regression.LinearRegression",
-    "safeds.ml.classical.regression._random_forest.RandomForest",
-    "safeds.ml.classical.regression._regressor.Regressor",
-    "safeds.ml.classical.regression._ridge_regression.RidgeRegression",
-    "safeds.ml.classical.regression._support_vector_machine.SupportVectorMachine",
-])
 
 
 @dataclass(frozen=True)
@@ -58,6 +23,44 @@ class ExplicitIdentityWrapper:
     """
     value: Any
     memory: SharedMemory
+
+    @classmethod
+    def shared(cls, value: Any) -> ExplicitIdentityWrapper:
+        """
+        Create a new wrapper around the provided value.
+
+        The provided value will be pickled and stored in shared memory, for storage in the memoization cache.
+        An explicit identity should already be assigned.
+
+        Parameters
+        ----------
+        value
+            Object to create a shared memory based wrapper for.
+
+        Returns
+        -------
+        result
+            A new wrapper object containing the provided value.
+        """
+        _shared_memory_serialize_and_assign(value)
+        return cls.existing(value)
+
+    @classmethod
+    def existing(cls, value: Any) -> ExplicitIdentityWrapper:
+        """
+        Create a wrapper around the provided value, by using the existing assigned shared memory location.
+
+        Parameters
+        ----------
+        value
+            Object to create a shared memory based wrapper for.
+
+        Returns
+        -------
+        result
+            A new wrapper object containing the provided value.
+        """
+        return cls(value, value.__ex_id_mem__)
 
     def __hash__(self) -> int:
         return hash(self.value)
@@ -81,7 +84,6 @@ class ExplicitIdentityWrapper:
         return self.memory
 
     def __setstate__(self, state: object) -> None:
-        import pickle
         object.__setattr__(self, 'memory', state)
         object.__setattr__(self, 'value', pickle.loads(self.memory.buf))
         _set_new_explicit_memory(self.value, self.memory)
@@ -118,12 +120,7 @@ class ExplicitIdentityWrapperLazy:
         result
             A new wrapper object containing the provided value.
         """
-        import pickle
-        bytes_dump = pickle.dumps(value, protocol=pickle.HIGHEST_PROTOCOL)
-        bytes_len = len(bytes_dump)
-        shared_memory = SharedMemory(create=True, size=bytes_len)
-        shared_memory.buf[:bytes_len] = bytes_dump
-        _set_new_explicit_memory(value, shared_memory)
+        _shared_memory_serialize_and_assign(value)
         return cls.existing(value)
 
     @classmethod
@@ -164,7 +161,6 @@ class ExplicitIdentityWrapperLazy:
     def _unpackvalue(self) -> None:
         """Unpack the value contained in this wrapper, if not currently present."""
         if self.value is None:
-            import pickle
             object.__setattr__(self, 'value', pickle.loads(self.memory.buf))
             _set_new_explicit_memory(self.value, self.memory)
 
@@ -182,21 +178,40 @@ class ExplicitIdentityWrapperLazy:
         object.__setattr__(self, 'hash', hash_value)
 
 
-def _is_explicit_identity_class(value: Any) -> bool:
+def _is_not_primitive(value: Any) -> bool:
     """
-    Check, whether the provided value is whitelisted, by comparing the module name and qualified classname to assign an explicit identity.
+    Check, if this value is not primitive, that can be trivially cloned.
 
     Parameters
     ----------
     value
-        Object to check, if allowed to receive an explicit identity.
+        Object to check, whether it is not primitive.
 
     Returns
     -------
     result
-        True, if the object can be assigned an explicit identity, otherwise false.
+        True, if the object is not primitive.
     """
-    return hasattr(value, "__class__") and (value.__class__.__module__ + "." + value.__class__.__qualname__) in explicit_identity_classes
+    return not isinstance(value, str | int | float | type(None) | bool)
+
+
+def _is_deterministically_hashable(value: Any) -> bool:
+    """
+    Check, whether the provided value is hashed without using the python object id.
+
+    This check only checks, if this value is not primitive and if the value overrides the __hash__ function.
+
+    Parameters
+    ----------
+    value
+        Object to check, if it is (probably) deterministically hashable.
+
+    Returns
+    -------
+    result
+        True, if the object can be deterministically hashed.
+    """
+    return _is_not_primitive(value) and hasattr(value, "__class__") and value.__class__.__hash__ != object.__hash__
 
 
 def _has_explicit_identity(value: Any) -> bool:
@@ -246,6 +261,18 @@ def _set_new_explicit_identity_deterministic_hash(value: Any) -> None:
     value.__ex_hash__ = hash(value)
 
 
+def _set_new_explicit_identity(value: Any) -> None:
+    """
+    Assign a new explicit identity to the provided object.
+
+    Parameters
+    ----------
+    value
+        Object to assign an explicit identity to
+    """
+    value.__ex_id__ = uuid.uuid4()
+
+
 def _set_new_explicit_memory(value: Any, memory: SharedMemory) -> None:
     """
     Assign a shared memory location to the provided object.
@@ -256,6 +283,28 @@ def _set_new_explicit_memory(value: Any, memory: SharedMemory) -> None:
         Object to assign a shared memory location to
     """
     value.__ex_id_mem__ = memory
+
+
+def _shared_memory_serialize_and_assign(value: Any) -> SharedMemory:
+    """
+    Serialize the provided value to a shared memory location and assign this location to the provided object and return it.
+
+    Parameters
+    ----------
+    value
+        Any value that should be stored in a shared memory location
+
+    Returns
+    -------
+    memory
+        Shared Memory location containing the provided object in a serialized representation.
+    """
+    bytes_dump = pickle.dumps(value, protocol=pickle.HIGHEST_PROTOCOL)
+    bytes_len = len(bytes_dump)
+    shared_memory = SharedMemory(create=True, size=bytes_len)
+    shared_memory.buf[:bytes_len] = bytes_dump
+    _set_new_explicit_memory(value, shared_memory)
+    return shared_memory
 
 
 def _make_hashable(value: Any) -> Any:
@@ -272,8 +321,10 @@ def _make_hashable(value: Any) -> Any:
     converted_value:
         Converted value.
     """
-    if _is_explicit_identity_class(value) and _has_explicit_identity_memory(value):
+    if _is_deterministically_hashable(value) and _has_explicit_identity_memory(value):
         return ExplicitIdentityWrapperLazy.existing(value)
+    elif not _is_deterministically_hashable(value) and _is_not_primitive(value) and _has_explicit_identity_memory(value):
+        return ExplicitIdentityWrapper.existing(value)
     elif isinstance(value, dict):
         return tuple((_make_hashable(key), _make_hashable(value)) for key, value in value.items())
     elif isinstance(value, list):
@@ -334,7 +385,7 @@ def _create_memoization_key(
     return function_name, _make_hashable(parameters), _make_hashable(hidden_parameters)
 
 
-def _convert_value_to_memoizable_format(
+def _wrap_value_to_shared_memory(
     result: Any,
 ) -> Any:
     """
@@ -347,16 +398,58 @@ def _convert_value_to_memoizable_format(
 
     Returns
     -------
-    The value in a memoizable format.
+    value
+        The value in a memoizable format, wrapped if needed.
     """
     if isinstance(result, tuple):
         results = []
         for entry in result:
-            if _is_explicit_identity_class(entry):
+            if _is_deterministically_hashable(entry):
                 _set_new_explicit_identity_deterministic_hash(entry)
                 results.append(ExplicitIdentityWrapperLazy.shared(entry))
+            elif _is_not_primitive(entry):
+                _set_new_explicit_identity(entry)
+                results.append(ExplicitIdentityWrapper.shared(entry))
+            else:
+                results.append(entry)
         return tuple(results)
-    elif _is_explicit_identity_class(result):
+    elif _is_deterministically_hashable(result):
         _set_new_explicit_identity_deterministic_hash(result)
         return ExplicitIdentityWrapperLazy.shared(result)
+    elif _is_not_primitive(result):
+        _set_new_explicit_identity(result)
+        return ExplicitIdentityWrapper.shared(result)
+    return result
+
+
+def _unwrap_value_from_shared_memory(
+    result: Any,
+) -> Any:
+    """
+    Convert a value from the memoizable format to a usable format.
+
+    Parameters
+    ----------
+    result
+        Value to convert to a usable format.
+
+    Returns
+    -------
+    value
+        The value in a usable format, unwrapped if needed.
+    """
+    if isinstance(result, tuple):
+        results = []
+        for entry in result:
+            if isinstance(entry, ExplicitIdentityWrapperLazy):
+                entry._unpackvalue()
+                results.append(entry.value)
+            if isinstance(entry, ExplicitIdentityWrapper):
+                results.append(entry.value)
+        return tuple(results)
+    if isinstance(result, ExplicitIdentityWrapperLazy):
+        result._unpackvalue()
+        return result.value
+    if isinstance(result, ExplicitIdentityWrapper):
+        return result.value
     return result
