@@ -104,6 +104,7 @@ class ExplicitIdentityWrapperLazy:
     def shared(cls, value: Any) -> ExplicitIdentityWrapperLazy:
         """
         Create a new wrapper around the provided value.
+
         The provided value will be pickled and stored in shared memory, for storage in the memoization cache.
         An explicit identity should already be assigned, and the object should be deterministically hashable.
 

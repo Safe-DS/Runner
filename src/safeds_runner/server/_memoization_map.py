@@ -52,6 +52,7 @@ class MemoizationMap:
     def ensure_capacity(self, needed_capacity: int) -> None:
         """
         Ensure that the requested capacity is at least available, by freeing values from the cache.
+
         If the needed capacity is larger than the max capacity, this function will not do anything to ensure further operation.
 
         Parameters
@@ -73,7 +74,7 @@ class MemoizationMap:
         capacity_to_free
             Amount of bytes that should be additionally freed, after this function returns
         """
-        copied_stats = [(function, stats) for function, stats in self._map_stats.copy().items()]
+        copied_stats = list(self._map_stats.copy().items())
         # Sort functions to remove them from the cache in a specific order
         copied_stats.sort(key=self.value_removal_strategy[0], reverse=self.value_removal_strategy[1])
         # Calculate which functions should be removed from the cache
@@ -86,7 +87,7 @@ class MemoizationMap:
             bytes_freed += function_sum_bytes
             functions_to_free.append(function)
         # Remove references to values, and let the gc handle the actual objects
-        for key in self._map_values.keys():
+        for key in self._map_values:
             for function_to_free in functions_to_free:
                 if key[0] == function_to_free:
                     del self._map_values[key]
