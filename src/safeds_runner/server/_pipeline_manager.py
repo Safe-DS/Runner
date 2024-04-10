@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import multiprocessing
+import os
 import queue
 import runpy
 import threading
@@ -265,6 +266,10 @@ class PipelineProcess:
         main_module = f"gen_{self._pipeline.main.module}_{self._pipeline.main.pipeline}"
         # Populate current_pipeline global, so child process can save placeholders in correct location
         globals()["current_pipeline"] = self
+
+        if self._pipeline.cwd is not None:
+            os.chdir(self._pipeline.cwd)  # pragma: no cover
+
         try:
             runpy.run_module(
                 (
