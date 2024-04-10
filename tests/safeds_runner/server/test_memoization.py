@@ -18,9 +18,10 @@ from safeds_runner.server._memoization_map import (
 from safeds_runner.server._messages import MessageDataProgram, ProgramMainInformation
 from safeds_runner.server._pipeline_manager import (
     PipelineProcess,
+    absolute_path,
     file_mtime,
     memoized_dynamic_call,
-    memoized_static_call, absolute_path,
+    memoized_static_call,
 )
 
 
