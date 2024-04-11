@@ -47,7 +47,7 @@ class MemoizationMap:
         -------
         Amount of bytes, this cache occupies. This may be an estimate.
         """
-        return functools.reduce(operator.add, [_get_size_of_value(value) for value in self._map_values.values()], 0)
+        return functools.reduce(operator.add, [functools.reduce(operator.add, stats.memory_sizes, 0) for stats in self._map_stats.values()], 0)
 
     def ensure_capacity(self, needed_capacity: int) -> None:
         """
@@ -89,7 +89,7 @@ class MemoizationMap:
             bytes_freed += function_sum_bytes
             functions_to_free.append(function)
         # Remove references to values, and let the gc handle the actual objects
-        for key in self._map_values:
+        for key in list(self._map_values.keys()):
             for function_to_free in functions_to_free:
                 if key[0] == function_to_free:
                     del self._map_values[key]
