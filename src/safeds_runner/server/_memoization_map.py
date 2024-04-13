@@ -1,8 +1,8 @@
 """Module that contains the memoization logic."""
 
 import functools
-import operator
 import logging
+import operator
 import time
 from collections.abc import Callable
 from typing import Any
@@ -11,7 +11,13 @@ import psutil
 
 from safeds_runner.server._memoization_stats import MemoizationStats
 from safeds_runner.server._memoization_strategies import STAT_ORDER_PRIORITY
-from safeds_runner.server._memoization_utils import MemoizationKey, _get_size_of_value, _create_memoization_key, _unwrap_value_from_shared_memory, _wrap_value_to_shared_memory
+from safeds_runner.server._memoization_utils import (
+    MemoizationKey,
+    _create_memoization_key,
+    _get_size_of_value,
+    _unwrap_value_from_shared_memory,
+    _wrap_value_to_shared_memory,
+)
 
 
 class MemoizationMap:
@@ -85,7 +91,7 @@ class MemoizationMap:
         # Calculate which functions should be removed from the cache
         bytes_freed = 0
         functions_to_free = []
-        for (function, stats) in copied_stats:
+        for function, stats in copied_stats:
             if bytes_freed >= capacity_to_free:
                 break
             function_sum_bytes = functools.reduce(operator.add, stats.memory_sizes, 0)
@@ -139,7 +145,11 @@ class MemoizationMap:
         # Pickling may raise AttributeError, hashing may raise TypeError
         except (AttributeError, TypeError) as exception:
             # Fallback to executing the call to continue working, but inform user about this failure
-            logging.exception("Could not lookup value for function %s. Falling back to calling the function", function_name, exc_info=exception)
+            logging.exception(
+                "Could not lookup value for function %s. Falling back to calling the function",
+                function_name,
+                exc_info=exception,
+            )
             return function_callable(*parameters)
         lookup_time = time.perf_counter_ns() - lookup_time_start
 

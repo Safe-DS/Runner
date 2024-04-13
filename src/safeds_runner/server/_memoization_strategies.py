@@ -1,6 +1,7 @@
 """Module that contains different memoization strategies."""
 
-from typing import TypeAlias, Callable, Any
+from collections.abc import Callable
+from typing import Any, TypeAlias
 
 from safeds_runner.server._memoization_stats import MemoizationStats
 
