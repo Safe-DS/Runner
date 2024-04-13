@@ -74,7 +74,7 @@ class ExplicitIdentityWrapper:
             return self.value == other.value
         if isinstance(other, ExplicitIdentityWrapper):
             return self.value.__ex_id__ == other.value.__ex_id__ or self.value == other.value
-        if _has_explicit_identity(other) and self.value.__ex_id__ == other.__ex_id__:
+        if _has_explicit_identity(other) and self.value.__ex_id__ == getattr(other, "__ex_id__"):
             return True
         return self.value == other
 
@@ -149,7 +149,7 @@ class ExplicitIdentityWrapperLazy:
             or isinstance(other, ExplicitIdentityWrapper)
             and self.id == other.value.__ex_id__
             or _has_explicit_identity(other)
-            and self.id == other.__ex_id__
+            and self.id == getattr(other, "__ex_id__")
         ):
             return True
         self._unpackvalue()
