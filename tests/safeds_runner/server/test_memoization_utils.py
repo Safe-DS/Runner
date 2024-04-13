@@ -349,8 +349,8 @@ def test_compare_wrapper_to_lazy(value: Any) -> None:
     _set_new_explicit_identity_deterministic_hash(value)
     wrapper0 = ExplicitIdentityWrapper.shared(value)
     wrapper1 = ExplicitIdentityWrapperLazy.shared(value)
-    assert wrapper0 == wrapper0
-    assert wrapper1 == wrapper1
+    assert wrapper0 == wrapper0  # noqa: PLR0124
+    assert wrapper1 == wrapper1  # noqa: PLR0124
     # Cross Compare
     assert wrapper0 == wrapper1
     assert wrapper1 == wrapper0

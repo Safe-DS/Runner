@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from multiprocessing.shared_memory import SharedMemory
 from typing import Any, TypeAlias
 
-MemoizationKey: TypeAlias = tuple[str, tuple[Any], tuple[Any]]
+MemoizationKey: TypeAlias = tuple[str, tuple, tuple]
 
 
 @dataclass(frozen=True)
@@ -74,7 +74,7 @@ class ExplicitIdentityWrapper:
             return self.value == other.value
         if isinstance(other, ExplicitIdentityWrapper):
             return self.value.__ex_id__ == other.value.__ex_id__ or self.value == other.value
-        if _has_explicit_identity(other) and self.value.__ex_id__ == other.__ex_id__:
+        if _has_explicit_identity(other) and self.value.__ex_id__ == getattr(other, "__ex_id__"):
             return True
         return self.value == other
 
@@ -143,7 +143,7 @@ class ExplicitIdentityWrapperLazy:
         return cls(value, value.__ex_id_mem__, value.__ex_id__, value.__ex_hash__)
 
     def __eq__(self, other: object) -> bool:
-        if isinstance(other, ExplicitIdentityWrapperLazy) and self.id == other.id or isinstance(other, ExplicitIdentityWrapper) and self.id == other.value.__ex_id__ or _has_explicit_identity(other) and self.id == other.__ex_id__:
+        if isinstance(other, ExplicitIdentityWrapperLazy) and self.id == other.id or isinstance(other, ExplicitIdentityWrapper) and self.id == other.value.__ex_id__ or _has_explicit_identity(other) and self.id == getattr(other, "__ex_id__"):
             return True
         self._unpackvalue()
         if isinstance(other, ExplicitIdentityWrapperLazy):
