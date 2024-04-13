@@ -131,9 +131,12 @@ def test_explicit_identity_shared_memory(value: Any) -> None:
 )
 def test_make_hashable_non_wrapper(value: Any, hashable: bool, exception: Type[BaseException]) -> None:
     if not hashable:
-        with pytest.raises(exception):
-            hash(value)
-            pickle.dumps(value)
+        if exception == TypeError:
+            with pytest.raises(exception):
+                hash(value)
+        elif exception == pickle.PicklingError:
+            with pytest.raises(exception):
+                pickle.dumps(value)
     else:
         assert hash(value) is not None
     hashable_value = _make_hashable(value)
