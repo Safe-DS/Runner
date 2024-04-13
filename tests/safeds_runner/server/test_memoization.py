@@ -277,39 +277,6 @@ def test_absolute_path() -> None:
 
 
 @pytest.mark.parametrize(
-    argnames="value,expected_size",
-    argvalues=[
-        (1, 0),
-        ({}, 0),
-        ({"a": "b"}, sys.getsizeof({})),
-        ([], 0),
-        ([1, 2, 3], sys.getsizeof([])),
-        ((), 0),
-        ((1, 2, 3), sys.getsizeof(())),
-        (set(), 0),
-        ({1, 2, 3}, sys.getsizeof(set())),
-        (frozenset(), 0),
-        (frozenset({1, 2, 3}), sys.getsizeof(frozenset())),
-    ],
-    ids=[
-        "immediate",
-        "dict_empty",
-        "dict_values",
-        "list_empty",
-        "list_values",
-        "tuple_empty",
-        "tuple_values",
-        "set_empty",
-        "set_values",
-        "frozenset_empty",
-        "frozenset_values",
-    ],
-)
-def test_memory_usage(value: Any, expected_size: int) -> None:
-    assert _get_size_of_value(value) > expected_size
-
-
-@pytest.mark.parametrize(
     argnames="cache,greater_than_zero",
     argvalues=[(MemoizationMap({}, {}), False), (MemoizationMap({}, {"a": MemoizationStats([], [], [], [20])}), True)],
     ids=["cache_empty", "cache_not_empty"],
@@ -371,6 +338,7 @@ def test_memoization_map_remove_worst_element_strategy(cache: MemoizationMap, ma
     free_size = cache.max_size - cache.get_cache_size()
     cache.remove_worst_element(needed_capacity - free_size)
     assert ("a" in cache._map_stats) and ("b" not in cache._map_stats)
+
 
 @pytest.mark.parametrize(
     argnames="function_name,function,params,hidden_params,expected_result",

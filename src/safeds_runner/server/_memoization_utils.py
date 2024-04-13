@@ -73,8 +73,8 @@ class ExplicitIdentityWrapper:
             return self.value == other.value
         if isinstance(other, ExplicitIdentityWrapper):
             return self.value.__ex_id__ == other.value.__ex_id__ or self.value == other.value
-        if _has_explicit_identity(other):
-            return self.value.__ex_id__ == other.__ex_id__
+        if _has_explicit_identity(other) and self.value.__ex_id__ == other.__ex_id__:
+            return True
         return self.value == other
 
     def __sizeof__(self) -> int:
@@ -402,17 +402,15 @@ def _wrap_value_to_shared_memory(
         The value in a memoizable format, wrapped if needed.
     """
     if isinstance(result, tuple):
-        results: list[Any] = []
-        for entry in result:
-            if _is_deterministically_hashable(entry):
-                _set_new_explicit_identity_deterministic_hash(entry)
-                results.append(ExplicitIdentityWrapperLazy.shared(entry))
-            elif _is_not_primitive(entry):
-                _set_new_explicit_identity(entry)
-                results.append(ExplicitIdentityWrapper.shared(entry))
-            else:
-                results.append(entry)
-        return tuple(results)
+        return tuple([_wrap_value_to_shared_memory(entry) for entry in result])
+    if isinstance(result, list):
+        return [_wrap_value_to_shared_memory(entry) for entry in result]
+    if isinstance(result, dict):
+        return {_wrap_value_to_shared_memory(key): _wrap_value_to_shared_memory(value) for key, value in result.items()}
+    if isinstance(result, set):
+        return {_wrap_value_to_shared_memory(entry) for entry in result}
+    if isinstance(result, frozenset):
+        return frozenset({_wrap_value_to_shared_memory(entry) for entry in result})
     elif _is_deterministically_hashable(result):
         _set_new_explicit_identity_deterministic_hash(result)
         return ExplicitIdentityWrapperLazy.shared(result)
@@ -439,14 +437,15 @@ def _unwrap_value_from_shared_memory(
         The value in a usable format, unwrapped if needed.
     """
     if isinstance(result, tuple):
-        results = []
-        for entry in result:
-            if isinstance(entry, ExplicitIdentityWrapperLazy):
-                entry._unpackvalue()
-                results.append(entry.value)
-            if isinstance(entry, ExplicitIdentityWrapper):
-                results.append(entry.value)
-        return tuple(results)
+        return tuple([_unwrap_value_from_shared_memory(entry) for entry in result])
+    if isinstance(result, list):
+        return [_unwrap_value_from_shared_memory(entry) for entry in result]
+    if isinstance(result, dict):
+        return {_unwrap_value_from_shared_memory(key): _unwrap_value_from_shared_memory(value) for key, value in result.items()}
+    if isinstance(result, set):
+        return {_unwrap_value_from_shared_memory(entry) for entry in result}
+    if isinstance(result, frozenset):
+        return frozenset({_unwrap_value_from_shared_memory(entry) for entry in result})
     if isinstance(result, ExplicitIdentityWrapperLazy):
         result._unpackvalue()
         return result.value
