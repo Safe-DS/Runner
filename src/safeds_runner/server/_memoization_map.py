@@ -7,6 +7,8 @@ import time
 from collections.abc import Callable
 from typing import Any
 
+import psutil
+
 from safeds_runner.server._memoization_stats import MemoizationStats
 from safeds_runner.server._memoization_strategies import STAT_ORDER_PRIORITY
 from safeds_runner.server._memoization_utils import MemoizationKey, _get_size_of_value, _create_memoization_key, _unwrap_value_from_shared_memory, _wrap_value_to_shared_memory
@@ -36,7 +38,8 @@ class MemoizationMap:
         """
         self._map_values: dict[MemoizationKey, Any] = map_values
         self._map_stats: dict[str, MemoizationStats] = map_stats
-        self.max_size: int | None = None
+        # Set to half of physical available memory as a guess, in the future this could be set with an option
+        self.max_size: int | None = psutil.virtual_memory().total // 2
         self.value_removal_strategy = STAT_ORDER_PRIORITY
 
     def get_cache_size(self) -> int:
