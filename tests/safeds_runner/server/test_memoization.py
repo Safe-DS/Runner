@@ -326,7 +326,9 @@ def test_memoization_map_ensure_capacity_unlimited(cache: MemoizationMap, needed
     ids=["cache_not_empty"],
 )
 def test_memoization_map_ensure_larger_than_capacity_no_eviction(
-    cache: MemoizationMap, max_size: int, needed_capacity: int,
+    cache: MemoizationMap,
+    max_size: int,
+    needed_capacity: int,
 ) -> None:
     cache.max_size = max_size
     size_before_potential_shrink = cache.get_cache_size()
@@ -407,7 +409,10 @@ def test_memoization_map_ensure_larger_than_capacity_no_eviction(
     ],
 )
 def test_memoization_map_remove_worst_element_strategy(
-    cache: MemoizationMap, max_size: int, needed_capacity: int, freeing_strategy: StatOrderExtractor,
+    cache: MemoizationMap,
+    max_size: int,
+    needed_capacity: int,
+    freeing_strategy: StatOrderExtractor,
 ) -> None:
     cache.max_size = max_size
     cache.value_removal_strategy = freeing_strategy

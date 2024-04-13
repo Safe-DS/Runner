@@ -38,7 +38,8 @@ STAT_ORDER_TIME_SAVED: StatOrderExtractor = (_stat_order_time_saved, False)
 # Sort functions by priority (ratio average computation time to average size, lowest priority first)
 def _stat_order_priority(function_stats: tuple[str, MemoizationStats]) -> float:
     return (sum(function_stats[1].computation_times) / max(1, len(function_stats[1].computation_times))) / max(
-        1.0, (sum(function_stats[1].memory_sizes) / max(1, len(function_stats[1].memory_sizes))),
+        1.0,
+        (sum(function_stats[1].memory_sizes) / max(1, len(function_stats[1].memory_sizes))),
     )
 
 
