@@ -56,7 +56,11 @@ class MemoizationMap:
         -------
         Amount of bytes, this cache occupies. This may be an estimate.
         """
-        return functools.reduce(operator.add, [functools.reduce(operator.add, stats.memory_sizes, 0) for stats in self._map_stats.values()], 0)
+        return functools.reduce(
+            operator.add,
+            [functools.reduce(operator.add, stats.memory_sizes, 0) for stats in self._map_stats.values()],
+            0,
+        )
 
     def ensure_capacity(self, needed_capacity: int) -> None:
         """

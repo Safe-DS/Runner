@@ -13,7 +13,14 @@ from safeds_runner.server._memoization_map import (
     MemoizationMap,
     MemoizationStats,
 )
-from safeds_runner.server._memoization_strategies import StatOrderExtractor, STAT_ORDER_MISS_RATE, STAT_ORDER_LRU, STAT_ORDER_TIME_SAVED, STAT_ORDER_PRIORITY, STAT_ORDER_LRU_INVERSE
+from safeds_runner.server._memoization_strategies import (
+    STAT_ORDER_LRU,
+    STAT_ORDER_LRU_INVERSE,
+    STAT_ORDER_MISS_RATE,
+    STAT_ORDER_PRIORITY,
+    STAT_ORDER_TIME_SAVED,
+    StatOrderExtractor,
+)
 from safeds_runner.server._memoization_utils import _make_hashable
 from safeds_runner.server._messages import MessageDataProgram, ProgramMainInformation
 from safeds_runner.server._pipeline_manager import (
@@ -286,7 +293,9 @@ def test_memoization_map_cache_size(cache: MemoizationMap, greater_than_zero: bo
 
 @pytest.mark.parametrize(
     argnames="cache,max_size,needed_capacity",
-    argvalues=[(MemoizationMap({("a", (), ()): "12345678901234567890"}, {"a": MemoizationStats([], [], [], [20])}), 25, 20)],
+    argvalues=[
+        (MemoizationMap({("a", (), ()): "12345678901234567890"}, {"a": MemoizationStats([], [], [], [20])}), 25, 20),
+    ],
     ids=["cache_not_empty"],
 )
 def test_memoization_map_ensure_capacity(cache: MemoizationMap, max_size: int, needed_capacity: int) -> None:
@@ -297,7 +306,9 @@ def test_memoization_map_ensure_capacity(cache: MemoizationMap, max_size: int, n
 
 @pytest.mark.parametrize(
     argnames="cache,needed_capacity",
-    argvalues=[(MemoizationMap({("a", (), ()): "12345678901234567890"}, {"a": MemoizationStats([], [], [], [20])}), 35)],
+    argvalues=[
+        (MemoizationMap({("a", (), ()): "12345678901234567890"}, {"a": MemoizationStats([], [], [], [20])}), 35),
+    ],
     ids=["cache_not_empty"],
 )
 def test_memoization_map_ensure_capacity_unlimited(cache: MemoizationMap, needed_capacity: int) -> None:
@@ -309,10 +320,14 @@ def test_memoization_map_ensure_capacity_unlimited(cache: MemoizationMap, needed
 
 @pytest.mark.parametrize(
     argnames="cache,max_size,needed_capacity",
-    argvalues=[(MemoizationMap({("a", (), ()): "12345678901234567890"}, {"a": MemoizationStats([], [], [], [20])}), 20, 35)],
+    argvalues=[
+        (MemoizationMap({("a", (), ()): "12345678901234567890"}, {"a": MemoizationStats([], [], [], [20])}), 20, 35),
+    ],
     ids=["cache_not_empty"],
 )
-def test_memoization_map_ensure_larger_than_capacity_no_eviction(cache: MemoizationMap, max_size: int, needed_capacity: int) -> None:
+def test_memoization_map_ensure_larger_than_capacity_no_eviction(
+    cache: MemoizationMap, max_size: int, needed_capacity: int,
+) -> None:
     cache.max_size = max_size
     size_before_potential_shrink = cache.get_cache_size()
     cache.ensure_capacity(needed_capacity)
@@ -322,16 +337,78 @@ def test_memoization_map_ensure_larger_than_capacity_no_eviction(cache: Memoizat
 @pytest.mark.parametrize(
     argnames="cache,max_size,needed_capacity,freeing_strategy",
     argvalues=[
-        (MemoizationMap({("a", (), ()): "12345678901234567890", ("b", (), ()): "12345678901234567890"}, {"a": MemoizationStats([10], [30, 30], [40], [20]), "b": MemoizationStats([10], [30, 30], [40, 40], [20])}), 45, 15, STAT_ORDER_MISS_RATE),
-        (MemoizationMap({("a", (), ()): "12345678901234567890", ("b", (), ()): "12345678901234567890"}, {"b": MemoizationStats([5], [30, 30], [40, 40], [20]), "a": MemoizationStats([10], [30, 30], [40, 40], [20])}), 45, 15, STAT_ORDER_LRU),
-        (MemoizationMap({("a", (), ()): "12345678901234567890", ("b", (), ()): "12345678901234567890"}, {"b": MemoizationStats([10], [30, 30], [40, 40], [20]), "a": MemoizationStats([10], [30, 30], [80, 80], [20])}), 45, 15, STAT_ORDER_TIME_SAVED),
-        (MemoizationMap({("a", (), ()): "12345678901234567890", ("b", (), ()): "12345678901234567890"}, {"b": MemoizationStats([10], [30, 30], [40, 40], [30]), "a": MemoizationStats([10], [30, 30], [40, 40], [10])}), 45, 15, STAT_ORDER_PRIORITY),
-        (MemoizationMap({("a", (), ()): "12345678901234567890", ("b", (), ()): "12345678901234567890"}, {"b": MemoizationStats([10], [30, 30], [40, 40], [20]), "a": MemoizationStats([5], [30, 30], [40, 40], [20])}), 45, 15, STAT_ORDER_LRU_INVERSE)
-
+        (
+            MemoizationMap(
+                {("a", (), ()): "12345678901234567890", ("b", (), ()): "12345678901234567890"},
+                {
+                    "a": MemoizationStats([10], [30, 30], [40], [20]),
+                    "b": MemoizationStats([10], [30, 30], [40, 40], [20]),
+                },
+            ),
+            45,
+            15,
+            STAT_ORDER_MISS_RATE,
+        ),
+        (
+            MemoizationMap(
+                {("a", (), ()): "12345678901234567890", ("b", (), ()): "12345678901234567890"},
+                {
+                    "b": MemoizationStats([5], [30, 30], [40, 40], [20]),
+                    "a": MemoizationStats([10], [30, 30], [40, 40], [20]),
+                },
+            ),
+            45,
+            15,
+            STAT_ORDER_LRU,
+        ),
+        (
+            MemoizationMap(
+                {("a", (), ()): "12345678901234567890", ("b", (), ()): "12345678901234567890"},
+                {
+                    "b": MemoizationStats([10], [30, 30], [40, 40], [20]),
+                    "a": MemoizationStats([10], [30, 30], [80, 80], [20]),
+                },
+            ),
+            45,
+            15,
+            STAT_ORDER_TIME_SAVED,
+        ),
+        (
+            MemoizationMap(
+                {("a", (), ()): "12345678901234567890", ("b", (), ()): "12345678901234567890"},
+                {
+                    "b": MemoizationStats([10], [30, 30], [40, 40], [30]),
+                    "a": MemoizationStats([10], [30, 30], [40, 40], [10]),
+                },
+            ),
+            45,
+            15,
+            STAT_ORDER_PRIORITY,
+        ),
+        (
+            MemoizationMap(
+                {("a", (), ()): "12345678901234567890", ("b", (), ()): "12345678901234567890"},
+                {
+                    "b": MemoizationStats([10], [30, 30], [40, 40], [20]),
+                    "a": MemoizationStats([5], [30, 30], [40, 40], [20]),
+                },
+            ),
+            45,
+            15,
+            STAT_ORDER_LRU_INVERSE,
+        ),
     ],
-    ids=["cache_strategy_miss_rate", "cache_strategy_miss_lru", "cache_strategy_time_saved", "cache_strategy_priority", "cache_strategy_miss_lru_inverse"],
+    ids=[
+        "cache_strategy_miss_rate",
+        "cache_strategy_miss_lru",
+        "cache_strategy_time_saved",
+        "cache_strategy_priority",
+        "cache_strategy_miss_lru_inverse",
+    ],
 )
-def test_memoization_map_remove_worst_element_strategy(cache: MemoizationMap, max_size: int, needed_capacity: int, freeing_strategy: StatOrderExtractor) -> None:
+def test_memoization_map_remove_worst_element_strategy(
+    cache: MemoizationMap, max_size: int, needed_capacity: int, freeing_strategy: StatOrderExtractor,
+) -> None:
     cache.max_size = max_size
     cache.value_removal_strategy = freeing_strategy
     free_size = cache.max_size - cache.get_cache_size()
@@ -357,7 +434,10 @@ def test_memoization_limited_static_not_present_values(
     hidden_params: list,
     expected_result: Any,
 ) -> None:
-    memo_map = MemoizationMap({("a", (), ()): "12345678901234567890", ("b", (), ()): "12345678901234567890"}, {"a": MemoizationStats([10], [30], [40], [20]), "b": MemoizationStats([10], [30], [40], [20])})
+    memo_map = MemoizationMap(
+        {("a", (), ()): "12345678901234567890", ("b", (), ()): "12345678901234567890"},
+        {"a": MemoizationStats([10], [30], [40], [20]), "b": MemoizationStats([10], [30], [40], [20])},
+    )
     memo_map.max_size = 45
     _pipeline_manager.current_pipeline = PipelineProcess(
         MessageDataProgram({}, ProgramMainInformation("", "", "")),

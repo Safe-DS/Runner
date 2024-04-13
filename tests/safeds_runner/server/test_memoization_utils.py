@@ -1,13 +1,26 @@
-import sys
-from typing import Any, Type
-
-import pytest
 import base64
 import pickle
+import sys
+from typing import Any
+
+import pytest
 from safeds.data.image.containers import Image
 from safeds.data.tabular.containers import Table
-
-from safeds_runner.server._memoization_utils import _is_not_primitive, _is_deterministically_hashable, _has_explicit_identity, _set_new_explicit_identity, _set_new_explicit_identity_deterministic_hash, _shared_memory_serialize_and_assign, _has_explicit_identity_memory, _make_hashable, ExplicitIdentityWrapperLazy, ExplicitIdentityWrapper, _get_size_of_value, _wrap_value_to_shared_memory, _unwrap_value_from_shared_memory
+from safeds_runner.server._memoization_utils import (
+    ExplicitIdentityWrapper,
+    ExplicitIdentityWrapperLazy,
+    _get_size_of_value,
+    _has_explicit_identity,
+    _has_explicit_identity_memory,
+    _is_deterministically_hashable,
+    _is_not_primitive,
+    _make_hashable,
+    _set_new_explicit_identity,
+    _set_new_explicit_identity_deterministic_hash,
+    _shared_memory_serialize_and_assign,
+    _unwrap_value_from_shared_memory,
+    _wrap_value_to_shared_memory,
+)
 
 
 @pytest.mark.parametrize(
@@ -20,9 +33,7 @@ from safeds_runner.server._memoization_utils import _is_not_primitive, _is_deter
         ("ab", True),
         (object(), False),
     ],
-    ids=[
-        "value_int", "value_float", "value_boolean", "value_none", "value_string", "value_object"
-    ],
+    ids=["value_int", "value_float", "value_boolean", "value_none", "value_string", "value_object"],
 )
 def test_is_not_primitive(value: Any, primitive: bool) -> None:
     assert _is_not_primitive(value) != primitive
@@ -38,14 +49,24 @@ def test_is_not_primitive(value: Any, primitive: bool) -> None:
         ("ab", False),
         (object(), False),
         (Table(), True),
-        (Image.from_bytes(
-            base64.b64decode(
-                "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
+        (
+            Image.from_bytes(
+                base64.b64decode(
+                    "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
+                ),
             ),
-        ), True)
+            True,
+        ),
     ],
     ids=[
-        "value_int", "value_float", "value_boolean", "value_none", "value_string", "value_object", "value_table", "value_image"
+        "value_int",
+        "value_float",
+        "value_boolean",
+        "value_none",
+        "value_string",
+        "value_object",
+        "value_table",
+        "value_image",
     ],
 )
 def test_is_deterministically_hashable(value: Any, deterministically_hashable: bool) -> None:
@@ -60,11 +81,9 @@ def test_is_deterministically_hashable(value: Any, deterministically_hashable: b
             base64.b64decode(
                 "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
             ),
-        )
+        ),
     ],
-    ids=[
-        "value_table_plain", "value_image_plain"
-    ],
+    ids=["value_table_plain", "value_image_plain"],
 )
 def test_has_explicit_identity(value: Any) -> None:
     assert not _has_explicit_identity(value)
@@ -80,11 +99,9 @@ def test_has_explicit_identity(value: Any) -> None:
             base64.b64decode(
                 "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
             ),
-        )
+        ),
     ],
-    ids=[
-        "value_table_plain", "value_image_plain"
-    ],
+    ids=["value_table_plain", "value_image_plain"],
 )
 def test_explicit_identity_deterministic_hash(value: Any) -> None:
     assert not _has_explicit_identity(value)
@@ -101,11 +118,9 @@ def test_explicit_identity_deterministic_hash(value: Any) -> None:
             base64.b64decode(
                 "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
             ),
-        )
+        ),
     ],
-    ids=[
-        "value_table_plain", "value_image_plain"
-    ],
+    ids=["value_table_plain", "value_image_plain"],
 )
 def test_explicit_identity_shared_memory(value: Any) -> None:
     _shared_memory_serialize_and_assign(value)
@@ -116,20 +131,28 @@ def test_explicit_identity_shared_memory(value: Any) -> None:
     argnames="value,hashable,exception",
     argvalues=[
         (Table(), True, None),
-        (Image.from_bytes(
-            base64.b64decode(
-                "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
+        (
+            Image.from_bytes(
+                base64.b64decode(
+                    "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
+                ),
             ),
-        ), True, None),
+            True,
+            None,
+        ),
         ({"a": "b"}, False, TypeError),
         (["a", "b", "c"], False, TypeError),
-        (lambda a, b: a + b, False, pickle.PicklingError)
+        (lambda a, b: a + b, False, pickle.PicklingError),
     ],
     ids=[
-        "value_table_hashable", "value_image_hashable", "value_dict_unhashable", "value_list_unhashable", "value_lambda_unhashable"
+        "value_table_hashable",
+        "value_image_hashable",
+        "value_dict_unhashable",
+        "value_list_unhashable",
+        "value_lambda_unhashable",
     ],
 )
-def test_make_hashable_non_wrapper(value: Any, hashable: bool, exception: Type[BaseException]) -> None:
+def test_make_hashable_non_wrapper(value: Any, hashable: bool, exception: type[BaseException]) -> None:
     if not hashable:
         if exception == TypeError:
             with pytest.raises(exception):
@@ -149,14 +172,18 @@ def test_make_hashable_non_wrapper(value: Any, hashable: bool, exception: Type[B
     argnames="value,wrapper",
     argvalues=[
         (Table(), True),
-        (Image.from_bytes(
-            base64.b64decode(
-                "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
+        (
+            Image.from_bytes(
+                base64.b64decode(
+                    "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
+                ),
             ),
-        ), True),
+            True,
+        ),
     ],
     ids=[
-        "value_table", "value_image",
+        "value_table",
+        "value_image",
     ],
 )
 def test_make_hashable_wrapper(value: Any, wrapper: bool) -> None:
@@ -211,23 +238,14 @@ def test_memory_usage(value: Any, expected_size: int) -> None:
         (Table(), Table()),
         {"a": Table()},
         {"a", "b", Table()},
-        frozenset({"a", "b", Table()})
+        frozenset({"a", "b", Table()}),
     ],
-    ids=[
-        "int",
-        "list",
-        "tuple",
-        "table",
-        "tuple_table",
-        "dict",
-        "set",
-        "frozenset"
-    ],
+    ids=["int", "list", "tuple", "table", "tuple_table", "dict", "set", "frozenset"],
 )
 def test_wrap_value_to_shared_memory(value: Any) -> None:
     def _delete_unpackvalue_field(wrapped_object: Any) -> None:
         if isinstance(wrapped_object, ExplicitIdentityWrapperLazy):
-            object.__setattr__(wrapped_object, 'value', None)
+            object.__setattr__(wrapped_object, "value", None)
         if isinstance(wrapped_object, tuple | list | set | frozenset):
             for entry in wrapped_object:
                 _delete_unpackvalue_field(entry)
@@ -268,12 +286,8 @@ def test_make_hashable_wrapper_nonlazy(value: Any, wrapper: bool) -> None:
 
 @pytest.mark.parametrize(
     argnames="value",
-    argvalues=[
-        NonPrimitiveObject()
-    ],
-    ids=[
-        "object"
-    ],
+    argvalues=[NonPrimitiveObject()],
+    ids=["object"],
 )
 def test_wrap_value_to_shared_memory_non_deterministic(value: Any) -> None:
     wrapped = _wrap_value_to_shared_memory(value)
@@ -293,18 +307,9 @@ def test_wrap_value_to_shared_memory_non_deterministic(value: Any) -> None:
         (Table(), Table()),
         {"a": Table()},
         {"a", "b", Table()},
-        frozenset({"a", "b", Table()})
+        frozenset({"a", "b", Table()}),
     ],
-    ids=[
-        "int",
-        "list",
-        "tuple",
-        "table",
-        "tuple_table",
-        "dict",
-        "set",
-        "frozenset"
-    ],
+    ids=["int", "list", "tuple", "table", "tuple_table", "dict", "set", "frozenset"],
 )
 def test_serialize_value_to_shared_memory(value: Any) -> None:
     _wrapped = _wrap_value_to_shared_memory(value)
@@ -317,12 +322,8 @@ def test_serialize_value_to_shared_memory(value: Any) -> None:
 
 @pytest.mark.parametrize(
     argnames="value",
-    argvalues=[
-        NonPrimitiveObject()
-    ],
-    ids=[
-        "object"
-    ],
+    argvalues=[NonPrimitiveObject()],
+    ids=["object"],
 )
 def test_serialize_value_to_shared_memory_non_lazy(value: Any) -> None:
     _wrapped = _wrap_value_to_shared_memory(value)
@@ -345,7 +346,8 @@ def test_serialize_value_to_shared_memory_non_lazy(value: Any) -> None:
         ),
     ],
     ids=[
-        "value_table", "value_image",
+        "value_table",
+        "value_image",
     ],
 )
 def test_compare_wrapper_to_lazy(value: Any) -> None:
@@ -369,18 +371,22 @@ def test_compare_wrapper_to_lazy(value: Any) -> None:
     argnames="value1,value2",
     argvalues=[
         (Table(), Table()),
-        (Image.from_bytes(
-            base64.b64decode(
-                "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
+        (
+            Image.from_bytes(
+                base64.b64decode(
+                    "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
+                ),
             ),
-        ), Image.from_bytes(
-            base64.b64decode(
-                "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
+            Image.from_bytes(
+                base64.b64decode(
+                    "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
+                ),
             ),
-        ))
+        ),
     ],
     ids=[
-        "value_table", "value_image",
+        "value_table",
+        "value_image",
     ],
 )
 def test_compare_wrapper_to_lazy_multi(value1: Any, value2: Any) -> None:
@@ -427,18 +433,22 @@ def test_compare_wrapper_to_lazy_multi(value1: Any, value2: Any) -> None:
     argnames="value1,value2",
     argvalues=[
         (Table(), Table()),
-        (Image.from_bytes(
-            base64.b64decode(
-                "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
+        (
+            Image.from_bytes(
+                base64.b64decode(
+                    "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
+                ),
             ),
-        ), Image.from_bytes(
-            base64.b64decode(
-                "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
+            Image.from_bytes(
+                base64.b64decode(
+                    "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
+                ),
             ),
-        ))
+        ),
     ],
     ids=[
-        "value_table", "value_image",
+        "value_table",
+        "value_image",
     ],
 )
 def test_wrapper_hash(value1: Any, value2: Any) -> None:
@@ -459,10 +469,11 @@ def test_wrapper_hash(value1: Any, value2: Any) -> None:
             base64.b64decode(
                 "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
             ),
-        )
+        ),
     ],
     ids=[
-        "value_table", "value_image",
+        "value_table",
+        "value_image",
     ],
 )
 def test_wrapper_size(value: Any) -> None:
