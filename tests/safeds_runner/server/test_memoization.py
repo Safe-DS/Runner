@@ -12,9 +12,16 @@ from safeds_runner.server import _pipeline_manager
 from safeds_runner.server._memoization_map import (
     MemoizationMap,
     MemoizationStats,
-    _get_size_of_value,
-    _make_hashable,
 )
+from safeds_runner.server._memoization_strategies import (
+    STAT_ORDER_LRU,
+    STAT_ORDER_MISS_RATE,
+    STAT_ORDER_MRU,
+    STAT_ORDER_PRIORITY,
+    STAT_ORDER_TIME_SAVED,
+    StatOrderExtractor,
+)
+from safeds_runner.server._memoization_utils import _make_hashable
 from safeds_runner.server._messages import MessageDataProgram, ProgramMainInformation
 from safeds_runner.server._pipeline_manager import (
     PipelineProcess,
@@ -276,33 +283,178 @@ def test_absolute_path() -> None:
 
 
 @pytest.mark.parametrize(
-    argnames="value,expected_size",
+    argnames="cache,greater_than_zero",
+    argvalues=[(MemoizationMap({}, {}), False), (MemoizationMap({}, {"a": MemoizationStats([], [], [], [20])}), True)],
+    ids=["cache_empty", "cache_not_empty"],
+)
+def test_memoization_map_cache_size(cache: MemoizationMap, greater_than_zero: bool) -> None:
+    assert (cache.get_cache_size() > 0) == greater_than_zero
+
+
+@pytest.mark.parametrize(
+    argnames="cache,max_size,needed_capacity",
     argvalues=[
-        (1, 0),
-        ({}, 0),
-        ({"a": "b"}, sys.getsizeof({})),
-        ([], 0),
-        ([1, 2, 3], sys.getsizeof([])),
-        ((), 0),
-        ((1, 2, 3), sys.getsizeof(())),
-        (set(), 0),
-        ({1, 2, 3}, sys.getsizeof(set())),
-        (frozenset(), 0),
-        (frozenset({1, 2, 3}), sys.getsizeof(frozenset())),
+        (MemoizationMap({("a", (), ()): "12345678901234567890"}, {"a": MemoizationStats([], [], [], [20])}), 25, 20),
+    ],
+    ids=["cache_not_empty"],
+)
+def test_memoization_map_ensure_capacity(cache: MemoizationMap, max_size: int, needed_capacity: int) -> None:
+    cache.max_size = max_size
+    cache.ensure_capacity(needed_capacity)
+    assert cache.max_size - cache.get_cache_size() >= needed_capacity
+
+
+@pytest.mark.parametrize(
+    argnames="cache,needed_capacity",
+    argvalues=[
+        (MemoizationMap({("a", (), ()): "12345678901234567890"}, {"a": MemoizationStats([], [], [], [20])}), 35),
+    ],
+    ids=["cache_not_empty"],
+)
+def test_memoization_map_ensure_capacity_unlimited(cache: MemoizationMap, needed_capacity: int) -> None:
+    cache.max_size = None
+    size_before_potential_shrink = cache.get_cache_size()
+    cache.ensure_capacity(needed_capacity)
+    assert size_before_potential_shrink == cache.get_cache_size()
+
+
+@pytest.mark.parametrize(
+    argnames="cache,max_size,needed_capacity",
+    argvalues=[
+        (MemoizationMap({("a", (), ()): "12345678901234567890"}, {"a": MemoizationStats([], [], [], [20])}), 20, 35),
+    ],
+    ids=["cache_not_empty"],
+)
+def test_memoization_map_ensure_larger_than_capacity_no_eviction(
+    cache: MemoizationMap,
+    max_size: int,
+    needed_capacity: int,
+) -> None:
+    cache.max_size = max_size
+    size_before_potential_shrink = cache.get_cache_size()
+    cache.ensure_capacity(needed_capacity)
+    assert size_before_potential_shrink == cache.get_cache_size()
+
+
+@pytest.mark.parametrize(
+    argnames="cache,max_size,needed_capacity,freeing_strategy",
+    argvalues=[
+        (
+            MemoizationMap(
+                {("a", (), ()): "12345678901234567890", ("b", (), ()): "12345678901234567890"},
+                {
+                    "a": MemoizationStats([10], [30, 30], [40], [20]),
+                    "b": MemoizationStats([10], [30, 30], [40, 40], [20]),
+                },
+            ),
+            45,
+            15,
+            STAT_ORDER_MISS_RATE,
+        ),
+        (
+            MemoizationMap(
+                {("a", (), ()): "12345678901234567890", ("b", (), ()): "12345678901234567890"},
+                {
+                    "b": MemoizationStats([5], [30, 30], [40, 40], [20]),
+                    "a": MemoizationStats([10], [30, 30], [40, 40], [20]),
+                },
+            ),
+            45,
+            15,
+            STAT_ORDER_LRU,
+        ),
+        (
+            MemoizationMap(
+                {("a", (), ()): "12345678901234567890", ("b", (), ()): "12345678901234567890"},
+                {
+                    "b": MemoizationStats([10], [30, 30], [40, 40], [20]),
+                    "a": MemoizationStats([10], [30, 30], [80, 80], [20]),
+                },
+            ),
+            45,
+            15,
+            STAT_ORDER_TIME_SAVED,
+        ),
+        (
+            MemoizationMap(
+                {("a", (), ()): "12345678901234567890", ("b", (), ()): "12345678901234567890"},
+                {
+                    "b": MemoizationStats([10], [30, 30], [40, 40], [30]),
+                    "a": MemoizationStats([10], [30, 30], [40, 40], [10]),
+                },
+            ),
+            45,
+            15,
+            STAT_ORDER_PRIORITY,
+        ),
+        (
+            MemoizationMap(
+                {("a", (), ()): "12345678901234567890", ("b", (), ()): "12345678901234567890"},
+                {
+                    "b": MemoizationStats([10], [30, 30], [40, 40], [20]),
+                    "a": MemoizationStats([5], [30, 30], [40, 40], [20]),
+                },
+            ),
+            45,
+            15,
+            STAT_ORDER_MRU,
+        ),
     ],
     ids=[
-        "immediate",
-        "dict_empty",
-        "dict_values",
-        "list_empty",
-        "list_values",
-        "tuple_empty",
-        "tuple_values",
-        "set_empty",
-        "set_values",
-        "frozenset_empty",
-        "frozenset_values",
+        "cache_strategy_miss_rate",
+        "cache_strategy_miss_lru",
+        "cache_strategy_time_saved",
+        "cache_strategy_priority",
+        "cache_strategy_miss_lru_inverse",
     ],
 )
-def test_memory_usage(value: Any, expected_size: int) -> None:
-    assert _get_size_of_value(value) > expected_size
+def test_memoization_map_remove_worst_element_strategy(
+    cache: MemoizationMap,
+    max_size: int,
+    needed_capacity: int,
+    freeing_strategy: StatOrderExtractor,
+) -> None:
+    cache.max_size = max_size
+    cache.value_removal_strategy = freeing_strategy
+    free_size = cache.max_size - cache.get_cache_size()
+    cache.remove_worst_element(needed_capacity - free_size)
+    assert "a" in cache._map_stats
+    assert "b" not in cache._map_stats
+
+
+@pytest.mark.parametrize(
+    argnames="function_name,function,params,hidden_params,expected_result",
+    argvalues=[
+        ("function_pure", lambda a, b, c: a + b + c, [1, 2, 3], [], 6),
+        ("function_impure_readfile", lambda filename: filename.split(".")[0], ["abc.txt"], [1234567891], "abc"),
+        ("function_dict", lambda x: len(x), [{}], [], 0),
+        ("function_lambda", lambda x: x(), [lambda: 0], [], 0),
+    ],
+    ids=["function_pure", "function_impure_readfile", "function_dict", "function_lambda"],
+)
+def test_memoization_limited_static_not_present_values(
+    function_name: str,
+    function: typing.Callable,
+    params: list,
+    hidden_params: list,
+    expected_result: Any,
+) -> None:
+    memo_map = MemoizationMap(
+        {("a", (), ()): "12345678901234567890", ("b", (), ()): "12345678901234567890"},
+        {"a": MemoizationStats([10], [30], [40], [20]), "b": MemoizationStats([10], [30], [40], [20])},
+    )
+    memo_map.max_size = 45
+    _pipeline_manager.current_pipeline = PipelineProcess(
+        MessageDataProgram({}, ProgramMainInformation("", "", "")),
+        "",
+        Queue(),
+        {},
+        memo_map,
+    )
+    # Save value in map
+    result = memoized_static_call(function_name, function, params, hidden_params)
+    assert result == expected_result
+    # Test if value is actually saved by calling another function that does not return the expected result
+    result2 = memoized_static_call(function_name, lambda *_: None, params, hidden_params)
+    assert result2 == expected_result
+    assert len(memo_map._map_values.items()) < 3
