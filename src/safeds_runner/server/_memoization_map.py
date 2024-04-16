@@ -91,7 +91,7 @@ class MemoizationMap:
         """
         copied_stats = list(self._map_stats.copy().items())
         # Sort functions to remove them from the cache in a specific order
-        copied_stats.sort(key=self.value_removal_strategy[0], reverse=self.value_removal_strategy[1])
+        copied_stats.sort(key=self.value_removal_strategy)
         # Calculate which functions should be removed from the cache
         bytes_freed = 0
         functions_to_free = []
