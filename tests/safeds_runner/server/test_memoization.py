@@ -15,8 +15,8 @@ from safeds_runner.server._memoization_map import (
 )
 from safeds_runner.server._memoization_strategies import (
     STAT_ORDER_LRU,
-    STAT_ORDER_MRU,
     STAT_ORDER_MISS_RATE,
+    STAT_ORDER_MRU,
     STAT_ORDER_PRIORITY,
     STAT_ORDER_TIME_SAVED,
     StatOrderExtractor,

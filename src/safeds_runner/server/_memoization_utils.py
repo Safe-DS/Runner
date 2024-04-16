@@ -151,9 +151,7 @@ class ExplicitIdentityWrapperLazy:
             and self.id == other.__ex_id__  # type: ignore[attr-defined]
         ):
             return True
-        if isinstance(other, ExplicitIdentityWrapperLazy):
-            return self.value == other.value
-        elif isinstance(other, ExplicitIdentityWrapper):
+        if isinstance(other, ExplicitIdentityWrapper | ExplicitIdentityWrapperLazy):
             return self.value == other.value
         return self.value == other
 
