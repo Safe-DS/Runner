@@ -15,7 +15,7 @@ from safeds_runner.server._memoization_map import (
 )
 from safeds_runner.server._memoization_strategies import (
     STAT_ORDER_LRU,
-    STAT_ORDER_LRU_INVERSE,
+    STAT_ORDER_MRU,
     STAT_ORDER_MISS_RATE,
     STAT_ORDER_PRIORITY,
     STAT_ORDER_TIME_SAVED,
@@ -397,7 +397,7 @@ def test_memoization_map_ensure_larger_than_capacity_no_eviction(
             ),
             45,
             15,
-            STAT_ORDER_LRU_INVERSE,
+            STAT_ORDER_MRU,
         ),
     ],
     ids=[

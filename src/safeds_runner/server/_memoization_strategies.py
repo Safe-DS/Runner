@@ -46,9 +46,9 @@ def _stat_order_priority(function_stats: tuple[str, MemoizationStats]) -> float:
 STAT_ORDER_PRIORITY: StatOrderExtractor = _stat_order_priority
 
 
-# Sort functions by inverse LRU (last access timestamp, in descending order, least recently used last)
-def _stat_order_lru_inverse(function_stats: tuple[str, MemoizationStats]) -> float:
+# Sort functions by MRU (last access timestamp, in descending order, least recently used last)
+def _stat_order_mru(function_stats: tuple[str, MemoizationStats]) -> float:
     return -max(function_stats[1].access_timestamps)
 
 
-STAT_ORDER_LRU_INVERSE: StatOrderExtractor = _stat_order_lru_inverse
+STAT_ORDER_MRU: StatOrderExtractor = _stat_order_mru
