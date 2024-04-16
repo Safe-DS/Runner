@@ -5,7 +5,9 @@ from typing import Any, TypeAlias
 
 from safeds_runner.server._memoization_stats import MemoizationStats
 
-# Callable = Stat Key Extractor, Boolean = Reverse Order
+# Callable = Stat Key Extractor
+# A value removal strategy will reorder a list of memoized functions, based on the provided stats for each function.
+# The first elements from this reordered list will be deleted first, if memory needs to be freed.
 StatOrderExtractor: TypeAlias = Callable[[tuple[str, MemoizationStats]], float]
 
 
@@ -46,7 +48,7 @@ def _stat_order_priority(function_stats: tuple[str, MemoizationStats]) -> float:
 STAT_ORDER_PRIORITY: StatOrderExtractor = _stat_order_priority
 
 
-# Sort functions by MRU (last access timestamp, in descending order, least recently used last)
+# Sort functions by MRU (last access timestamp, in descending order, most recently used first)
 def _stat_order_mru(function_stats: tuple[str, MemoizationStats]) -> float:
     return -max(function_stats[1].access_timestamps)
 
