@@ -245,7 +245,7 @@ def test_memory_usage(value: Any, expected_size: int) -> None:
 def test_wrap_value_to_shared_memory(value: Any) -> None:
     def _delete_unpackvalue_field(wrapped_object: Any) -> None:
         if isinstance(wrapped_object, ExplicitIdentityWrapperLazy):
-            object.__setattr__(wrapped_object, "value", None)
+            object.__setattr__(wrapped_object, "_value", None)
         if isinstance(wrapped_object, tuple | list | set | frozenset):
             for entry in wrapped_object:
                 _delete_unpackvalue_field(entry)

@@ -70,7 +70,6 @@ class ExplicitIdentityWrapper:
         if isinstance(other, ExplicitIdentityWrapperLazy):
             if self.value.__ex_id__ == other.id:
                 return True
-            other._unpackvalue()
             return self.value == other.value
         if isinstance(other, ExplicitIdentityWrapper):
             return self.value.__ex_id__ == other.value.__ex_id__ or self.value == other.value
@@ -99,7 +98,7 @@ class ExplicitIdentityWrapperLazy:
     If the comparison using the explicit identity fails, the object is unpickled as a fallback solution and compared using the __eq__ function.
     """
 
-    value: Any
+    _value: Any
     memory: SharedMemory
     id: uuid.UUID
     hash: int
@@ -152,9 +151,7 @@ class ExplicitIdentityWrapperLazy:
             and self.id == other.__ex_id__  # type: ignore[attr-defined]
         ):
             return True
-        self._unpackvalue()
         if isinstance(other, ExplicitIdentityWrapperLazy):
-            other._unpackvalue()
             return self.value == other.value
         elif isinstance(other, ExplicitIdentityWrapper):
             return self.value == other.value
@@ -163,11 +160,20 @@ class ExplicitIdentityWrapperLazy:
     def __hash__(self) -> int:
         return self.hash
 
-    def _unpackvalue(self) -> None:
-        """Unpack the value contained in this wrapper, if not currently present."""
-        if self.value is None:
-            object.__setattr__(self, "value", pickle.loads(self.memory.buf))
-            _set_new_explicit_memory(self.value, self.memory)
+    @property
+    def value(self) -> Any:
+        """
+        Unpack the value contained in this wrapper, if not currently present, otherwise return the wrapped value.
+
+        Returns
+        -------
+        value
+            Wrapped value
+        """
+        if self._value is None:
+            object.__setattr__(self, "_value", pickle.loads(self.memory.buf))
+            _set_new_explicit_memory(self._value, self.memory)
+        return self._value
 
     def __sizeof__(self) -> int:
         return self.memory.size
@@ -177,7 +183,7 @@ class ExplicitIdentityWrapperLazy:
 
     def __setstate__(self, state: tuple[SharedMemory, uuid.UUID, int]) -> None:
         memory_value, id_value, hash_value = state
-        object.__setattr__(self, "value", None)
+        object.__setattr__(self, "_value", None)
         object.__setattr__(self, "memory", memory_value)
         object.__setattr__(self, "id", id_value)
         object.__setattr__(self, "hash", hash_value)
@@ -457,7 +463,6 @@ def _unwrap_value_from_shared_memory(
     if isinstance(result, frozenset):
         return frozenset({_unwrap_value_from_shared_memory(entry) for entry in result})
     if isinstance(result, ExplicitIdentityWrapperLazy):
-        result._unpackvalue()
         return result.value
     if isinstance(result, ExplicitIdentityWrapper):
         return result.value
