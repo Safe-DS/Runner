@@ -415,13 +415,15 @@ async def test_should_execute_pipeline_return_exception(
                             "code": {
                                 "": {
                                     "gen_test_a": (
-                                        "import safeds_runner\nimport base64\nfrom safeds.data.image.containers import Image\nfrom safeds.data.tabular.containers import Table\nimport safeds_runner\n\ndef pipe():\n\tvalue1 ="
+                                        "import safeds_runner\nimport base64\nfrom safeds.data.image.containers import Image\nfrom safeds.data.tabular.containers import Table\nimport safeds_runner\nfrom safeds_runner.server._json_encoder import SafeDsEncoder\n\ndef pipe():\n\tvalue1 ="
                                         " 1\n\tsafeds_runner.save_placeholder('value1',"
                                         " value1)\n\tsafeds_runner.save_placeholder('obj',"
                                         " object())\n\tsafeds_runner.save_placeholder('image',"
                                         " Image.from_bytes(base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC')))\n\t"
                                         "table = safeds_runner.memoized_static_call(\"safeds.data.tabular.containers.Table.from_dict\", Table.from_dict, [{'a': [1, 2], 'b': [3, 4]}], [])\n\t"
-                                        "safeds_runner.save_placeholder('table',table)\n"
+                                        "safeds_runner.save_placeholder('table',table)\n\t"
+                                        "object_mem = safeds_runner.memoized_static_call(\"random.object.call\", SafeDsEncoder, [], [])\n\t"
+                                        "safeds_runner.save_placeholder('object_mem',object_mem)\n"
                                     ),
                                     "gen_test_a_pipe": (
                                         "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()"
@@ -433,7 +435,7 @@ async def test_should_execute_pipeline_return_exception(
                     },
                 ),
             ],
-            5,
+            6,
             [
                 # Query Placeholder
                 json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": {"name": "value1", "window": {}}}),
@@ -450,6 +452,7 @@ async def test_should_execute_pipeline_return_exception(
                 Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("obj", "object")),
                 Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("image", "Image")),
                 Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("table", "Table")),
+                Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("object_mem", "SafeDsEncoder")),
                 # Validate Progress Information
                 Message(message_type_runtime_progress, "abcdefg", create_runtime_progress_done()),
                 # Query Result Valid
