@@ -191,6 +191,8 @@ class PipelineManager:
         This should only be called if this PipelineManager is not intended to be reused again.
         """
         self._multiprocessing_manager.shutdown()
+        self._process_pool.close()
+        self._process_pool.join()
 
 
 class PipelineProcess:
