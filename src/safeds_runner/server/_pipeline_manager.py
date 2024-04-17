@@ -17,6 +17,7 @@ from typing import Any
 import stack_data
 
 from ._memoization_map import MemoizationMap
+from ._memoization_utils import _is_deterministically_hashable, _has_explicit_identity_memory, _is_not_primitive, ExplicitIdentityWrapper, ExplicitIdentityWrapperLazy
 from ._messages import (
     Message,
     MessageDataProgram,
@@ -173,6 +174,8 @@ class PipelineManager:
         if placeholder_name not in self._placeholder_map[execution_id]:
             return None, None
         value = self._placeholder_map[execution_id][placeholder_name]
+        if isinstance(value, ExplicitIdentityWrapper | ExplicitIdentityWrapperLazy):
+            value = value.value
         return _get_placeholder_type(value), value
 
     def shutdown(self) -> None:
@@ -241,8 +244,14 @@ class PipelineProcess:
             import torch
 
             value = Image(value._image_tensor, torch.device("cpu"))
-        self._placeholder_map[placeholder_name] = value
         placeholder_type = _get_placeholder_type(value)
+        if _is_deterministically_hashable(value) and _has_explicit_identity_memory(value):
+            value = ExplicitIdentityWrapperLazy.existing(value)
+        elif (
+            not _is_deterministically_hashable(value) and _is_not_primitive(value) and _has_explicit_identity_memory(value)
+        ):
+            value = ExplicitIdentityWrapper.existing(value)
+        self._placeholder_map[placeholder_name] = value
         self._send_message(
             message_type_placeholder_type,
             create_placeholder_description(placeholder_name, placeholder_type),
