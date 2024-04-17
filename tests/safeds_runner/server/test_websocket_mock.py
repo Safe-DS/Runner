@@ -352,13 +352,6 @@ def test_should_fail_message_validation_reason_placeholder_query(
     assert invalid_message == exception_message
 
 
-@pytest.mark.skipif(
-    sys.platform.startswith("win") and os.getenv("COVERAGE_RCFILE") is not None,
-    reason=(
-        "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
-        "causes Manager to hang, when using multiprocessing coverage"
-    ),
-)
 @pytest.mark.parametrize(
     argnames="message,expected_response_runtime_error",
     argvalues=[
@@ -406,13 +399,6 @@ async def test_should_execute_pipeline_return_exception(
             assert isinstance(frame["line"], int)
 
 
-@pytest.mark.skipif(
-    sys.platform.startswith("win") and os.getenv("COVERAGE_RCFILE") is not None,
-    reason=(
-        "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
-        "causes Manager to hang, when using multiprocessing coverage"
-    ),
-)
 @pytest.mark.parametrize(
     argnames="initial_messages,initial_execution_message_wait,appended_messages,expected_responses",
     argvalues=[
@@ -426,11 +412,13 @@ async def test_should_execute_pipeline_return_exception(
                             "code": {
                                 "": {
                                     "gen_test_a": (
-                                        "import safeds_runner\nimport base64\nfrom safeds.data.image.containers import Image\n\ndef pipe():\n\tvalue1 ="
+                                        "import safeds_runner\nimport base64\nfrom safeds.data.image.containers import Image\nfrom safeds.data.tabular.containers import Table\nimport safeds_runner\n\ndef pipe():\n\tvalue1 ="
                                         " 1\n\tsafeds_runner.save_placeholder('value1',"
                                         " value1)\n\tsafeds_runner.save_placeholder('obj',"
                                         " object())\n\tsafeds_runner.save_placeholder('image',"
-                                        " Image.from_bytes(base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC')))\n"
+                                        " Image.from_bytes(base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC')))\n\t"
+                                        "table = safeds_runner.memoized_static_call(\"safeds.data.tabular.containers.Table.from_dict\", Table.from_dict, [{'a': [1, 2], 'b': [3, 4]}], [])\n\t"
+                                        "safeds_runner.save_placeholder('table',table)\n"
                                     ),
                                     "gen_test_a_pipe": (
                                         "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()"
@@ -442,10 +430,12 @@ async def test_should_execute_pipeline_return_exception(
                     },
                 ),
             ],
-            4,
+            5,
             [
                 # Query Placeholder
                 json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": {"name": "value1", "window": {}}}),
+                # Query Placeholder (memoized type)
+                json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": {"name": "table", "window": {}}}),
                 # Query not displayable Placeholder
                 json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": {"name": "obj", "window": {}}}),
                 # Query invalid placeholder
@@ -456,6 +446,7 @@ async def test_should_execute_pipeline_return_exception(
                 Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("value1", "Int")),
                 Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("obj", "object")),
                 Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("image", "Image")),
+                Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("table", "Table")),
                 # Validate Progress Information
                 Message(message_type_runtime_progress, "abcdefg", create_runtime_progress_done()),
                 # Query Result Valid
@@ -463,6 +454,12 @@ async def test_should_execute_pipeline_return_exception(
                     message_type_placeholder_value,
                     "abcdefg",
                     create_placeholder_value(MessageQueryInformation("value1"), "Int", 1),
+                ),
+                # Query Result Valid (memoized)
+                Message(
+                    message_type_placeholder_value,
+                    "abcdefg",
+                    create_placeholder_value(MessageQueryInformation("table"), "Table", {'a': [1, 2], 'b': [3, 4]}),
                 ),
                 # Query Result not displayable
                 Message(
@@ -508,13 +505,6 @@ async def test_should_execute_pipeline_return_valid_placeholder(
             assert next_message == expected_responses.pop(0)
 
 
-@pytest.mark.skipif(
-    sys.platform.startswith("win") and os.getenv("COVERAGE_RCFILE") is not None,
-    reason=(
-        "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
-        "causes Manager to hang, when using multiprocessing coverage"
-    ),
-)
 @pytest.mark.parametrize(
     argnames="messages,expected_response",
     argvalues=[
@@ -585,13 +575,6 @@ async def test_should_successfully_execute_simple_flow(messages: list[str], expe
         assert query_result_invalid == expected_response
 
 
-@pytest.mark.skipif(
-    sys.platform.startswith("win") and os.getenv("COVERAGE_RCFILE") is not None,
-    reason=(
-        "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
-        "causes Manager to hang, when using multiprocessing coverage"
-    ),
-)
 @pytest.mark.parametrize(
     argnames="messages",
     argvalues=[
