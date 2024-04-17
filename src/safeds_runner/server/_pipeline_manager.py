@@ -81,7 +81,7 @@ class PipelineManager:
         if not self._messages_queue_thread.is_alive():
             self._messages_queue_thread.start()
         # Ensure that pool is started
-        self._process_pool._check_running()
+        _pool = self._process_pool
 
     def _handle_queue_messages(self, event_loop: asyncio.AbstractEventLoop) -> None:
         """
