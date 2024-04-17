@@ -55,8 +55,8 @@ class PipelineManager:
         return self._multiprocessing_manager.Queue()
 
     @cached_property
-    def _process_pool(self) -> multiprocessing.Pool:
-        return multiprocessing.Pool(processes=multiprocessing.cpu_count(), maxtasksperchild=None)
+    def _process_pool(self) -> multiprocessing.pool.Pool:
+        return multiprocessing.pool.Pool(processes=multiprocessing.cpu_count(), maxtasksperchild=None)
 
     @cached_property
     def _messages_queue_thread(self) -> threading.Thread:
@@ -304,7 +304,7 @@ class PipelineProcess:
         # This is a callback to log an unexpected failure, executing this is never expected
         logging.exception("Pipeline process unexpectedly failed", exc_info=error)  # pragma: no cover
 
-    def execute(self, pool: multiprocessing.Pool) -> None:
+    def execute(self, pool: multiprocessing.pool.Pool) -> None:
         """
         Execute this pipeline in a process from the provided process pool.
 
