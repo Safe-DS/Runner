@@ -1,3 +1,11 @@
+## [0.11.0](https://github.com/Safe-DS/Runner/compare/v0.10.0...v0.11.0) (2024-04-17)
+
+
+### Features
+
+* bump `safe-ds` to `v0.21.0` ([#86](https://github.com/Safe-DS/Runner/issues/86)) ([d780822](https://github.com/Safe-DS/Runner/commit/d78082222d179d61a53ec9a3560246aad2f74c32)), closes [#85](https://github.com/Safe-DS/Runner/issues/85)
+* memoization improvements ([#81](https://github.com/Safe-DS/Runner/issues/81)) ([6bc2288](https://github.com/Safe-DS/Runner/commit/6bc22889afc8e61922cb2905badad2974cff9b54)), closes [#44](https://github.com/Safe-DS/Runner/issues/44)
+
 ## [0.10.0](https://github.com/Safe-DS/Runner/compare/v0.9.0...v0.10.0) (2024-04-10)
 
 
