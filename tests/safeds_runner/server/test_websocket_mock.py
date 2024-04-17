@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import multiprocessing
-import os
 import sys
 import time
 import typing
@@ -463,7 +462,7 @@ async def test_should_execute_pipeline_return_exception(
                 Message(
                     message_type_placeholder_value,
                     "abcdefg",
-                    create_placeholder_value(MessageQueryInformation("table"), "Table", {'a': [1, 2], 'b': [3, 4]}),
+                    create_placeholder_value(MessageQueryInformation("table"), "Table", {"a": [1, 2], "b": [3, 4]}),
                 ),
                 # Query Result not displayable
                 Message(
