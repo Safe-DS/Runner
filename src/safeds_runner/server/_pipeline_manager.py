@@ -301,7 +301,8 @@ class PipelineProcess:
             pipeline_finder.detach()
 
     def _catch_subprocess_error(self, error: BaseException) -> None:
-        logging.exception("Pipeline process unexpectedly failed", exc_info=error)
+        # This is a callback to log an unexpected failure, executing this is never expected
+        logging.exception("Pipeline process unexpectedly failed", exc_info=error)  # pragma: no cover
 
     def execute(self, pool: multiprocessing.Pool) -> None:
         """
