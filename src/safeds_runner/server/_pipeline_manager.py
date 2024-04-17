@@ -393,41 +393,63 @@ def memoized_dynamic_call(
     )
 
 
-def file_mtime(filename: str) -> int | None:
+@typing.overload
+def file_mtime(filenames: str) -> int | None: ...
+
+
+@typing.overload
+def file_mtime(filenames: list[str]) -> list[int | None]: ...
+
+
+def file_mtime(filenames: str | list[str]) -> int | None | list[int | None]:
     """
     Get the last modification timestamp of the provided file.
 
     Parameters
     ----------
-    filename: str
-        Name of the file
+    filenames:
+        Names of the files
 
     Returns
     -------
-    int | None
-        Last modification timestamp if the provided file exists, otherwise None
+    timestamps:
+        Last modification timestamp or None for each provided file, depending on whether the file exists or not.
     """
+    if isinstance(filenames, list):
+        return [file_mtime(f) for f in filenames]
+
     try:
-        return Path(filename).stat().st_mtime_ns
+        return Path(filenames).stat().st_mtime_ns
     except FileNotFoundError:
         return None
 
 
-def absolute_path(filename: str) -> str:
+@typing.overload
+def absolute_path(filenames: str) -> str: ...
+
+
+@typing.overload
+def absolute_path(filenames: list[str]) -> list[str]: ...
+
+
+def absolute_path(filenames: str | list[str]) -> str | list[str]:
     """
     Get the absolute path of the provided file.
 
     Parameters
     ----------
-    filename:
-        Name of the file
+    filenames:
+        Names of the files.
 
     Returns
     -------
-    absolute_path:
-        Absolute path of the provided file
+    absolute_paths:
+        Absolute paths of the provided files.
     """
-    return str(Path(filename).resolve())
+    if isinstance(filenames, list):
+        return [absolute_path(f) for f in filenames]
+
+    return str(Path(filenames).resolve())
 
 
 def get_backtrace_info(error: BaseException) -> list[dict[str, Any]]:
