@@ -54,6 +54,10 @@ class PipelineManager:
         return self._multiprocessing_manager.Queue()
 
     @cached_property
+    def _process_pool(self) -> multiprocessing.Pool:
+        return multiprocessing.Pool(processes=multiprocessing.cpu_count(), maxtasksperchild=1)
+
+    @cached_property
     def _messages_queue_thread(self) -> threading.Thread:
         return threading.Thread(target=self._handle_queue_messages, daemon=True, args=(asyncio.get_event_loop(),))
 
@@ -75,6 +79,8 @@ class PipelineManager:
         _mq = self._messages_queue  # Initialize it here before starting a thread to avoid potential race condition
         if not self._messages_queue_thread.is_alive():
             self._messages_queue_thread.start()
+        # Ensure that pool is started
+        self._process_pool._check_running()
 
     def _handle_queue_messages(self, event_loop: asyncio.AbstractEventLoop) -> None:
         """
@@ -144,7 +150,7 @@ class PipelineManager:
             self._placeholder_map[execution_id],
             self._memoization_map,
         )
-        process.execute()
+        process.execute(self._process_pool)
 
     def get_placeholder(self, execution_id: str, placeholder_name: str) -> tuple[str | None, Any]:
         """
@@ -210,7 +216,6 @@ class PipelineProcess:
         self._messages_queue = messages_queue
         self._placeholder_map = placeholder_map
         self._memoization_map = memoization_map
-        self._process = multiprocessing.Process(target=self._execute, daemon=True)
 
     def _send_message(self, message_type: str, value: dict[Any, Any] | str) -> None:
         self._messages_queue.put(Message(message_type, self._id, value))
@@ -286,13 +291,16 @@ class PipelineProcess:
         finally:
             pipeline_finder.detach()
 
-    def execute(self) -> None:
+    def _catch_subprocess_error(self, error: BaseException) -> None:
+        logging.exception("Pipeline process unexpectedly failed", exc_info=error)
+
+    def execute(self, pool: multiprocessing.Pool) -> None:
         """
-        Execute this pipeline in a newly created process.
+        Execute this pipeline in a process from the provided process pool.
 
         Results, progress and errors are communicated back to the main process.
         """
-        self._process.start()
+        pool.apply_async(func=self._execute, error_callback=self._catch_subprocess_error)
 
 
 # Pipeline process object visible in child process
