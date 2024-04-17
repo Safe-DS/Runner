@@ -422,7 +422,7 @@ async def test_should_execute_pipeline_return_exception(
                                         " Image.from_bytes(base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC')))\n\t"
                                         "table = safeds_runner.memoized_static_call(\"safeds.data.tabular.containers.Table.from_dict\", Table.from_dict, [{'a': [1, 2], 'b': [3, 4]}], [])\n\t"
                                         "safeds_runner.save_placeholder('table',table)\n\t"
-                                        "object_mem = safeds_runner.memoized_static_call(\"random.object.call\", SafeDsEncoder, [], [])\n\t"
+                                        'object_mem = safeds_runner.memoized_static_call("random.object.call", SafeDsEncoder, [], [])\n\t'
                                         "safeds_runner.save_placeholder('object_mem',object_mem)\n"
                                     ),
                                     "gen_test_a_pipe": (
@@ -452,7 +452,11 @@ async def test_should_execute_pipeline_return_exception(
                 Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("obj", "object")),
                 Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("image", "Image")),
                 Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("table", "Table")),
-                Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("object_mem", "SafeDsEncoder")),
+                Message(
+                    message_type_placeholder_type,
+                    "abcdefg",
+                    create_placeholder_description("object_mem", "SafeDsEncoder"),
+                ),
                 # Validate Progress Information
                 Message(message_type_runtime_progress, "abcdefg", create_runtime_progress_done()),
                 # Query Result Valid
