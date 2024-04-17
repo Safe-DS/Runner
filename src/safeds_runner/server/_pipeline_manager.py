@@ -17,7 +17,13 @@ from typing import Any
 import stack_data
 
 from ._memoization_map import MemoizationMap
-from ._memoization_utils import _is_deterministically_hashable, _has_explicit_identity_memory, _is_not_primitive, ExplicitIdentityWrapper, ExplicitIdentityWrapperLazy
+from ._memoization_utils import (
+    ExplicitIdentityWrapper,
+    ExplicitIdentityWrapperLazy,
+    _has_explicit_identity_memory,
+    _is_deterministically_hashable,
+    _is_not_primitive,
+)
 from ._messages import (
     Message,
     MessageDataProgram,
@@ -248,7 +254,9 @@ class PipelineProcess:
         if _is_deterministically_hashable(value) and _has_explicit_identity_memory(value):
             value = ExplicitIdentityWrapperLazy.existing(value)
         elif (
-            not _is_deterministically_hashable(value) and _is_not_primitive(value) and _has_explicit_identity_memory(value)
+            not _is_deterministically_hashable(value)
+            and _is_not_primitive(value)
+            and _has_explicit_identity_memory(value)
         ):
             value = ExplicitIdentityWrapper.existing(value)
         self._placeholder_map[placeholder_name] = value
