@@ -55,7 +55,7 @@ class PipelineManager:
 
     @cached_property
     def _process_pool(self) -> multiprocessing.Pool:
-        return multiprocessing.Pool(processes=multiprocessing.cpu_count(), maxtasksperchild=1)
+        return multiprocessing.Pool(processes=multiprocessing.cpu_count(), maxtasksperchild=None)
 
     @cached_property
     def _messages_queue_thread(self) -> threading.Thread:
