@@ -1,6 +1,7 @@
 """Module that contains the infrastructure for pipeline execution in child processes."""
 
 import asyncio
+import linecache
 import json
 import logging
 import multiprocessing
@@ -308,6 +309,7 @@ class PipelineProcess:
         except BaseException as error:  # noqa: BLE001
             self._send_exception(error)
         finally:
+            linecache.clearcache()
             pipeline_finder.detach()
 
     def _catch_subprocess_error(self, error: BaseException) -> None:
