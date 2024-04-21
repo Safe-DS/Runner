@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import multiprocessing
-import os
 import sys
 import time
 import typing
@@ -142,7 +141,8 @@ from safeds_runner.server._server import SafeDsServer
 )
 @pytest.mark.asyncio()
 async def test_should_fail_message_validation_ws(websocket_message: str) -> None:
-    test_client = SafeDsServer().app.test_client()
+    sds_server = SafeDsServer()
+    test_client = sds_server.app.test_client()
     async with test_client.websocket("/WSMain") as test_websocket:
         await test_websocket.send(websocket_message)
         disconnected = False
@@ -151,6 +151,7 @@ async def test_should_fail_message_validation_ws(websocket_message: str) -> None
         except WebsocketDisconnectError as _disconnect:
             disconnected = True
         assert disconnected
+    sds_server.app_pipeline_manager.shutdown()
 
 
 @pytest.mark.parametrize(
@@ -352,13 +353,6 @@ def test_should_fail_message_validation_reason_placeholder_query(
     assert invalid_message == exception_message
 
 
-@pytest.mark.skipif(
-    sys.platform.startswith("win") and os.getenv("COVERAGE_RCFILE") is not None,
-    reason=(
-        "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
-        "causes Manager to hang, when using multiprocessing coverage"
-    ),
-)
 @pytest.mark.parametrize(
     argnames="message,expected_response_runtime_error",
     argvalues=[
@@ -388,7 +382,8 @@ async def test_should_execute_pipeline_return_exception(
     message: str,
     expected_response_runtime_error: Message,
 ) -> None:
-    test_client = SafeDsServer().app.test_client()
+    sds_server = SafeDsServer()
+    test_client = sds_server.app.test_client()
     async with test_client.websocket("/WSMain") as test_websocket:
         await test_websocket.send(message)
         received_message = await test_websocket.receive()
@@ -404,15 +399,9 @@ async def test_should_execute_pipeline_return_exception(
             assert isinstance(frame["file"], str)
             assert "line" in frame
             assert isinstance(frame["line"], int)
+    sds_server.app_pipeline_manager.shutdown()
 
 
-@pytest.mark.skipif(
-    sys.platform.startswith("win") and os.getenv("COVERAGE_RCFILE") is not None,
-    reason=(
-        "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
-        "causes Manager to hang, when using multiprocessing coverage"
-    ),
-)
 @pytest.mark.parametrize(
     argnames="initial_messages,initial_execution_message_wait,appended_messages,expected_responses",
     argvalues=[
@@ -426,11 +415,15 @@ async def test_should_execute_pipeline_return_exception(
                             "code": {
                                 "": {
                                     "gen_test_a": (
-                                        "import safeds_runner\nimport base64\nfrom safeds.data.image.containers import Image\n\ndef pipe():\n\tvalue1 ="
+                                        "import safeds_runner\nimport base64\nfrom safeds.data.image.containers import Image\nfrom safeds.data.tabular.containers import Table\nimport safeds_runner\nfrom safeds_runner.server._json_encoder import SafeDsEncoder\n\ndef pipe():\n\tvalue1 ="
                                         " 1\n\tsafeds_runner.save_placeholder('value1',"
                                         " value1)\n\tsafeds_runner.save_placeholder('obj',"
                                         " object())\n\tsafeds_runner.save_placeholder('image',"
-                                        " Image.from_bytes(base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC')))\n"
+                                        " Image.from_bytes(base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC')))\n\t"
+                                        "table = safeds_runner.memoized_static_call(\"safeds.data.tabular.containers.Table.from_dict\", Table.from_dict, [{'a': [1, 2], 'b': [3, 4]}], [])\n\t"
+                                        "safeds_runner.save_placeholder('table',table)\n\t"
+                                        'object_mem = safeds_runner.memoized_static_call("random.object.call", SafeDsEncoder, [], [])\n\t'
+                                        "safeds_runner.save_placeholder('object_mem',object_mem)\n"
                                     ),
                                     "gen_test_a_pipe": (
                                         "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()"
@@ -442,10 +435,12 @@ async def test_should_execute_pipeline_return_exception(
                     },
                 ),
             ],
-            4,
+            6,
             [
                 # Query Placeholder
                 json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": {"name": "value1", "window": {}}}),
+                # Query Placeholder (memoized type)
+                json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": {"name": "table", "window": {}}}),
                 # Query not displayable Placeholder
                 json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": {"name": "obj", "window": {}}}),
                 # Query invalid placeholder
@@ -456,6 +451,12 @@ async def test_should_execute_pipeline_return_exception(
                 Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("value1", "Int")),
                 Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("obj", "object")),
                 Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("image", "Image")),
+                Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("table", "Table")),
+                Message(
+                    message_type_placeholder_type,
+                    "abcdefg",
+                    create_placeholder_description("object_mem", "SafeDsEncoder"),
+                ),
                 # Validate Progress Information
                 Message(message_type_runtime_progress, "abcdefg", create_runtime_progress_done()),
                 # Query Result Valid
@@ -463,6 +464,12 @@ async def test_should_execute_pipeline_return_exception(
                     message_type_placeholder_value,
                     "abcdefg",
                     create_placeholder_value(MessageQueryInformation("value1"), "Int", 1),
+                ),
+                # Query Result Valid (memoized)
+                Message(
+                    message_type_placeholder_value,
+                    "abcdefg",
+                    create_placeholder_value(MessageQueryInformation("table"), "Table", {"a": [1, 2], "b": [3, 4]}),
                 ),
                 # Query Result not displayable
                 Message(
@@ -489,7 +496,8 @@ async def test_should_execute_pipeline_return_valid_placeholder(
     expected_responses: list[Message],
 ) -> None:
     # Initial execution
-    test_client = SafeDsServer().app.test_client()
+    sds_server = SafeDsServer()
+    test_client = sds_server.app.test_client()
     async with test_client.websocket("/WSMain") as test_websocket:
         for message in initial_messages:
             await test_websocket.send(message)
@@ -506,15 +514,9 @@ async def test_should_execute_pipeline_return_valid_placeholder(
             received_message = await test_websocket.receive()
             next_message = Message.from_dict(json.loads(received_message))
             assert next_message == expected_responses.pop(0)
+    sds_server.app_pipeline_manager.shutdown()
 
 
-@pytest.mark.skipif(
-    sys.platform.startswith("win") and os.getenv("COVERAGE_RCFILE") is not None,
-    reason=(
-        "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
-        "causes Manager to hang, when using multiprocessing coverage"
-    ),
-)
 @pytest.mark.parametrize(
     argnames="messages,expected_response",
     argvalues=[
@@ -576,22 +578,17 @@ async def test_should_execute_pipeline_return_valid_placeholder(
 )
 @pytest.mark.asyncio()
 async def test_should_successfully_execute_simple_flow(messages: list[str], expected_response: Message) -> None:
-    test_client = SafeDsServer().app.test_client()
+    sds_server = SafeDsServer()
+    test_client = sds_server.app.test_client()
     async with test_client.websocket("/WSMain") as test_websocket:
         for message in messages:
             await test_websocket.send(message)
         received_message = await test_websocket.receive()
         query_result_invalid = Message.from_dict(json.loads(received_message))
         assert query_result_invalid == expected_response
+    sds_server.app_pipeline_manager.shutdown()
 
 
-@pytest.mark.skipif(
-    sys.platform.startswith("win") and os.getenv("COVERAGE_RCFILE") is not None,
-    reason=(
-        "skipping multiprocessing tests on windows if coverage is enabled, as pytest "
-        "causes Manager to hang, when using multiprocessing coverage"
-    ),
-)
 @pytest.mark.parametrize(
     argnames="messages",
     argvalues=[
@@ -613,10 +610,12 @@ def helper_should_shut_itself_down_run_in_subprocess(sub_messages: list[str]) ->
 
 
 async def helper_should_shut_itself_down_run_in_subprocess_async(sub_messages: list[str]) -> None:
-    test_client = SafeDsServer().app.test_client()
+    sds_server = SafeDsServer()
+    test_client = sds_server.app.test_client()
     async with test_client.websocket("/WSMain") as test_websocket:
         for message in sub_messages:
             await test_websocket.send(message)
+    sds_server.app_pipeline_manager.shutdown()
 
 
 @pytest.mark.timeout(45)

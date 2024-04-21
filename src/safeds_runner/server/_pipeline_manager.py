@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import linecache
 import logging
 import multiprocessing
 import os
@@ -9,6 +10,7 @@ import queue
 import runpy
 import threading
 import typing
+from concurrent.futures import ProcessPoolExecutor
 from functools import cached_property
 from multiprocessing.managers import SyncManager
 from pathlib import Path
@@ -17,6 +19,13 @@ from typing import Any
 import stack_data
 
 from ._memoization_map import MemoizationMap
+from ._memoization_utils import (
+    ExplicitIdentityWrapper,
+    ExplicitIdentityWrapperLazy,
+    _has_explicit_identity_memory,
+    _is_deterministically_hashable,
+    _is_not_primitive,
+)
 from ._messages import (
     Message,
     MessageDataProgram,
@@ -54,6 +63,10 @@ class PipelineManager:
         return self._multiprocessing_manager.Queue()
 
     @cached_property
+    def _process_pool(self) -> ProcessPoolExecutor:
+        return ProcessPoolExecutor(max_workers=4, mp_context=multiprocessing.get_context("spawn"))
+
+    @cached_property
     def _messages_queue_thread(self) -> threading.Thread:
         return threading.Thread(target=self._handle_queue_messages, daemon=True, args=(asyncio.get_event_loop(),))
 
@@ -75,6 +88,8 @@ class PipelineManager:
         _mq = self._messages_queue  # Initialize it here before starting a thread to avoid potential race condition
         if not self._messages_queue_thread.is_alive():
             self._messages_queue_thread.start()
+        # Ensure that pool is started
+        _pool = self._process_pool
 
     def _handle_queue_messages(self, event_loop: asyncio.AbstractEventLoop) -> None:
         """
@@ -144,7 +159,7 @@ class PipelineManager:
             self._placeholder_map[execution_id],
             self._memoization_map,
         )
-        process.execute()
+        process.execute(self._process_pool)
 
     def get_placeholder(self, execution_id: str, placeholder_name: str) -> tuple[str | None, Any]:
         """
@@ -167,6 +182,8 @@ class PipelineManager:
         if placeholder_name not in self._placeholder_map[execution_id]:
             return None, None
         value = self._placeholder_map[execution_id][placeholder_name]
+        if isinstance(value, ExplicitIdentityWrapper | ExplicitIdentityWrapperLazy):
+            value = value.value
         return _get_placeholder_type(value), value
 
     def shutdown(self) -> None:
@@ -176,6 +193,7 @@ class PipelineManager:
         This should only be called if this PipelineManager is not intended to be reused again.
         """
         self._multiprocessing_manager.shutdown()
+        self._process_pool.shutdown(wait=True, cancel_futures=True)
 
 
 class PipelineProcess:
@@ -210,7 +228,6 @@ class PipelineProcess:
         self._messages_queue = messages_queue
         self._placeholder_map = placeholder_map
         self._memoization_map = memoization_map
-        self._process = multiprocessing.Process(target=self._execute, daemon=True)
 
     def _send_message(self, message_type: str, value: dict[Any, Any] | str) -> None:
         self._messages_queue.put(Message(message_type, self._id, value))
@@ -236,8 +253,16 @@ class PipelineProcess:
             import torch
 
             value = Image(value._image_tensor, torch.device("cpu"))
-        self._placeholder_map[placeholder_name] = value
         placeholder_type = _get_placeholder_type(value)
+        if _is_deterministically_hashable(value) and _has_explicit_identity_memory(value):
+            value = ExplicitIdentityWrapperLazy.existing(value)
+        elif (
+            not _is_deterministically_hashable(value)
+            and _is_not_primitive(value)
+            and _has_explicit_identity_memory(value)
+        ):
+            value = ExplicitIdentityWrapper.existing(value)
+        self._placeholder_map[placeholder_name] = value
         self._send_message(
             message_type_placeholder_type,
             create_placeholder_description(placeholder_name, placeholder_type),
@@ -284,15 +309,23 @@ class PipelineProcess:
         except BaseException as error:  # noqa: BLE001
             self._send_exception(error)
         finally:
+            linecache.clearcache()
             pipeline_finder.detach()
 
-    def execute(self) -> None:
+    def _catch_subprocess_error(self, error: BaseException) -> None:
+        # This is a callback to log an unexpected failure, executing this is never expected
+        logging.exception("Pipeline process unexpectedly failed", exc_info=error)  # pragma: no cover
+
+    def execute(self, pool: ProcessPoolExecutor) -> None:
         """
-        Execute this pipeline in a newly created process.
+        Execute this pipeline in a process from the provided process pool.
 
         Results, progress and errors are communicated back to the main process.
         """
-        self._process.start()
+        future = pool.submit(self._execute)
+        exception = future.exception()
+        if exception is not None:
+            self._catch_subprocess_error(exception)  # pragma: no cover
 
 
 # Pipeline process object visible in child process
