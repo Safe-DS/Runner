@@ -9,6 +9,7 @@ import queue
 import runpy
 import threading
 import typing
+from concurrent.futures import ProcessPoolExecutor
 from functools import cached_property
 from multiprocessing.managers import SyncManager
 from pathlib import Path
@@ -61,8 +62,8 @@ class PipelineManager:
         return self._multiprocessing_manager.Queue()
 
     @cached_property
-    def _process_pool(self) -> multiprocessing.pool.Pool:
-        return multiprocessing.pool.Pool(processes=4, maxtasksperchild=None)
+    def _process_pool(self) -> ProcessPoolExecutor:
+        return ProcessPoolExecutor(max_workers=4, mp_context=multiprocessing.get_context("spawn"))
 
     @cached_property
     def _messages_queue_thread(self) -> threading.Thread:
@@ -191,8 +192,7 @@ class PipelineManager:
         This should only be called if this PipelineManager is not intended to be reused again.
         """
         self._multiprocessing_manager.shutdown()
-        self._process_pool.close()
-        self._process_pool.join()
+        self._process_pool.shutdown(wait=True, cancel_futures=True)
 
 
 class PipelineProcess:
@@ -314,13 +314,16 @@ class PipelineProcess:
         # This is a callback to log an unexpected failure, executing this is never expected
         logging.exception("Pipeline process unexpectedly failed", exc_info=error)  # pragma: no cover
 
-    def execute(self, pool: multiprocessing.pool.Pool) -> None:
+    def execute(self, pool: ProcessPoolExecutor) -> None:
         """
         Execute this pipeline in a process from the provided process pool.
 
         Results, progress and errors are communicated back to the main process.
         """
-        pool.apply_async(func=self._execute, error_callback=self._catch_subprocess_error)
+        future = pool.submit(self._execute)
+        exception = future.exception()
+        if exception is not None:
+            self._catch_subprocess_error(exception)  # pragma: no cover
 
 
 # Pipeline process object visible in child process
