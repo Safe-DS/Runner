@@ -1,8 +1,8 @@
 """Module that contains the infrastructure for pipeline execution in child processes."""
 
 import asyncio
-import linecache
 import json
+import linecache
 import logging
 import multiprocessing
 import os
