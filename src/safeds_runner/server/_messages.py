@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import dataclasses
-import json
-from dataclasses import dataclass
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -28,7 +26,7 @@ message_types = [
 ]
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class Message:
     """
     A message object, which is exchanged between the runner and the VS Code extension.
@@ -279,35 +277,3 @@ def create_runtime_progress_done() -> str:
         Message data of "runtime_progress" messages.
     """
     return "done"
-
-
-def parse_validate_message(message: str) -> tuple[Message | None, str | None, str | None]:
-    """
-    Validate the basic structure of a received message string and return a parsed message object.
-
-    Parameters
-    ----------
-    message:
-        Message string, that should be in JSON format.
-
-    Returns
-    -------
-    message_or_error:
-        A tuple containing either a message or a detailed error description and a short error message.
-    """
-    try:
-        message_dict: dict[str, Any] = json.loads(message)
-    except json.JSONDecodeError:
-        return None, f"Invalid message received: {message}", "Invalid Message: not JSON"
-    if "type" not in message_dict:
-        return None, f"No message type specified in: {message}", "Invalid Message: no type"
-    elif "id" not in message_dict:
-        return None, f"No message id specified in: {message}", "Invalid Message: no id"
-    elif "data" not in message_dict:
-        return None, f"No message data specified in: {message}", "Invalid Message: no data"
-    elif not isinstance(message_dict["type"], str):
-        return None, f"Message type is not a string: {message}", "Invalid Message: invalid type"
-    elif not isinstance(message_dict["id"], str):
-        return None, f"Message id is not a string: {message}", "Invalid Message: invalid id"
-    else:
-        return Message(**message_dict), None, None

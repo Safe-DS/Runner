@@ -18,10 +18,10 @@ safe-ds-runner = "safeds_runner.main:main"
 [tool.poetry.dependencies]
 python = "^3.11,<3.13"
 safe-ds = ">=0.20,<0.22"
-hypercorn = "^0.16.0"
 psutil = "^5.9.8"
 pydantic = "^2.7.0"
-quart = "^0.19.4"
+python-socketio = "^5.11.2"
+uvicorn = "^0.29.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8.1.1"

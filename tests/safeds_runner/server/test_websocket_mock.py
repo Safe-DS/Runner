@@ -28,7 +28,6 @@ from safeds_runner.server._messages import (
     message_type_placeholder_value,
     message_type_runtime_error,
     message_type_runtime_progress,
-    parse_validate_message,
 )
 from safeds_runner.server._server import SafeDsServer
 
@@ -157,31 +156,7 @@ async def test_should_fail_message_validation_ws(websocket_message: str) -> None
         except WebsocketDisconnectError as _disconnect:
             disconnected = True
         assert disconnected
-    sds_server.shutdown()
-
-
-@pytest.mark.parametrize(
-    argnames="websocket_message,exception_message",
-    argvalues=[
-        ("<invalid message>", "Invalid Message: not JSON"),
-        (json.dumps({"id": "a", "data": "b"}), "Invalid Message: no type"),
-        (json.dumps({"type": "a", "data": "b"}), "Invalid Message: no id"),
-        (json.dumps({"type": "b", "id": "123"}), "Invalid Message: no data"),
-        (json.dumps({"type": {"program": "2"}, "id": "123", "data": "a"}), "Invalid Message: invalid type"),
-        (json.dumps({"type": "c", "id": {"": "1233"}, "data": "a"}), "Invalid Message: invalid id"),
-    ],
-    ids=[
-        "no_json",
-        "any_no_type",
-        "any_no_id",
-        "any_no_data",
-        "any_invalid_type",
-        "any_invalid_id",
-    ],
-)
-def test_should_fail_message_validation_reason_general(websocket_message: str, exception_message: str) -> None:
-    received_object, error_detail, error_short = parse_validate_message(websocket_message)
-    assert error_short == exception_message
+    await sds_server.shutdown()
 
 
 @pytest.mark.parametrize(
@@ -332,7 +307,7 @@ async def test_should_execute_pipeline_return_exception(
             assert isinstance(frame["file"], str)
             assert "line" in frame
             assert isinstance(frame["line"], int)
-    sds_server.shutdown()
+    await sds_server.shutdown()
 
 
 @pytest.mark.parametrize(
@@ -447,7 +422,7 @@ async def test_should_execute_pipeline_return_valid_placeholder(
             received_message = await test_websocket.receive()
             next_message = Message.from_dict(json.loads(received_message))
             assert next_message == expected_responses.pop(0)
-    sds_server.shutdown()
+    await sds_server.shutdown()
 
 
 @pytest.mark.parametrize(
@@ -519,7 +494,7 @@ async def test_should_successfully_execute_simple_flow(messages: list[str], expe
         received_message = await test_websocket.receive()
         query_result_invalid = Message.from_dict(json.loads(received_message))
         assert query_result_invalid == expected_response
-    sds_server.shutdown()
+    await sds_server.shutdown()
 
 
 @pytest.mark.parametrize(
@@ -548,7 +523,7 @@ async def helper_should_shut_itself_down_run_in_subprocess_async(sub_messages: l
     async with test_client.websocket("/WSMain") as test_websocket:
         for message in sub_messages:
             await test_websocket.send(message)
-    sds_server.shutdown()
+    await sds_server.shutdown()
 
 
 @pytest.mark.timeout(45)
