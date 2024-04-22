@@ -28,7 +28,7 @@ from ._memoization_utils import (
 )
 from ._messages import (
     Message,
-    MessageDataProgram,
+    ProgramMessageData,
     create_placeholder_description,
     create_runtime_error_description,
     create_runtime_progress_done,
@@ -136,7 +136,7 @@ class PipelineManager:
 
     def execute_pipeline(
         self,
-        pipeline: MessageDataProgram,
+        pipeline: ProgramMessageData,
         execution_id: str,
     ) -> None:
         """
@@ -144,7 +144,7 @@ class PipelineManager:
 
         Parameters
         ----------
-        pipeline : MessageDataProgram
+        pipeline : ProgramMessageData
             Message object that contains the information to run a pipeline.
         execution_id : str
             Unique ID to identify this execution.
@@ -201,7 +201,7 @@ class PipelineProcess:
 
     def __init__(
         self,
-        pipeline: MessageDataProgram,
+        pipeline: ProgramMessageData,
         execution_id: str,
         messages_queue: queue.Queue[Message],
         placeholder_map: dict[str, Any],
@@ -212,7 +212,7 @@ class PipelineProcess:
 
         Parameters
         ----------
-        pipeline : MessageDataProgram
+        pipeline : ProgramMessageData
             Message object that contains the information to run a pipeline.
         execution_id : str
             Unique ID to identify this process.

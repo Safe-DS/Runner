@@ -22,7 +22,7 @@ from safeds_runner.server._memoization_strategies import (
     StatOrderExtractor,
 )
 from safeds_runner.server._memoization_utils import _make_hashable
-from safeds_runner.server._messages import MessageDataProgram, ProgramMainInformation
+from safeds_runner.server._messages import ProgramMessageData, ProgramMessageMainInformation
 from safeds_runner.server._pipeline_manager import (
     PipelineProcess,
     absolute_path,
@@ -52,7 +52,7 @@ def test_memoization_static_already_present_values(
     expected_result: Any,
 ) -> None:
     _pipeline_manager.current_pipeline = PipelineProcess(
-        MessageDataProgram({}, ProgramMainInformation("", "", "")),
+        ProgramMessageData(code={}, main=ProgramMessageMainInformation(modulepath="", module="", pipeline="")),
         "",
         Queue(),
         {},
@@ -93,7 +93,7 @@ def test_memoization_static_not_present_values(
     expected_result: Any,
 ) -> None:
     _pipeline_manager.current_pipeline = PipelineProcess(
-        MessageDataProgram({}, ProgramMainInformation("", "", "")),
+        ProgramMessageData(code={}, main=ProgramMessageMainInformation(modulepath="", module="", pipeline="")),
         "",
         Queue(),
         {},
@@ -147,7 +147,7 @@ def test_memoization_dynamic(
     expected_result: Any,
 ) -> None:
     _pipeline_manager.current_pipeline = PipelineProcess(
-        MessageDataProgram({}, ProgramMainInformation("", "", "")),
+        ProgramMessageData(code={}, main=ProgramMessageMainInformation(modulepath="", module="", pipeline="")),
         "",
         Queue(),
         {},
@@ -191,7 +191,7 @@ def test_memoization_dynamic_contains_correct_fully_qualified_name(
     fully_qualified_function_name: Any,
 ) -> None:
     _pipeline_manager.current_pipeline = PipelineProcess(
-        MessageDataProgram({}, ProgramMainInformation("", "", "")),
+        ProgramMessageData(code={}, main=ProgramMessageMainInformation(modulepath="", module="", pipeline="")),
         "",
         Queue(),
         {},
@@ -226,7 +226,7 @@ def test_memoization_dynamic_not_base_name(
     fully_qualified_function_name: Any,
 ) -> None:
     _pipeline_manager.current_pipeline = PipelineProcess(
-        MessageDataProgram({}, ProgramMainInformation("", "", "")),
+        ProgramMessageData(code={}, main=ProgramMessageMainInformation(modulepath="", module="", pipeline="")),
         "",
         Queue(),
         {},
@@ -256,7 +256,7 @@ def test_memoization_static_unhashable_values(
     expected_result: Any,
 ) -> None:
     _pipeline_manager.current_pipeline = PipelineProcess(
-        MessageDataProgram({}, ProgramMainInformation("", "", "")),
+        ProgramMessageData(code={}, main=ProgramMessageMainInformation(modulepath="", module="", pipeline="")),
         "",
         Queue(),
         {},
@@ -457,7 +457,7 @@ def test_memoization_limited_static_not_present_values(
     )
     memo_map.max_size = 45
     _pipeline_manager.current_pipeline = PipelineProcess(
-        MessageDataProgram({}, ProgramMainInformation("", "", "")),
+        ProgramMessageData(code={}, main=ProgramMessageMainInformation(modulepath="", module="", pipeline="")),
         "",
         Queue(),
         {},
