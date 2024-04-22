@@ -1,3 +1,11 @@
+## [0.12.0](https://github.com/Safe-DS/Runner/compare/v0.11.0...v0.12.0) (2024-04-22)
+
+
+### Features
+
+* handle list of filenames in `absolute_path` and `file_mtime` ([#89](https://github.com/Safe-DS/Runner/issues/89)) ([50d831f](https://github.com/Safe-DS/Runner/commit/50d831fb2ed5381e4d4f5bf291431dcf3b7edd07)), closes [#88](https://github.com/Safe-DS/Runner/issues/88)
+* prepare and pool processes ([#87](https://github.com/Safe-DS/Runner/issues/87)) ([e5e7011](https://github.com/Safe-DS/Runner/commit/e5e7011eca50a49acd7f8c0ca937ad43faf393e6)), closes [#85](https://github.com/Safe-DS/Runner/issues/85)
+
 ## [0.11.0](https://github.com/Safe-DS/Runner/compare/v0.10.0...v0.11.0) (2024-04-17)
 
 
