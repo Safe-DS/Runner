@@ -209,8 +209,8 @@ def test_should_fail_message_validation_reason_general(websocket_message: str, e
         ),
         (
             {
-                    "code": {"": {"entry": ""}},
-                    "main": {"modulepath": "1", "module": "2", "pipeline": "3", "other": "4"},
+                "code": {"": {"entry": ""}},
+                "main": {"modulepath": "1", "module": "2", "pipeline": "3", "other": "4"},
             },
             re.compile(r"main.other[\s\S]*extra_forbidden"),
         ),

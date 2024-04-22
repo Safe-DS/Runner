@@ -1,7 +1,6 @@
 """Module containing the server, endpoints and utility functions."""
 
 import asyncio
-import dataclasses
 import json
 import logging
 import sys
