@@ -1,21 +1,26 @@
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
 import multiprocessing
+import re
 import sys
 import time
-import typing
+from typing import TYPE_CHECKING, Any
 
 import pytest
 import safeds_runner.server.main
 import simple_websocket
+from pydantic import ValidationError
 from quart.testing.connections import WebsocketDisconnectError
 from safeds.data.tabular.containers import Table
 from safeds_runner.server._json_encoder import SafeDsEncoder
 from safeds_runner.server._messages import (
     Message,
-    MessageQueryInformation,
-    QueryWindow,
+    ProgramMessageData,
+    QueryMessageData,
+    QueryMessageWindow,
     create_placeholder_description,
     create_placeholder_value,
     create_runtime_progress_done,
@@ -24,10 +29,11 @@ from safeds_runner.server._messages import (
     message_type_runtime_error,
     message_type_runtime_progress,
     parse_validate_message,
-    validate_placeholder_query_message_data,
-    validate_program_message_data,
 )
 from safeds_runner.server._server import SafeDsServer
+
+if TYPE_CHECKING:
+    from regex import Regex
 
 
 @pytest.mark.parametrize(
@@ -179,178 +185,105 @@ def test_should_fail_message_validation_reason_general(websocket_message: str, e
 
 
 @pytest.mark.parametrize(
-    argnames="websocket_message,exception_message",
+    argnames=["data", "exception_regex"],
     argvalues=[
-        (json.dumps({"type": "program", "id": "1234", "data": "a"}), "Message data is not a JSON object"),
         (
-            json.dumps(
-                {
-                    "type": "program",
-                    "id": "1234",
-                    "data": {"main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
-                },
-            ),
-            "No 'code' parameter given",
+            {"main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
+            re.compile(r"code[\s\S]*missing"),
         ),
         (
-            json.dumps({"type": "program", "id": "1234", "data": {"code": {"": {"entry": ""}}}}),
-            "No 'main' parameter given",
+            {"code": {"": {"entry": ""}}},
+            re.compile(r"main[\s\S]*missing"),
         ),
         (
-            json.dumps(
-                {
-                    "type": "program",
-                    "id": "1234",
-                    "data": {"code": {"": {"entry": ""}}, "main": {"modulepath": "1", "module": "2"}},
-                },
-            ),
-            "Invalid 'main' parameter given",
+            {"code": {"": {"entry": ""}}, "main": {"modulepath": "1", "module": "2"}},
+            re.compile(r"main.pipeline[\s\S]*missing"),
         ),
         (
-            json.dumps(
-                {
-                    "type": "program",
-                    "id": "1234",
-                    "data": {"code": {"": {"entry": ""}}, "main": {"modulepath": "1", "pipeline": "3"}},
-                },
-            ),
-            "Invalid 'main' parameter given",
+            {"code": {"": {"entry": ""}}, "main": {"modulepath": "1", "pipeline": "3"}},
+            re.compile(r"main.module[\s\S]*missing"),
         ),
         (
-            json.dumps(
-                {
-                    "type": "program",
-                    "id": "1234",
-                    "data": {"code": {"": {"entry": ""}}, "main": {"module": "2", "pipeline": "3"}},
-                },
-            ),
-            "Invalid 'main' parameter given",
+            {"code": {"": {"entry": ""}}, "main": {"module": "2", "pipeline": "3"}},
+            re.compile(r"main.modulepath[\s\S]*missing"),
         ),
         (
-            json.dumps(
-                {
-                    "type": "program",
-                    "id": "1234",
-                    "data": {
-                        "code": {"": {"entry": ""}},
-                        "main": {"modulepath": "1", "module": "2", "pipeline": "3", "other": "4"},
-                    },
-                },
-            ),
-            "Invalid 'main' parameter given",
+            {
+                "code": {"": {"entry": ""}},
+                "main": {"modulepath": "1", "module": "2", "pipeline": "3", "other": "4"},
+            },
+            re.compile(r"main.other[\s\S]*extra_forbidden"),
         ),
         (
-            json.dumps(
-                {
-                    "type": "program",
-                    "id": "1234",
-                    "data": {
-                        "code": {"": {"entry": ""}},
-                        "main": {"modulepath": "1", "module": "2", "pipeline": "3", "other": {"4": "a"}},
-                    },
-                },
-            ),
-            "Invalid 'main' parameter given",
+            {"code": "a", "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
+            re.compile(r"code[\s\S]*dict_type"),
         ),
         (
-            json.dumps(
-                {
-                    "type": "program",
-                    "id": "1234",
-                    "data": {"code": "a", "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
-                },
-            ),
-            "Invalid 'code' parameter given",
+            {"code": {"a": "n"}, "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
+            re.compile(r"code\.a[\s\S]*dict_type"),
         ),
         (
-            json.dumps(
-                {
-                    "type": "program",
-                    "id": "1234",
-                    "data": {"code": {"": "a"}, "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
-                },
-            ),
-            "Invalid 'code' parameter given",
+            {
+                "code": {"a": {"b": {"c": "d"}}},
+                "main": {"modulepath": "1", "module": "2", "pipeline": "3"},
+            },
+            re.compile(r"code\.a\.b[\s\S]*string_type"),
         ),
         (
-            json.dumps(
-                {
-                    "type": "program",
-                    "id": "1234",
-                    "data": {
-                        "code": {"": {"a": {"b": "c"}}},
-                        "main": {"modulepath": "1", "module": "2", "pipeline": "3"},
-                    },
-                },
-            ),
-            "Invalid 'code' parameter given",
-        ),
-        (
-            json.dumps(
-                {
-                    "type": "program",
-                    "id": "1234",
-                    "data": {
-                        "code": {},
-                        "main": {"modulepath": "1", "module": "2", "pipeline": "3"},
-                        "cwd": 1,
-                    },
-                },
-            ),
-            "Invalid 'cwd' parameter given",
+            {
+                "code": {},
+                "main": {"modulepath": "1", "module": "2", "pipeline": "3"},
+                "cwd": 1,
+            },
+            re.compile(r"cwd[\s\S]*string_type"),
         ),
     ],
     ids=[
-        "program_invalid_data",
         "program_no_code",
         "program_no_main",
         "program_invalid_main1",
         "program_invalid_main2",
         "program_invalid_main3",
         "program_invalid_main4",
-        "program_invalid_main5",
         "program_invalid_code1",
         "program_invalid_code2",
         "program_invalid_code3",
         "program_invalid_cwd",
     ],
 )
-def test_should_fail_message_validation_reason_program(websocket_message: str, exception_message: str) -> None:
-    received_object, error_detail, error_short = parse_validate_message(websocket_message)
-    assert received_object is not None
-    program_data, invalid_message = validate_program_message_data(received_object.data)
-    assert invalid_message == exception_message
+def test_should_fail_message_validation_reason_program(data: dict[str, Any], exception_regex: str) -> None:
+    with pytest.raises(ValidationError, match=exception_regex):
+        ProgramMessageData(**data)
 
 
 @pytest.mark.parametrize(
-    argnames="websocket_message,exception_message",
+    argnames=["data", "exception_regex"],
     argvalues=[
-        (json.dumps({"type": "placeholder_query", "id": "123", "data": "abc"}), "Message data is not a JSON object"),
-        (json.dumps({"type": "placeholder_query", "id": "123", "data": {"a": "v"}}), "No 'name' parameter given"),
         (
-            json.dumps({"type": "placeholder_query", "id": "123", "data": {"name": "v", "window": {"begin": "a"}}}),
-            "Invalid 'window'.'begin' parameter given",
+            {"a": "v"},
+            re.compile(r"name[\s\S]*missing"),
         ),
         (
-            json.dumps({"type": "placeholder_query", "id": "123", "data": {"name": "v", "window": {"size": "a"}}}),
-            "Invalid 'window'.'size' parameter given",
+            {"name": "v", "window": {"begin": "a"}},
+            re.compile(r"window.begin[\s\S]*int_parsing"),
+        ),
+        (
+            {"name": "v", "window": {"size": "a"}},
+            re.compile(r"window.size[\s\S]*int_parsing"),
         ),
     ],
     ids=[
-        "placeholder_query_invalid_data1",
-        "placeholder_query_invalid_data2",
-        "placeholder_query_invalid_data3",
-        "placeholder_query_invalid_data4",
+        "missing_name",
+        "wrong_type_begin",
+        "wrong_type_size",
     ],
 )
 def test_should_fail_message_validation_reason_placeholder_query(
-    websocket_message: str,
-    exception_message: str,
+    data: dict[str, Any],
+    exception_regex: Regex,
 ) -> None:
-    received_object, error_detail, error_short = parse_validate_message(websocket_message)
-    assert received_object is not None
-    program_data, invalid_message = validate_placeholder_query_message_data(received_object.data)
-    assert invalid_message == exception_message
+    with pytest.raises(ValidationError, match=exception_regex):
+        QueryMessageData(**data)
 
 
 @pytest.mark.parametrize(
@@ -463,25 +396,25 @@ async def test_should_execute_pipeline_return_exception(
                 Message(
                     message_type_placeholder_value,
                     "abcdefg",
-                    create_placeholder_value(MessageQueryInformation("value1"), "Int", 1),
+                    create_placeholder_value(QueryMessageData(name="value1"), "Int", 1),
                 ),
                 # Query Result Valid (memoized)
                 Message(
                     message_type_placeholder_value,
                     "abcdefg",
-                    create_placeholder_value(MessageQueryInformation("table"), "Table", {"a": [1, 2], "b": [3, 4]}),
+                    create_placeholder_value(QueryMessageData(name="table"), "Table", {"a": [1, 2], "b": [3, 4]}),
                 ),
                 # Query Result not displayable
                 Message(
                     message_type_placeholder_value,
                     "abcdefg",
-                    create_placeholder_value(MessageQueryInformation("obj"), "object", "<Not displayable>"),
+                    create_placeholder_value(QueryMessageData(name="obj"), "object", "<Not displayable>"),
                 ),
                 # Query Result Invalid
                 Message(
                     message_type_placeholder_value,
                     "abcdefg",
-                    create_placeholder_value(MessageQueryInformation("value2"), "", ""),
+                    create_placeholder_value(QueryMessageData(name="value2"), "", ""),
                 ),
             ],
         ),
@@ -570,7 +503,7 @@ async def test_should_execute_pipeline_return_valid_placeholder(
             Message(
                 message_type_placeholder_value,
                 "unknown-code-id-never-generated",
-                create_placeholder_value(MessageQueryInformation("v"), "", ""),
+                create_placeholder_value(QueryMessageData(name="v"), "", ""),
             ),
         ),
     ],
@@ -667,13 +600,13 @@ def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
     argnames="query,type_,value,result",
     argvalues=[
         (
-            MessageQueryInformation("name"),
+            QueryMessageData(name="name"),
             "Table",
             Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
             '{"name": "name", "type": "Table", "value": {"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}}',
         ),
         (
-            MessageQueryInformation("name", QueryWindow(0, 1)),
+            QueryMessageData(name="name", window=QueryMessageWindow(begin=0, size=1)),
             "Table",
             Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
             (
@@ -682,7 +615,7 @@ def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
             ),
         ),
         (
-            MessageQueryInformation("name", QueryWindow(4, 3)),
+            QueryMessageData(name="name", window=QueryMessageWindow(begin=4, size=3)),
             "Table",
             Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
             (
@@ -691,7 +624,7 @@ def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
             ),
         ),
         (
-            MessageQueryInformation("name", QueryWindow(0, 0)),
+            QueryMessageData(name="name", window=QueryMessageWindow(begin=0, size=0)),
             "Table",
             Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
             (
@@ -700,7 +633,7 @@ def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
             ),
         ),
         (
-            MessageQueryInformation("name", QueryWindow(4, 30)),
+            QueryMessageData(name="name", window=QueryMessageWindow(begin=4, size=30)),
             "Table",
             Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
             (
@@ -709,7 +642,7 @@ def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
             ),
         ),
         (
-            MessageQueryInformation("name", QueryWindow(4, None)),
+            QueryMessageData(name="name", window=QueryMessageWindow(begin=4, size=None)),
             "Table",
             Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
             (
@@ -718,7 +651,7 @@ def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
             ),
         ),
         (
-            MessageQueryInformation("name", QueryWindow(0, -5)),
+            QueryMessageData(name="name", window=QueryMessageWindow(begin=0, size=-5)),
             "Table",
             Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
             (
@@ -727,7 +660,7 @@ def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
             ),
         ),
         (
-            MessageQueryInformation("name", QueryWindow(-5, None)),
+            QueryMessageData(name="name", window=QueryMessageWindow(begin=-5, size=None)),
             "Table",
             Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
             (
@@ -747,7 +680,7 @@ def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
         "query_windowed_negative_offset",
     ],
 )
-def test_windowed_placeholder(query: MessageQueryInformation, type_: str, value: typing.Any, result: str) -> None:
+def test_windowed_placeholder(query: QueryMessageData, type_: str, value: Any, result: str) -> None:
     message = create_placeholder_value(query, type_, value)
     assert json.dumps(message, cls=SafeDsEncoder) == result
 

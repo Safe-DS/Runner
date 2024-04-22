@@ -7,16 +7,17 @@ import sys
 
 import hypercorn.asyncio
 import quart.app
+from pydantic import ValidationError
 
 from ._json_encoder import SafeDsEncoder
 from ._messages import (
     Message,
+    ProgramMessageData,
+    QueryMessageData,
     create_placeholder_value,
     message_type_placeholder_value,
     message_types,
     parse_validate_message,
-    validate_placeholder_query_message_data,
-    validate_program_message_data,
 )
 from ._pipeline_manager import PipelineManager
 
@@ -110,26 +111,29 @@ class SafeDsServer:
                     pipeline_manager.shutdown()
                     sys.exit(0)
                 case "program":
-                    program_data, invalid_message = validate_program_message_data(received_object.data)
-                    if program_data is None:
-                        logging.error("Invalid message data specified in: %s (%s)", received_message, invalid_message)
+                    try:
+                        program_data = ProgramMessageData(**received_object.data)
+                    except ValidationError as validation_error:
+                        logging.exception("Invalid message data specified in: %s", received_message)
                         await output_queue.put(None)
                         pipeline_manager.disconnect(output_queue)
-                        await ws.close(code=1000, reason=invalid_message)
+                        await ws.close(code=1000, reason=str(validation_error))
                         return
+
                     # This should only be called from the extension as it is a security risk
                     pipeline_manager.execute_pipeline(program_data, received_object.id)
                 case "placeholder_query":
                     # For this query, a response can be directly sent to the requesting connection
-                    placeholder_query_data, invalid_message = validate_placeholder_query_message_data(
-                        received_object.data,
-                    )
-                    if placeholder_query_data is None:
-                        logging.error("Invalid message data specified in: %s (%s)", received_message, invalid_message)
+
+                    try:
+                        placeholder_query_data = QueryMessageData(**received_object.data)
+                    except ValidationError as validation_error:
+                        logging.exception("Invalid message data specified in: %s", received_message)
                         await output_queue.put(None)
                         pipeline_manager.disconnect(output_queue)
-                        await ws.close(code=1000, reason=invalid_message)
+                        await ws.close(code=1000, reason=str(validation_error))
                         return
+
                     placeholder_type, placeholder_value = pipeline_manager.get_placeholder(
                         received_object.id,
                         placeholder_query_data.name,
