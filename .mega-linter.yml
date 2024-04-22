@@ -18,3 +18,6 @@ JSON_PRETTIER_FILE_EXTENSIONS:
 # Commands
 PRE_COMMANDS:
   - command: npm i @lars-reimann/prettier-config
+
+PYTHON_MYPY_PRE_COMMANDS:
+  - command: pip install pydantic
