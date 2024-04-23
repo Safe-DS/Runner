@@ -374,28 +374,32 @@ def _get_size_of_value(value: Any) -> int:
 
 
 def _create_memoization_key(
-    function_name: str,
-    parameters: list[Any],
-    hidden_parameters: list[Any],
+    fully_qualified_function_name: str,
+    positional_arguments: list[Any],
+    keyword_arguments: dict[str, Any],
+    hidden_arguments: list[Any],
 ) -> MemoizationKey:
     """
     Convert values provided to a memoized function call to a memoization key.
 
     Parameters
     ----------
-    function_name:
+    fully_qualified_function_name:
         Fully qualified function name
-    parameters:
-        List of parameters passed to the function
-    hidden_parameters:
-        List of parameters not passed to the function
+    positional_arguments:
+        List of arguments passed to the function
+    keyword_arguments:
+        Dictionary of keyword arguments passed to the function
+    hidden_arguments:
+        List of arguments not passed to the function
 
     Returns
     -------
     key:
         A memoization key, which contains the lists converted to tuples
     """
-    return function_name, _make_hashable(parameters), _make_hashable(hidden_parameters)
+    arguments = [*positional_arguments, *keyword_arguments.values()]
+    return fully_qualified_function_name, _make_hashable(arguments), _make_hashable(hidden_arguments)
 
 
 def _wrap_value_to_shared_memory(

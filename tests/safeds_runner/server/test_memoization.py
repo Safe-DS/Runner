@@ -38,17 +38,24 @@ class UnhashableClass:
 
 
 @pytest.mark.parametrize(
-    argnames="function_name,params,hidden_params,expected_result",
+    argnames=(
+        "fully_qualified_function_name",
+        "positional_arguments",
+        "keyword_arguments",
+        "hidden_arguments",
+        "expected_result",
+    ),
     argvalues=[
-        ("function_pure", [1, 2, 3], [], "abc"),
-        ("function_impure_readfile", ["filea.txt"], [1234567891], "abc"),
+        ("function_pure", [1, 2, 3], {}, [], "abc"),
+        ("function_impure_readfile", ["filea.txt"], {}, [1234567891], "abc"),
     ],
     ids=["function_pure", "function_impure_readfile"],
 )
 def test_memoization_static_already_present_values(
-    function_name: str,
-    params: list,
-    hidden_params: list,
+    fully_qualified_function_name: str,
+    positional_arguments: list,
+    keyword_arguments: dict,
+    hidden_arguments: list,
     expected_result: Any,
 ) -> None:
     _pipeline_manager.current_pipeline = PipelineProcess(
@@ -60,36 +67,52 @@ def test_memoization_static_already_present_values(
     )
     _pipeline_manager.current_pipeline.get_memoization_map()._map_values[
         (
-            function_name,
-            _make_hashable(params),
-            _make_hashable(hidden_params),
+            fully_qualified_function_name,
+            _make_hashable(positional_arguments),
+            _make_hashable(hidden_arguments),
         )
     ] = expected_result
-    _pipeline_manager.current_pipeline.get_memoization_map()._map_stats[function_name] = MemoizationStats(
-        [time.perf_counter_ns()],
-        [],
-        [],
-        [sys.getsizeof(expected_result)],
+    _pipeline_manager.current_pipeline.get_memoization_map()._map_stats[fully_qualified_function_name] = (
+        MemoizationStats(
+            [time.perf_counter_ns()],
+            [],
+            [],
+            [sys.getsizeof(expected_result)],
+        )
     )
-    result = _pipeline_manager.memoized_static_call(function_name, lambda *_: None, params, hidden_params)
+    result = _pipeline_manager.memoized_static_call(
+        fully_qualified_function_name,
+        lambda *_: None,
+        positional_arguments,
+        keyword_arguments,
+        hidden_arguments,
+    )
     assert result == expected_result
 
 
 @pytest.mark.parametrize(
-    argnames="function_name,function,params,hidden_params,expected_result",
+    argnames=(
+        "fully_qualified_function_name",
+        "callable_",
+        "positional_arguments",
+        "keyword_arguments",
+        "hidden_arguments",
+        "expected_result",
+    ),
     argvalues=[
-        ("function_pure", lambda a, b, c: a + b + c, [1, 2, 3], [], 6),
-        ("function_impure_readfile", lambda filename: filename.split(".")[0], ["abc.txt"], [1234567891], "abc"),
-        ("function_dict", lambda x: len(x), [{}], [], 0),
-        ("function_lambda", lambda x: x(), [lambda: 0], [], 0),
+        ("function_pure", lambda a, b, c: a + b + c, [1, 2, 3], {}, [], 6),
+        ("function_impure_readfile", lambda filename: filename.split(".")[0], ["abc.txt"], {}, [1234567891], "abc"),
+        ("function_dict", lambda x: len(x), [{}], {}, [], 0),
+        ("function_lambda", lambda x: x(), [lambda: 0], {}, [], 0),
     ],
     ids=["function_pure", "function_impure_readfile", "function_dict", "function_lambda"],
 )
 def test_memoization_static_not_present_values(
-    function_name: str,
-    function: typing.Callable,
-    params: list,
-    hidden_params: list,
+    fully_qualified_function_name: str,
+    callable_: typing.Callable,
+    positional_arguments: list,
+    keyword_arguments: dict,
+    hidden_arguments: list,
     expected_result: Any,
 ) -> None:
     _pipeline_manager.current_pipeline = PipelineProcess(
@@ -100,10 +123,23 @@ def test_memoization_static_not_present_values(
         MemoizationMap({}, {}),
     )
     # Save value in map
-    result = memoized_static_call(function_name, function, params, hidden_params)
+    result = memoized_static_call(
+        fully_qualified_function_name,
+        callable_,
+        positional_arguments,
+        keyword_arguments,
+        hidden_arguments,
+    )
     assert result == expected_result
+
     # Test if value is actually saved by calling another function that does not return the expected result
-    result2 = memoized_static_call(function_name, lambda *_: None, params, hidden_params)
+    result2 = memoized_static_call(
+        fully_qualified_function_name,
+        lambda *_: None,
+        positional_arguments,
+        keyword_arguments,
+        hidden_arguments,
+    )
     assert result2 == expected_result
 
 
@@ -114,7 +150,7 @@ class BaseClass:
     def method1(self) -> int:
         return 1
 
-    def method2(self, default: int = 5) -> int:
+    def method2(self, *, default: int = 5) -> int:
         return 1 * default
 
 
@@ -125,25 +161,36 @@ class ChildClass(BaseClass):
     def method1(self) -> int:
         return 2
 
-    def method2(self, default: int = 3) -> int:
+    def method2(self, *, default: int = 3) -> int:
         return 2 * default
 
 
 @pytest.mark.parametrize(
-    argnames="function_name,function,params,hidden_params,expected_result",
-    argvalues=[
-        ("method1", None, [BaseClass()], [], 1),
-        ("method1", None, [ChildClass()], [], 2),
-        ("method2", lambda instance, *_: instance.method2(default=7), [BaseClass(), 7], [], 7),
-        ("method2", lambda instance, *_: instance.method2(default=7), [ChildClass(), 7], [], 14),
+    argnames=[
+        "receiver",
+        "function_name",
+        "positional_arguments",
+        "keyword_arguments",
+        "hidden_arguments",
+        "expected_result",
     ],
-    ids=["member_call_base", "member_call_child", "member_call_base_lambda", "member_call_child_lambda"],
+    argvalues=[
+        (BaseClass(), "method1", [], {}, [], 1),
+        (ChildClass(), "method1", [], {}, [], 2),
+        (BaseClass(), "method2", [], {"default": 5}, [], 5),
+    ],
+    ids=[
+        "member_call_base",
+        "member_call_child",
+        "member_call_keyword_only_argument",
+    ],
 )
 def test_memoization_dynamic(
+    receiver: Any,
     function_name: str,
-    function: typing.Callable | None,
-    params: list,
-    hidden_params: list,
+    positional_arguments: list,
+    keyword_arguments: dict,
+    hidden_arguments: list,
     expected_result: Any,
 ) -> None:
     _pipeline_manager.current_pipeline = PipelineProcess(
@@ -153,41 +200,52 @@ def test_memoization_dynamic(
         {},
         MemoizationMap({}, {}),
     )
+
     # Save value in map
-    result = memoized_dynamic_call(function_name, function, params, hidden_params)
+    result = memoized_dynamic_call(
+        receiver,
+        function_name,
+        positional_arguments,
+        keyword_arguments,
+        hidden_arguments,
+    )
     assert result == expected_result
+
     # Test if value is actually saved by calling another function that does not return the expected result
-    result2 = memoized_dynamic_call(function_name, lambda *_: None, params, hidden_params)
+    result2 = memoized_dynamic_call(
+        receiver,
+        function_name,
+        positional_arguments,
+        keyword_arguments,
+        hidden_arguments,
+    )
     assert result2 == expected_result
 
 
 @pytest.mark.parametrize(
-    argnames="function_name,function,params,hidden_params,fully_qualified_function_name",
+    argnames=(
+        "receiver",
+        "function_name",
+        "positional_arguments",
+        "keyword_arguments",
+        "hidden_arguments",
+        "fully_qualified_function_name",
+    ),
     argvalues=[
-        ("method1", None, [BaseClass()], [], "tests.safeds_runner.server.test_memoization.BaseClass.method1"),
-        ("method1", None, [ChildClass()], [], "tests.safeds_runner.server.test_memoization.ChildClass.method1"),
-        (
-            "method2",
-            lambda instance, *_: instance.method2(default=7),
-            [BaseClass(), 7],
-            [],
-            "tests.safeds_runner.server.test_memoization.BaseClass.method2",
-        ),
-        (
-            "method2",
-            lambda instance, *_: instance.method2(default=7),
-            [ChildClass(), 7],
-            [],
-            "tests.safeds_runner.server.test_memoization.ChildClass.method2",
-        ),
+        (BaseClass(), "method1", [], {}, [], "tests.safeds_runner.server.test_memoization.BaseClass.method1"),
+        (ChildClass(), "method1", [], {}, [], "tests.safeds_runner.server.test_memoization.ChildClass.method1"),
     ],
-    ids=["member_call_base", "member_call_child", "member_call_base_lambda", "member_call_child_lambda"],
+    ids=[
+        "member_call_base",
+        "member_call_child",
+    ],
 )
 def test_memoization_dynamic_contains_correct_fully_qualified_name(
+    receiver: Any,
     function_name: str,
-    function: typing.Callable | None,
-    params: list,
-    hidden_params: list,
+    positional_arguments: list,
+    keyword_arguments: dict,
+    hidden_arguments: list,
     fully_qualified_function_name: Any,
 ) -> None:
     _pipeline_manager.current_pipeline = PipelineProcess(
@@ -198,31 +256,48 @@ def test_memoization_dynamic_contains_correct_fully_qualified_name(
         MemoizationMap({}, {}),
     )
     # Save value in map
-    result = memoized_dynamic_call(function_name, function, params, hidden_params)
+    result = memoized_dynamic_call(
+        receiver,
+        function_name,
+        positional_arguments,
+        keyword_arguments,
+        hidden_arguments,
+    )
+
     # Test if value is actually saved with the correct function name
-    result2 = memoized_static_call(fully_qualified_function_name, lambda *_: None, params, hidden_params)
+    result2 = memoized_static_call(
+        fully_qualified_function_name,
+        lambda *_: None,
+        [receiver, *positional_arguments],
+        keyword_arguments,
+        hidden_arguments,
+    )
+
     assert result == result2
 
 
 @pytest.mark.parametrize(
-    argnames="function_name,function,params,hidden_params,fully_qualified_function_name",
+    argnames=(
+        "receiver",
+        "function_name",
+        "positional_arguments",
+        "keyword_arguments",
+        "hidden_arguments",
+        "fully_qualified_function_name",
+    ),
     argvalues=[
-        ("method1", None, [ChildClass()], [], "tests.safeds_runner.server.test_memoization.BaseClass.method1"),
-        (
-            "method2",
-            lambda instance, *_: instance.method2(default=7),
-            [ChildClass(), 7],
-            [],
-            "tests.safeds_runner.server.test_memoization.BaseClass.method2",
-        ),
+        (ChildClass(), "method1", [], {}, [], "tests.safeds_runner.server.test_memoization.BaseClass.method1"),
     ],
-    ids=["member_call_child", "member_call_child_lambda"],
+    ids=[
+        "member_call_child",
+    ],
 )
 def test_memoization_dynamic_not_base_name(
+    receiver: Any,
     function_name: str,
-    function: typing.Callable | None,
-    params: list,
-    hidden_params: list,
+    positional_arguments: list,
+    keyword_arguments: dict,
+    hidden_arguments: list,
     fully_qualified_function_name: Any,
 ) -> None:
     _pipeline_manager.current_pipeline = PipelineProcess(
@@ -232,27 +307,54 @@ def test_memoization_dynamic_not_base_name(
         {},
         MemoizationMap({}, {}),
     )
+
     # Save value in map
-    result = memoized_dynamic_call(function_name, function, params, hidden_params)
+    result = memoized_dynamic_call(
+        receiver,
+        function_name,
+        positional_arguments,
+        keyword_arguments,
+        hidden_arguments,
+    )
+
     # Test if value is actually saved with the correct function name
-    result2 = memoized_static_call(fully_qualified_function_name, lambda *_: None, params, hidden_params)
+    result2 = memoized_static_call(
+        fully_qualified_function_name,
+        lambda *_: None,
+        [receiver, *positional_arguments],
+        keyword_arguments,
+        hidden_arguments,
+    )
     assert result is not None
     assert result2 is None
 
 
 @pytest.mark.parametrize(
-    argnames="function_name,function,params,hidden_params,expected_result",
+    argnames=(
+        "fully_qualified_function_name",
+        "callable_",
+        "positional_arguments",
+        "keyword_arguments",
+        "hidden_arguments",
+        "expected_result",
+    ),
     argvalues=[
-        ("unhashable_params", lambda a: type(a).__name__, [UnhashableClass()], [], "UnhashableClass"),
-        ("unhashable_hidden_params", lambda: None, [], [UnhashableClass()], None),
+        ("unhashable_positional_argument", lambda a: type(a).__name__, [UnhashableClass()], {}, [], "UnhashableClass"),
+        ("unhashable_params", lambda a: type(a).__name__, [UnhashableClass()], {}, [], "UnhashableClass"),
+        ("unhashable_hidden_params", lambda: None, [], {}, [UnhashableClass()], None),
     ],
-    ids=["unhashable_params", "unhashable_hidden_params"],
+    ids=[
+        "unhashable_positional_argument",
+        "unhashable_keyword_argument",
+        "unhashable_hidden_arguments",
+    ],
 )
 def test_memoization_static_unhashable_values(
-    function_name: str,
-    function: typing.Callable,
-    params: list,
-    hidden_params: list,
+    fully_qualified_function_name: str,
+    callable_: typing.Callable,
+    positional_arguments: list,
+    keyword_arguments: dict,
+    hidden_arguments: list,
     expected_result: Any,
 ) -> None:
     _pipeline_manager.current_pipeline = PipelineProcess(
@@ -262,7 +364,13 @@ def test_memoization_static_unhashable_values(
         {},
         MemoizationMap({}, {}),
     )
-    result = memoized_static_call(function_name, function, params, hidden_params)
+    result = memoized_static_call(
+        fully_qualified_function_name,
+        callable_,
+        positional_arguments,
+        keyword_arguments,
+        hidden_arguments,
+    )
     assert result == expected_result
 
 
@@ -435,20 +543,33 @@ def test_memoization_map_remove_worst_element_strategy(
 
 
 @pytest.mark.parametrize(
-    argnames="function_name,function,params,hidden_params,expected_result",
+    argnames=(
+        "fully_qualified_function_name",
+        "callable_",
+        "positional_arguments",
+        "keyword_arguments",
+        "hidden_arguments",
+        "expected_result",
+    ),
     argvalues=[
-        ("function_pure", lambda a, b, c: a + b + c, [1, 2, 3], [], 6),
-        ("function_impure_readfile", lambda filename: filename.split(".")[0], ["abc.txt"], [1234567891], "abc"),
-        ("function_dict", lambda x: len(x), [{}], [], 0),
-        ("function_lambda", lambda x: x(), [lambda: 0], [], 0),
+        ("function_pure", lambda a, b, c: a + b + c, [1, 2, 3], {}, [], 6),
+        ("function_impure_readfile", lambda filename: filename.split(".")[0], ["abc.txt"], {}, [1234567891], "abc"),
+        ("function_dict", lambda x: len(x), [{}], {}, [], 0),
+        ("function_lambda", lambda x: x(), [lambda: 0], {}, [], 0),
     ],
-    ids=["function_pure", "function_impure_readfile", "function_dict", "function_lambda"],
+    ids=[
+        "function_pure",
+        "function_impure_readfile",
+        "function_dict",
+        "function_lambda",
+    ],
 )
 def test_memoization_limited_static_not_present_values(
-    function_name: str,
-    function: typing.Callable,
-    params: list,
-    hidden_params: list,
+    fully_qualified_function_name: str,
+    callable_: typing.Callable,
+    positional_arguments: list,
+    keyword_arguments: dict,
+    hidden_arguments: list,
     expected_result: Any,
 ) -> None:
     memo_map = MemoizationMap(
@@ -464,9 +585,23 @@ def test_memoization_limited_static_not_present_values(
         memo_map,
     )
     # Save value in map
-    result = memoized_static_call(function_name, function, params, hidden_params)
+    result = memoized_static_call(
+        fully_qualified_function_name,
+        callable_,
+        positional_arguments,
+        keyword_arguments,
+        hidden_arguments,
+    )
     assert result == expected_result
+
     # Test if value is actually saved by calling another function that does not return the expected result
-    result2 = memoized_static_call(function_name, lambda *_: None, params, hidden_params)
+    result2 = memoized_static_call(
+        fully_qualified_function_name,
+        lambda *_: None,
+        positional_arguments,
+        keyword_arguments,
+        hidden_arguments,
+    )
+
     assert result2 == expected_result
     assert len(memo_map._map_values.items()) < 3
