@@ -35,11 +35,11 @@ class Message:
 
     Parameters
     ----------
-    type : str
+    type:
         Type that identifies the kind of message.
-    id : str
+    id:
         ID that identifies the execution where this message belongs to.
-    data : Any
+    data:
         Message data section. Differs between message types.
     """
 
@@ -54,12 +54,12 @@ class Message:
 
         Parameters
         ----------
-        d : dict[str, Any]
+        d:
             Dictionary which should contain all needed fields.
 
         Returns
         -------
-        Message
+        message:
             Dataclass which contains information copied from the provided dictionary.
         """
         return Message(**d)
@@ -70,7 +70,7 @@ class Message:
 
         Returns
         -------
-        dict[str, Any]
+        dict:
             Dictionary containing all the fields which are part of this dataclass.
         """
         return dataclasses.asdict(self)
@@ -82,7 +82,7 @@ class ProgramMessage(BaseModel):
 
     Parameters
     ----------
-    data : ProgramMessageData
+    data:
         Data of the program message.
     """
 
@@ -98,11 +98,11 @@ class ProgramMessageData(BaseModel):
 
     Parameters
     ----------
-    code : dict[str, dict[str, str]]
+    code:
         A dictionary containing the code needed for executed,
         in a virtual filesystem. Keys of the outer dictionary are the module path, keys of the inner dictionary are the
         module name. The values of the inner dictionary is the python code for each module.
-    main : ProgramMessageMainInformation
+    main:
         Information where the main pipeline (the pipeline to be executed) is located.
     cwd:
         Current working directory to use for execution. If not set, the default working directory is used.
@@ -121,11 +121,11 @@ class ProgramMessageMainInformation(BaseModel):
 
     Parameters
     ----------
-    modulepath : str
+    modulepath:
         Path, where the main module is located.
-    module : str
+    module:
         Safe-DS module name.
-    pipeline : str
+    pipeline:
         Safe-DS pipeline name.
     """
 
@@ -142,7 +142,7 @@ class QueryMessage(BaseModel):
 
     Parameters
     ----------
-    data : QueryMessageData
+    data:
         Data of the placeholder query message.
     """
 
@@ -158,9 +158,9 @@ class QueryMessageWindow(BaseModel):
 
     Parameters
     ----------
-    begin : int | None
+    begin:
         Index of the first entry that should be sent. May be present if a windowed query is required.
-    size : int | None
+    size:
         Max. amount of entries that should be sent. May be present if a windowed query is required.
     """
 
@@ -176,9 +176,9 @@ class QueryMessageData(BaseModel):
 
     Parameters
     ----------
-    name : str
+    name:
         Placeholder name that is queried.
-    window : QueryMessageWindow
+    window:
         Window bounds for requesting only a subset of the available data.
     """
 
@@ -194,14 +194,14 @@ def create_placeholder_description(name: str, type_: str) -> dict[str, str]:
 
     Parameters
     ----------
-    name : str
+    name:
         Name of the placeholder.
-    type_ : str
+    type_:
         Type of the placeholder.
 
     Returns
     -------
-    dict[str, str]
+    message_data:
         Message data of "placeholder_type" messages.
     """
     return {"name": name, "type": type_}
@@ -216,16 +216,16 @@ def create_placeholder_value(placeholder_query: QueryMessageData, type_: str, va
 
     Parameters
     ----------
-    placeholder_query : QueryMessageData
+    placeholder_query:
         Query of the placeholder.
-    type_ : str
+    type_:
         Type of the placeholder.
-    value : Any
+    value:
         Value of the placeholder.
 
     Returns
     -------
-    dict[str, str]
+    message_data:
         Message data of "placeholder_value" messages.
     """
     import safeds.data.tabular.containers
@@ -256,14 +256,14 @@ def create_runtime_error_description(message: str, backtrace: list[dict[str, Any
 
     Parameters
     ----------
-    message : str
+    message:
         Error information message.
-    backtrace : list[dict[str, Any]]
+    backtrace:
         Python backtrace of the error. Each list entry represents a stack frame.
 
     Returns
     -------
-    dict[str, Any]
+    message_data:
         Message data of "runtime_error" messages.
     """
     return {"message": message, "backtrace": backtrace}
@@ -275,7 +275,7 @@ def create_runtime_progress_done() -> str:
 
     Returns
     -------
-    str
+    str:
         Message data of "runtime_progress" messages.
     """
     return "done"
@@ -287,12 +287,12 @@ def parse_validate_message(message: str) -> tuple[Message | None, str | None, st
 
     Parameters
     ----------
-    message : str
+    message:
         Message string, that should be in JSON format.
 
     Returns
     -------
-    tuple[Message | None, str | None, str | None]
+    message_or_error:
         A tuple containing either a message or a detailed error description and a short error message.
     """
     try:

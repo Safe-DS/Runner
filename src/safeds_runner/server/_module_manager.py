@@ -19,9 +19,9 @@ class InMemoryLoader(importlib.abc.SourceLoader, ABC):
 
         Parameters
         ----------
-        code_bytes : bytes
+        code_bytes:
             Byte array containing python code.
-        filename : str
+        filename:
             Filename of the python module.
         """
         self.code_bytes = code_bytes
@@ -33,12 +33,12 @@ class InMemoryLoader(importlib.abc.SourceLoader, ABC):
 
         Parameters
         ----------
-        _path : bytes | str
+        _path:
             Module path.
 
         Returns
         -------
-        bytes
+        code_as_bytes:
             Module code.
         """
         return self.code_bytes
@@ -49,12 +49,12 @@ class InMemoryLoader(importlib.abc.SourceLoader, ABC):
 
         Parameters
         ----------
-        _fullname : str
+        _fullname:
             Module path.
 
         Returns
         -------
-        str
+        filename:
             virtual module path, as located in the code array in the InMemoryFinder that created this loader.
         """
         return self.filename
@@ -69,7 +69,7 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
 
         Parameters
         ----------
-        code : dict[str, dict[str, str]]
+        code:
             A dictionary containing the code to be executed,
             grouped by module path containing a mapping from module name to module code.
         """
@@ -95,16 +95,16 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
 
         Parameters
         ----------
-        fullname : str
+        fullname:
             Full module path (separated with '.').
-        path : typing.Sequence[str] | None
+        path:
             Module Path.
-        target : types.ModuleType | None
+        target:
             Module Type.
 
         Returns
         -------
-        ModuleSpec | None
+        module_spec:
             A module spec, if found. None otherwise
         """
         logging.debug("Find Spec: %s %s %s", fullname, path, target)

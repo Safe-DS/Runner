@@ -19,12 +19,12 @@ class SafeDsEncoder(json.JSONEncoder):
 
         Parameters
         ----------
-        o: Any
+        o:
             An object that needs to be encoded to JSON.
 
         Returns
         -------
-        Any
+        json_serializable:
             The passed object represented in a way that is serializable to JSON.
         """
         # Moving these imports to the top drastically increases startup time

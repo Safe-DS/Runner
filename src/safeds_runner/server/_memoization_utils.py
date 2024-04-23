@@ -35,12 +35,12 @@ class ExplicitIdentityWrapper:
 
         Parameters
         ----------
-        value
+        value:
             Object to create a shared memory based wrapper for.
 
         Returns
         -------
-        result
+        result:
             A new wrapper object containing the provided value.
         """
         _shared_memory_serialize_and_assign(value)
@@ -53,12 +53,12 @@ class ExplicitIdentityWrapper:
 
         Parameters
         ----------
-        value
+        value:
             Object to create a shared memory based wrapper for.
 
         Returns
         -------
-        result
+        result:
             A new wrapper object containing the provided value.
         """
         return cls(value, value.__ex_id_mem__)
@@ -113,12 +113,12 @@ class ExplicitIdentityWrapperLazy:
 
         Parameters
         ----------
-        value
+        value:
             Object to create a shared memory based wrapper for.
 
         Returns
         -------
-        result
+        result:
             A new wrapper object containing the provided value.
         """
         _shared_memory_serialize_and_assign(value)
@@ -131,12 +131,12 @@ class ExplicitIdentityWrapperLazy:
 
         Parameters
         ----------
-        value
+        value:
             Object to create a shared memory based wrapper for.
 
         Returns
         -------
-        result
+        result:
             A new wrapper object containing the provided value.
         """
         return cls(value, value.__ex_id_mem__, value.__ex_id__, value.__ex_hash__)
@@ -165,7 +165,7 @@ class ExplicitIdentityWrapperLazy:
 
         Returns
         -------
-        value
+        value:
             Wrapped value
         """
         if self._value is None:
@@ -193,12 +193,12 @@ def _is_not_primitive(value: Any) -> bool:
 
     Parameters
     ----------
-    value
+    value:
         Object to check, whether it is not primitive.
 
     Returns
     -------
-    result
+    result:
         True, if the object is not primitive.
     """
     return not isinstance(value, str | int | float | type(None) | bool)
@@ -212,12 +212,12 @@ def _is_deterministically_hashable(value: Any) -> bool:
 
     Parameters
     ----------
-    value
+    value:
         Object to check, if it is (probably) deterministically hashable.
 
     Returns
     -------
-    result
+    result:
         True, if the object can be deterministically hashed.
     """
     return _is_not_primitive(value) and hasattr(value, "__class__") and value.__class__.__hash__ != object.__hash__
@@ -229,12 +229,12 @@ def _has_explicit_identity(value: Any) -> bool:
 
     Parameters
     ----------
-    value
+    value:
         Object to check
 
     Returns
     -------
-    result
+    result:
         Whether the object has been assigned an explicit identity.
     """
     return hasattr(value, "__ex_id__")
@@ -246,12 +246,12 @@ def _has_explicit_identity_memory(value: Any) -> bool:
 
     Parameters
     ----------
-    value
+    value:
         Object to check
 
     Returns
     -------
-    result
+    result:
         Whether the object has been assigned shared memory location.
     """
     return hasattr(value, "__ex_id_mem__")
@@ -263,7 +263,7 @@ def _set_new_explicit_identity_deterministic_hash(value: Any) -> None:
 
     Parameters
     ----------
-    value
+    value:
         Object to assign an explicit identity and a deterministic hash to
     """
     value.__ex_id__ = uuid.uuid4()
@@ -276,7 +276,7 @@ def _set_new_explicit_identity(value: Any) -> None:
 
     Parameters
     ----------
-    value
+    value:
         Object to assign an explicit identity to
     """
     value.__ex_id__ = uuid.uuid4()
@@ -288,7 +288,7 @@ def _set_new_explicit_memory(value: Any, memory: SharedMemory) -> None:
 
     Parameters
     ----------
-    value
+    value:
         Object to assign a shared memory location to
     """
     value.__ex_id_mem__ = memory
@@ -300,12 +300,12 @@ def _shared_memory_serialize_and_assign(value: Any) -> SharedMemory:
 
     Parameters
     ----------
-    value
+    value:
         Any value that should be stored in a shared memory location
 
     Returns
     -------
-    memory
+    memory:
         Shared Memory location containing the provided object in a serialized representation.
     """
     bytes_dump = pickle.dumps(value, protocol=pickle.HIGHEST_PROTOCOL)
@@ -322,7 +322,7 @@ def _make_hashable(value: Any) -> Any:
 
     Parameters
     ----------
-    value
+    value:
         Value to be converted.
 
     Returns
@@ -354,12 +354,13 @@ def _get_size_of_value(value: Any) -> int:
 
     Parameters
     ----------
-    value
+    value:
         Any value of which the memory usage should be calculated.
 
     Returns
     -------
-    Size of the provided value in bytes
+    size:
+        Size of the provided value in bytes
     """
     size_immediate = sys.getsizeof(value)
     if isinstance(value, dict):
@@ -382,16 +383,17 @@ def _create_memoization_key(
 
     Parameters
     ----------
-    function_name
+    function_name:
         Fully qualified function name
-    parameters
+    parameters:
         List of parameters passed to the function
-    hidden_parameters
+    hidden_parameters:
         List of parameters not passed to the function
 
     Returns
     -------
-    A memoization key, which contains the lists converted to tuples
+    key:
+        A memoization key, which contains the lists converted to tuples
     """
     return function_name, _make_hashable(parameters), _make_hashable(hidden_parameters)
 
@@ -404,12 +406,12 @@ def _wrap_value_to_shared_memory(
 
     Parameters
     ----------
-    result
+    result:
         Value to convert to memoizable format.
 
     Returns
     -------
-    value
+    value:
         The value in a memoizable format, wrapped if needed.
     """
     if isinstance(result, tuple):
@@ -439,12 +441,12 @@ def _unwrap_value_from_shared_memory(
 
     Parameters
     ----------
-    result
+    result:
         Value to convert to a usable format.
 
     Returns
     -------
-    value
+    value:
         The value in a usable format, unwrapped if needed.
     """
     if isinstance(result, tuple):
