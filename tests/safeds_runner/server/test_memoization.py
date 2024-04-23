@@ -72,11 +72,13 @@ def test_memoization_static_already_present_values(
             _make_hashable(hidden_arguments),
         )
     ] = expected_result
-    _pipeline_manager.current_pipeline.get_memoization_map()._map_stats[fully_qualified_function_name] = MemoizationStats(
-        [time.perf_counter_ns()],
-        [],
-        [],
-        [sys.getsizeof(expected_result)],
+    _pipeline_manager.current_pipeline.get_memoization_map()._map_stats[fully_qualified_function_name] = (
+        MemoizationStats(
+            [time.perf_counter_ns()],
+            [],
+            [],
+            [sys.getsizeof(expected_result)],
+        )
     )
     result = _pipeline_manager.memoized_static_call(
         fully_qualified_function_name,
