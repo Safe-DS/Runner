@@ -37,9 +37,9 @@ class MemoizationMap:
 
         Parameters
         ----------
-        map_values
+        map_values:
             Value store dictionary
-        map_stats
+        map_stats:
             Stats dictionary
         """
         self._map_values: dict[MemoizationKey, Any] = map_values
@@ -54,7 +54,8 @@ class MemoizationMap:
 
         Returns
         -------
-        Amount of bytes, this cache occupies. This may be an estimate.
+        cache_size:
+            Amount of bytes, this cache occupies. This may be an estimate.
         """
         return functools.reduce(
             operator.add,
@@ -70,7 +71,7 @@ class MemoizationMap:
 
         Parameters
         ----------
-        needed_capacity
+        needed_capacity:
             Amount of free storage space requested, in bytes
         """
         if self.max_size is None:
@@ -86,7 +87,7 @@ class MemoizationMap:
 
         Parameters
         ----------
-        capacity_to_free
+        capacity_to_free:
             Amount of bytes that should be additionally freed, after this function returns
         """
         copied_stats = list(self._map_stats.copy().items())
@@ -126,18 +127,19 @@ class MemoizationMap:
 
         Parameters
         ----------
-        function_name
+        function_name:
             Fully qualified function name
-        function_callable
+        function_callable:
             Function that is called and memoized if the result was not found in the memoization map
-        parameters
+        parameters:
             List of parameters passed to the function
-        hidden_parameters
+        hidden_parameters:
             List of hidden parameters for the function. This is used for memoizing some impure functions.
 
         Returns
         -------
-        The result of the specified function, if any exists
+        result:
+            The result of the specified function, if any exists
         """
         access_timestamp = time.time_ns()
 
@@ -198,12 +200,13 @@ class MemoizationMap:
 
         Parameters
         ----------
-        key
+        key:
             Memoization Key
 
         Returns
         -------
-        The value corresponding to the provided memoization key, if any exists.
+        value:
+            The value corresponding to the provided memoization key, if any exists.
         """
         looked_up_value = self._map_values.get(key)
         return _unwrap_value_from_shared_memory(looked_up_value)
@@ -214,11 +217,11 @@ class MemoizationMap:
 
         Parameters
         ----------
-        function_name
+        function_name:
             Fully qualified function name
-        access_timestamp
+        access_timestamp:
             Timestamp when this value was last accessed
-        lookup_time
+        lookup_time:
             Duration the comparison took in nanoseconds
         """
         stats = self._map_stats[function_name]
@@ -241,15 +244,15 @@ class MemoizationMap:
 
         Parameters
         ----------
-        function_name
+        function_name:
             Fully qualified function name
-        access_timestamp
+        access_timestamp:
             Timestamp when this value was last accessed
-        lookup_time
+        lookup_time:
             Duration the comparison took in nanoseconds
-        computation_time
+        computation_time:
             Duration the computation of the new value took in nanoseconds
-        memory_size
+        memory_size:
             Memory the newly computed value takes up in bytes
         """
         stats = self._map_stats.get(function_name)

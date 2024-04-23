@@ -99,7 +99,7 @@ class PipelineManager:
 
         Parameters
         ----------
-        event_loop : asyncio.AbstractEventLoop
+        event_loop:
             Event Loop that handles websocket connections.
         """
         try:
@@ -118,7 +118,7 @@ class PipelineManager:
 
         Parameters
         ----------
-        websocket_connection_queue : asyncio.Queue
+        websocket_connection_queue:
             Message Queue for a websocket connection.
         """
         self._websocket_target.append(websocket_connection_queue)
@@ -129,7 +129,7 @@ class PipelineManager:
 
         Parameters
         ----------
-        websocket_connection_queue : asyncio.Queue
+        websocket_connection_queue:
             Message Queue for a websocket connection to be removed.
         """
         self._websocket_target.remove(websocket_connection_queue)
@@ -144,9 +144,9 @@ class PipelineManager:
 
         Parameters
         ----------
-        pipeline : ProgramMessageData
+        pipeline:
             Message object that contains the information to run a pipeline.
-        execution_id : str
+        execution_id:
             Unique ID to identify this execution.
         """
         self.startup()
@@ -167,14 +167,14 @@ class PipelineManager:
 
         Parameters
         ----------
-        execution_id : str
+        execution_id:
             Unique ID identifying the execution in which the placeholder was calculated.
-        placeholder_name : str
+        placeholder_name:
             Name of the placeholder.
 
         Returns
         -------
-        tuple[str | None, Any]
+        placeholder:
             Tuple containing placeholder type and placeholder value, or (None, None) if the placeholder does not exist.
         """
         if execution_id not in self._placeholder_map:
@@ -212,15 +212,15 @@ class PipelineProcess:
 
         Parameters
         ----------
-        pipeline : ProgramMessageData
+        pipeline:
             Message object that contains the information to run a pipeline.
-        execution_id : str
+        execution_id:
             Unique ID to identify this process.
-        messages_queue : queue.Queue[Message]
+        messages_queue:
             A queue to write outgoing messages to.
-        placeholder_map : dict[str, Any]
+        placeholder_map:
             A map to save calculated placeholders in.
-        memoization_map : MemoizationMap
+        memoization_map:
             A map to save memoizable functions in.
         """
         self._pipeline = pipeline
@@ -242,9 +242,9 @@ class PipelineProcess:
 
         Parameters
         ----------
-        placeholder_name : str
+        placeholder_name:
             Name of the placeholder.
-        value : Any
+        value:
             Actual value of the placeholder.
         """
         from safeds.data.image.containers import Image
@@ -274,7 +274,7 @@ class PipelineProcess:
 
         Returns
         -------
-        MemoizationMap
+        memoization_map:
             Memoization Map
         """
         return self._memoization_map
@@ -338,9 +338,9 @@ def save_placeholder(placeholder_name: str, value: Any) -> None:
 
     Parameters
     ----------
-    placeholder_name : str
+    placeholder_name:
         Name of the placeholder.
-    value : Any
+    value:
         Actual value of the placeholder.
     """
     if current_pipeline is not None:
@@ -360,18 +360,18 @@ def memoized_static_call(
 
     Parameters
     ----------
-    function_name : str
+    function_name:
         Fully qualified function name
-    function_callable : typing.Callable
+    function_callable:
         Function that is called and memoized if the result was not found in the memoization map
-    parameters : list[Any]
+    parameters:
         List of parameters for the function
-    hidden_parameters : list[Any]
+    hidden_parameters:
         List of hidden parameters for the function. This is used for memoizing some impure functions.
 
     Returns
     -------
-    Any
+    result:
         The result of the specified function, if any exists
     """
     if current_pipeline is None:
@@ -395,18 +395,18 @@ def memoized_dynamic_call(
 
     Parameters
     ----------
-    function_name : str
+    function_name:
         Simple function name
-    function_callable : typing.Callable | None
+    function_callable:
         Function that is called and memoized if the result was not found in the memoization map or none, if the function handle should be in the provided instance
-    parameters : list[Any]
+    parameters:
         List of parameters for the function, the first parameter should be the instance the function should be called on (receiver)
-    hidden_parameters : list[Any]
+    hidden_parameters:
         List of hidden parameters for the function. This is used for memoizing some impure functions.
 
     Returns
     -------
-    Any
+    result:
         The result of the specified function, if any exists
     """
     if current_pipeline is None:
@@ -491,12 +491,12 @@ def get_backtrace_info(error: BaseException) -> list[dict[str, Any]]:
 
     Parameters
     ----------
-    error : BaseException
+    error:
         Caught exception.
 
     Returns
     -------
-    list[dict[str, Any]]
+    backtrace_info:
         List containing file and line information for each stack frame.
     """
     backtrace_list = []
@@ -511,12 +511,12 @@ def _get_placeholder_type(value: Any) -> str:
 
     Parameters
     ----------
-    value : Any
+    value:
         A python object.
 
     Returns
     -------
-    str
+    placeholder_type:
         Safe-DS name corresponding to the given python object instance.
     """
     match value:

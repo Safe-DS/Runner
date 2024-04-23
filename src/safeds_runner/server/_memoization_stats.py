@@ -11,13 +11,13 @@ class MemoizationStats:
 
     Parameters
     ----------
-    access_timestamps
+    access_timestamps:
         Absolute timestamp since the unix epoch of the last access to the memoized value in nanoseconds
-    lookup_times
+    lookup_times:
         Duration the lookup of the value took in nanoseconds (key comparison + IPC)
-    computation_times
+    computation_times:
         Duration the computation of the value took in nanoseconds
-    memory_sizes
+    memory_sizes:
         Amount of memory the memoized value takes up in bytes
     """
 
@@ -32,9 +32,9 @@ class MemoizationStats:
 
         Parameters
         ----------
-        access_timestamp
+        access_timestamp:
             Timestamp when this value was last accessed
-        lookup_time
+        lookup_time:
             Duration the comparison took in nanoseconds
         """
         self.access_timestamps.append(access_timestamp)
@@ -46,13 +46,13 @@ class MemoizationStats:
 
         Parameters
         ----------
-        access_timestamp
+        access_timestamp:
             Timestamp when this value was last accessed
-        lookup_time
+        lookup_time:
             Duration the comparison took in nanoseconds
-        computation_time
+        computation_time:
             Duration the computation of the new value took in nanoseconds
-        memory_size
+        memory_size:
             Memory the newly computed value takes up in bytes
         """
         self.access_timestamps.append(access_timestamp)
@@ -66,7 +66,8 @@ class MemoizationStats:
 
         Returns
         -------
-        Summary of stats
+        string_representation:
+            Summary of stats
         """
         return (  # pragma: no cover
             f"Last access: {self.access_timestamps}, computation time: {self.computation_times}, lookup time:"

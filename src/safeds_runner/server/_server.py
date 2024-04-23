@@ -28,7 +28,7 @@ def create_flask_app() -> quart.app.Quart:
 
     Returns
     -------
-    quart.app.Quart
+    app:
         App.
     """
     return quart.app.Quart(__name__)
@@ -50,7 +50,7 @@ class SafeDsServer:
 
         Parameters
         ----------
-        port : int
+        port:
             Port to listen on
         """
         logging.info("Starting Safe-DS Runner on port %s", str(port))
@@ -76,9 +76,9 @@ class SafeDsServer:
 
         Parameters
         ----------
-        ws : quart.Websocket
+        ws:
             Connection
-        pipeline_manager : PipelineManager
+        pipeline_manager:
             Pipeline Manager
         """
         logging.debug("Request to WSRunProgram")
@@ -197,9 +197,9 @@ async def send_message(connection: quart.Websocket, message: Message) -> None:
 
     Parameters
     ----------
-    connection : quart.Websocket
+    connection:
         Connection that should receive the message.
-    message : Message
+    message:
         Object that will be sent.
     """
     message_encoded = json.dumps(message.to_dict(), cls=SafeDsEncoder)
