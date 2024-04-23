@@ -353,9 +353,9 @@ async def test_should_execute_pipeline_return_exception(
                                         " value1)\n\tsafeds_runner.save_placeholder('obj',"
                                         " object())\n\tsafeds_runner.save_placeholder('image',"
                                         " Image.from_bytes(base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC')))\n\t"
-                                        "table = safeds_runner.memoized_static_call(\"safeds.data.tabular.containers.Table.from_dict\", Table.from_dict, [{'a': [1, 2], 'b': [3, 4]}], [])\n\t"
+                                        "table = safeds_runner.memoized_static_call(\"safeds.data.tabular.containers.Table.from_dict\", Table.from_dict, [{'a': [1, 2], 'b': [3, 4]}], {}, [])\n\t"
                                         "safeds_runner.save_placeholder('table',table)\n\t"
-                                        'object_mem = safeds_runner.memoized_static_call("random.object.call", SafeDsEncoder, [], [])\n\t'
+                                        'object_mem = safeds_runner.memoized_static_call("random.object.call", SafeDsEncoder, [], {}, [])\n\t'
                                         "safeds_runner.save_placeholder('object_mem',object_mem)\n"
                                     ),
                                     "gen_test_a_pipe": (

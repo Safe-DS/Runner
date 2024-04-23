@@ -113,10 +113,11 @@ class MemoizationMap:
 
     def memoized_function_call(
         self,
-        function_name: str,
-        function_callable: Callable,
-        parameters: list[Any],
-        hidden_parameters: list[Any],
+        fully_qualified_function_name: str,
+        callable_: Callable,
+        positional_arguments: list[Any],
+        keyword_arguments: dict[str, Any],
+        hidden_arguments: list[Any],
     ) -> Any:
         """
         Handle a memoized function call.
@@ -127,14 +128,16 @@ class MemoizationMap:
 
         Parameters
         ----------
-        function_name:
+        fully_qualified_function_name:
             Fully qualified function name
-        function_callable:
+        callable_:
             Function that is called and memoized if the result was not found in the memoization map
-        parameters:
-            List of parameters passed to the function
-        hidden_parameters:
-            List of hidden parameters for the function. This is used for memoizing some impure functions.
+        positional_arguments:
+            List of arguments passed to the function
+        keyword_arguments:
+            Dictionary of keyword arguments passed to the function
+        hidden_arguments:
+            List of hidden arguments for the function. This is used for memoizing some impure functions.
 
         Returns
         -------
@@ -145,7 +148,12 @@ class MemoizationMap:
 
         # Lookup memoized value
         lookup_time_start = time.perf_counter_ns()
-        key = _create_memoization_key(function_name, parameters, hidden_parameters)
+        key = _create_memoization_key(
+            fully_qualified_function_name,
+            positional_arguments,
+            keyword_arguments,
+            hidden_arguments,
+        )
         try:
             memoized_value = self._lookup_value(key)
         # Pickling may raise AttributeError, hashing may raise TypeError
@@ -153,20 +161,20 @@ class MemoizationMap:
             # Fallback to executing the call to continue working, but inform user about this failure
             logging.exception(
                 "Could not lookup value for function %s. Falling back to calling the function",
-                function_name,
+                fully_qualified_function_name,
                 exc_info=exception,
             )
-            return function_callable(*parameters)
+            return callable_(*positional_arguments, **keyword_arguments)
         lookup_time = time.perf_counter_ns() - lookup_time_start
 
         # Hit
         if memoized_value is not None:
-            self._update_stats_on_hit(function_name, access_timestamp, lookup_time)
+            self._update_stats_on_hit(fully_qualified_function_name, access_timestamp, lookup_time)
             return memoized_value
 
         # Miss
         computation_time_start = time.perf_counter_ns()
-        computed_value = function_callable(*parameters)
+        computed_value = callable_(*positional_arguments, **keyword_arguments)
         computation_time = time.perf_counter_ns() - computation_time_start
         memory_size = _get_size_of_value(computed_value)
 
@@ -176,7 +184,7 @@ class MemoizationMap:
         self._map_values[key] = memoizable_value
 
         self._update_stats_on_miss(
-            function_name,
+            fully_qualified_function_name,
             access_timestamp,
             lookup_time,
             computation_time,

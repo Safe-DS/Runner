@@ -348,10 +348,11 @@ def save_placeholder(placeholder_name: str, value: Any) -> None:
 
 
 def memoized_static_call(
-    function_name: str,
-    function_callable: typing.Callable,
-    parameters: list[Any],
-    hidden_parameters: list[Any],
+    fully_qualified_function_name: str,
+    callable_: typing.Callable,
+    positional_arguments: list[Any],
+    keyword_arguments: dict[str, Any],
+    hidden_arguments: list[Any],
 ) -> Any:
     """
     Call a function that can be memoized and save the result.
@@ -360,14 +361,16 @@ def memoized_static_call(
 
     Parameters
     ----------
-    function_name:
+    fully_qualified_function_name:
         Fully qualified function name
-    function_callable:
+    callable_:
         Function that is called and memoized if the result was not found in the memoization map
-    parameters:
-        List of parameters for the function
-    hidden_parameters:
-        List of hidden parameters for the function. This is used for memoizing some impure functions.
+    positional_arguments:
+        List of positions arguments for the function
+    keyword_arguments:
+        Dictionary of keyword arguments for the function
+    hidden_arguments:
+        List of hidden arguments for the function. This is used for memoizing some impure functions.
 
     Returns
     -------
@@ -376,15 +379,23 @@ def memoized_static_call(
     """
     if current_pipeline is None:
         return None  # pragma: no cover
+
     memoization_map = current_pipeline.get_memoization_map()
-    return memoization_map.memoized_function_call(function_name, function_callable, parameters, hidden_parameters)
+    return memoization_map.memoized_function_call(
+        fully_qualified_function_name,
+        callable_,
+        positional_arguments,
+        keyword_arguments,
+        hidden_arguments,
+    )
 
 
 def memoized_dynamic_call(
+    receiver: Any,
     function_name: str,
-    function_callable: typing.Callable | None,
-    parameters: list[Any],
-    hidden_parameters: list[Any],
+    positional_arguments: list[Any],
+    keyword_arguments: dict[str, Any],
+    hidden_arguments: list[Any],
 ) -> Any:
     """
     Dynamically call a function that can be memoized and save the result.
@@ -395,13 +406,15 @@ def memoized_dynamic_call(
 
     Parameters
     ----------
+    receiver : Any
+        Instance the function should be called on
     function_name:
         Simple function name
-    function_callable:
-        Function that is called and memoized if the result was not found in the memoization map or none, if the function handle should be in the provided instance
-    parameters:
-        List of parameters for the function, the first parameter should be the instance the function should be called on (receiver)
-    hidden_parameters:
+    positional_arguments:
+        List of positions arguments for the function
+    keyword_arguments:
+        Dictionary of keyword arguments for the function
+    hidden_arguments:
         List of hidden parameters for the function. This is used for memoizing some impure functions.
 
     Returns
@@ -411,18 +424,21 @@ def memoized_dynamic_call(
     """
     if current_pipeline is None:
         return None  # pragma: no cover
+
     fully_qualified_function_name = (
-        parameters[0].__class__.__module__ + "." + parameters[0].__class__.__qualname__ + "." + function_name
+        receiver.__class__.__module__ + "." + receiver.__class__.__qualname__ + "." + function_name
     )
+
+    member = getattr(receiver, function_name)
+    callable_ = member.__func__
+
     memoization_map = current_pipeline.get_memoization_map()
-    if function_callable is None:
-        function_target_bound = getattr(parameters[0], function_name)
-        function_callable = function_target_bound.__func__
     return memoization_map.memoized_function_call(
         fully_qualified_function_name,
-        function_callable,
-        parameters,
-        hidden_parameters,
+        callable_,
+        [receiver, *positional_arguments],
+        keyword_arguments,
+        hidden_arguments,
     )
 
 
