@@ -1,6 +1,8 @@
-ignore-init-module-imports = true
 line-length = 120
 target-version = "py311"
+
+[lint]
+ignore-init-module-imports = true
 
 select = [
     "F",
@@ -44,6 +46,7 @@ select = [
     "NPY",
     "RUF"
 ]
+
 ignore = [
     # line-too-long (handled by black)
     "E501",
@@ -91,7 +94,7 @@ ignore = [
     "TRY003",
 ]
 
-[per-file-ignores]
+[lint.per-file-ignores]
 "*test*.py" = [
     # Undocumented declarations
     "D100",
@@ -104,5 +107,5 @@ ignore = [
     "D107",
 ]
 
-[pydocstyle]
+[lint.pydocstyle]
 convention = "numpy"
