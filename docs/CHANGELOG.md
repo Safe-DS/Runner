@@ -1,3 +1,10 @@
+## [0.13.0](https://github.com/Safe-DS/Runner/compare/v0.12.0...v0.13.0) (2024-04-24)
+
+
+### Features
+
+* pass keyword arguments separately in memoized calls ([#95](https://github.com/Safe-DS/Runner/issues/95)) ([0f63b0c](https://github.com/Safe-DS/Runner/commit/0f63b0c17e03b769158024d339d656e2d8ee306c))
+
 ## [0.12.0](https://github.com/Safe-DS/Runner/compare/v0.11.0...v0.12.0) (2024-04-22)
 
 
