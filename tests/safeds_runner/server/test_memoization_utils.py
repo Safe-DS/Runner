@@ -1,8 +1,10 @@
 import base64
+import datetime
 import pickle
 import sys
 from typing import Any
 
+import numpy as np
 import pytest
 from safeds.data.image.containers import Image
 from safeds.data.tabular.containers import Table
@@ -308,8 +310,21 @@ def test_wrap_value_to_shared_memory_non_deterministic(value: Any) -> None:
         {"a": Table()},
         {"a", "b", Table()},
         frozenset({"a", "b", Table()}),
+        np.int64(1),
+        datetime.date(2021, 1, 1),
     ],
-    ids=["int", "list", "tuple", "table", "tuple_table", "dict", "set", "frozenset"],
+    ids=[
+        "int",
+        "list",
+        "tuple",
+        "table",
+        "tuple_table",
+        "dict",
+        "set",
+        "frozenset",
+        "numpy_int64",
+        "datetime_date",
+    ],
 )
 def test_serialize_value_to_shared_memory(value: Any) -> None:
     _wrapped = _wrap_value_to_shared_memory(value)

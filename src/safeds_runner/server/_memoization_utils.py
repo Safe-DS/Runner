@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from multiprocessing.shared_memory import SharedMemory
 from typing import Any, TypeAlias
 
+import numpy as np
+
 MemoizationKey: TypeAlias = tuple[str, tuple, tuple]
 
 
@@ -201,7 +203,7 @@ def _is_not_primitive(value: Any) -> bool:
     result:
         True, if the object is not primitive.
     """
-    return not isinstance(value, str | int | float | type(None) | bool)
+    return not isinstance(value, str | int | float | type(None) | bool | np.generic)
 
 
 def _is_deterministically_hashable(value: Any) -> bool:
@@ -428,12 +430,18 @@ def _wrap_value_to_shared_memory(
         return {_wrap_value_to_shared_memory(entry) for entry in result}
     if isinstance(result, frozenset):
         return frozenset({_wrap_value_to_shared_memory(entry) for entry in result})
-    elif _is_deterministically_hashable(result):
-        _set_new_explicit_identity_deterministic_hash(result)
-        return ExplicitIdentityWrapperLazy.shared(result)
-    elif _is_not_primitive(result):
-        _set_new_explicit_identity(result)
-        return ExplicitIdentityWrapper.shared(result)
+
+    try:
+        if _is_deterministically_hashable(result):
+            _set_new_explicit_identity_deterministic_hash(result)
+            return ExplicitIdentityWrapperLazy.shared(result)
+        elif _is_not_primitive(result):
+            _set_new_explicit_identity(result)
+            return ExplicitIdentityWrapper.shared(result)
+    except AttributeError:
+        # We cannot add fields to many built-in types.
+        pass
+
     return result
 
 
