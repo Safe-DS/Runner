@@ -1,3 +1,10 @@
+## [0.13.1](https://github.com/Safe-DS/Runner/compare/v0.13.0...v0.13.1) (2024-04-24)
+
+
+### Bug Fixes
+
+* possible attribute error when adding `__ex_id__` ([#96](https://github.com/Safe-DS/Runner/issues/96)) ([7cfc0e2](https://github.com/Safe-DS/Runner/commit/7cfc0e2b62821cf6a78cec40004a59ee0e68326e)), closes [#93](https://github.com/Safe-DS/Runner/issues/93)
+
 ## [0.13.0](https://github.com/Safe-DS/Runner/compare/v0.12.0...v0.13.0) (2024-04-24)
 
 
