@@ -146,6 +146,7 @@ def _warmup_worker() -> None:
         return
 
     from safeds.data.tabular.containers import Table  # pragma: no cover
+
     Table({"a": [1]}).get_column("a").plot_histogram()  # pragma: no cover
 
 
