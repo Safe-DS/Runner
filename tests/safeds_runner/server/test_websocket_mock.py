@@ -148,7 +148,7 @@ if TYPE_CHECKING:
 @pytest.mark.asyncio()
 async def test_should_fail_message_validation_ws(websocket_message: str) -> None:
     sds_server = SafeDsServer()
-    test_client = sds_server.app.test_client()
+    test_client = sds_server._app.test_client()
     async with test_client.websocket("/WSMain") as test_websocket:
         await test_websocket.send(websocket_message)
         disconnected = False
@@ -316,7 +316,7 @@ async def test_should_execute_pipeline_return_exception(
     expected_response_runtime_error: Message,
 ) -> None:
     sds_server = SafeDsServer()
-    test_client = sds_server.app.test_client()
+    test_client = sds_server._app.test_client()
     async with test_client.websocket("/WSMain") as test_websocket:
         await test_websocket.send(message)
         received_message = await test_websocket.receive()
@@ -430,7 +430,7 @@ async def test_should_execute_pipeline_return_valid_placeholder(
 ) -> None:
     # Initial execution
     sds_server = SafeDsServer()
-    test_client = sds_server.app.test_client()
+    test_client = sds_server._app.test_client()
     async with test_client.websocket("/WSMain") as test_websocket:
         for message in initial_messages:
             await test_websocket.send(message)
@@ -512,7 +512,7 @@ async def test_should_execute_pipeline_return_valid_placeholder(
 @pytest.mark.asyncio()
 async def test_should_successfully_execute_simple_flow(messages: list[str], expected_response: Message) -> None:
     sds_server = SafeDsServer()
-    test_client = sds_server.app.test_client()
+    test_client = sds_server._app.test_client()
     async with test_client.websocket("/WSMain") as test_websocket:
         for message in messages:
             await test_websocket.send(message)
@@ -544,7 +544,7 @@ def helper_should_shut_itself_down_run_in_subprocess(sub_messages: list[str]) ->
 
 async def helper_should_shut_itself_down_run_in_subprocess_async(sub_messages: list[str]) -> None:
     sds_server = SafeDsServer()
-    test_client = sds_server.app.test_client()
+    test_client = sds_server._app.test_client()
     async with test_client.websocket("/WSMain") as test_websocket:
         for message in sub_messages:
             await test_websocket.send(message)

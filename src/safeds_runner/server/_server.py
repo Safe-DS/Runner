@@ -47,15 +47,15 @@ class SafeDsServer:
     def __init__(self) -> None:
         """Create a new server object."""
         self._websocket_target: list[asyncio.Queue] = []
-        self.process_manager = ProcessManager(self._websocket_target)
-        self.pipeline_manager = PipelineManager(self.process_manager)
+        self._process_manager = ProcessManager(self._websocket_target)
+        self._pipeline_manager = PipelineManager(self._process_manager)
 
-        self.app = create_flask_app()
-        self.app.config["connect"] = self.connect
-        self.app.config["disconnect"] = self.disconnect
-        self.app.config["process_manager"] = self.process_manager
-        self.app.config["pipeline_manager"] = self.pipeline_manager
-        self.app.websocket("/WSMain")(SafeDsServer.ws_main)
+        self._app = create_flask_app()
+        self._app.config["connect"] = self.connect
+        self._app.config["disconnect"] = self.disconnect
+        self._app.config["process_manager"] = self._process_manager
+        self._app.config["pipeline_manager"] = self._pipeline_manager
+        self._app.websocket("/WSMain")(SafeDsServer.ws_main)
 
     def startup(self, port: int) -> None:
         """
@@ -66,19 +66,19 @@ class SafeDsServer:
         port:
             Port to listen on
         """
-        self.process_manager.startup()
+        self._process_manager.startup()
         logging.info("Starting Safe-DS Runner on port %s", str(port))
         serve_config = hypercorn.config.Config()
         # Only bind to host=127.0.0.1. Connections from other devices should not be accepted
         serve_config.bind = f"127.0.0.1:{port}"
         serve_config.websocket_ping_interval = 25.0
         event_loop = asyncio.get_event_loop()
-        event_loop.run_until_complete(hypercorn.asyncio.serve(self.app, serve_config))
+        event_loop.run_until_complete(hypercorn.asyncio.serve(self._app, serve_config))
         event_loop.run_forever()  # pragma: no cover
 
     def shutdown(self) -> None:
         """Shutdown the server."""
-        self.process_manager.shutdown()
+        self._process_manager.shutdown()
 
     def connect(self, websocket_connection_queue: asyncio.Queue) -> None:
         """
