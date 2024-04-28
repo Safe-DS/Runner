@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 class ProcessManager:
     """Service for managing processes and communicating between them."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._lock = Lock()
         self._state: _State = "initial"
         self._on_message_callbacks: set[Callable[[Message], Coroutine[Any, Any, None]]] = set()
@@ -66,7 +66,7 @@ class ProcessManager:
         except BaseException as error:  # noqa: BLE001  # pragma: no cover
             logging.warning("Message queue terminated: %s", error.__repr__())  # pragma: no cover
 
-    def startup(self):
+    def startup(self) -> None:
         """
         Start the process manager and all associated processes.
 
@@ -89,7 +89,7 @@ class ProcessManager:
             raise RuntimeError("ProcessManager has already been shutdown.")
         self._lock.release()
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         """
         Shutdown the process manager and all associated processes.
 
@@ -133,13 +133,13 @@ class ProcessManager:
     _P = ParamSpec("_P")
     _T = TypeVar("_T")
 
-    def submit(self, func: Callable[_P, _T], /, *args: _P, **kwargs: _P) -> Future[_T]:
+    def submit(self, func: Callable[_P, _T], /, *args: _P.args, **kwargs: _P.kwargs) -> Future[_T]:
         """Submit a function to be executed by a worker process."""
         self.startup()
         return self._process_pool.submit(func, *args, **kwargs)
 
 
-def _warmup_worker():
+def _warmup_worker() -> None:
     """Import packages that worker processes will definitely need."""
     # Skip warmup if being tested. This greatly speeds up test execution.
     if "PYTEST_CURRENT_TEST" in os.environ:
