@@ -51,11 +51,11 @@ class PipelineManager:
     subprocess and the main process using a shared message queue.
     """
 
-    def __init__(self, process_manager: ProcessManager) -> None:
+    def __init__(self, targets: list[asyncio.Queue], process_manager: ProcessManager) -> None:
         """Create a new PipelineManager object, which is lazily started, when needed."""
+        self._websocket_target = targets
         self._process_manager = process_manager
         self._placeholder_map: dict = {}
-        self._websocket_target: list[asyncio.Queue] = []
 
     @cached_property
     def _messages_queue_thread(self) -> threading.Thread:
@@ -102,28 +102,6 @@ class PipelineManager:
                     asyncio.run_coroutine_threadsafe(connection.put(message_encoded), event_loop)
         except BaseException as error:  # noqa: BLE001  # pragma: no cover
             logging.warning("Message queue terminated: %s", error.__repr__())  # pragma: no cover
-
-    def connect(self, websocket_connection_queue: asyncio.Queue) -> None:
-        """
-        Add a websocket connection queue to relay event messages to, which are occurring during pipeline execution.
-
-        Parameters
-        ----------
-        websocket_connection_queue:
-            Message Queue for a websocket connection.
-        """
-        self._websocket_target.append(websocket_connection_queue)
-
-    def disconnect(self, websocket_connection_queue: asyncio.Queue) -> None:
-        """
-        Remove a websocket target connection queue to no longer receive messages.
-
-        Parameters
-        ----------
-        websocket_connection_queue:
-            Message Queue for a websocket connection to be removed.
-        """
-        self._websocket_target.remove(websocket_connection_queue)
 
     def execute_pipeline(
         self,

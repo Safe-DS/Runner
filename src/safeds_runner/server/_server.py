@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 import sys
+from typing import TYPE_CHECKING
 
 import hypercorn.asyncio
 import quart.app
@@ -23,6 +24,9 @@ from ._messages import (
 )
 from ._pipeline_manager import PipelineManager
 from ._process_manager import ProcessManager
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def create_flask_app() -> quart.app.Quart:
@@ -43,10 +47,14 @@ class SafeDsServer:
     def __init__(self) -> None:
         """Create a new server object."""
         self.process_manager = ProcessManager()
-        self.app_pipeline_manager = PipelineManager(self.process_manager)
+        self._websocket_target: list[asyncio.Queue] = []
+        self.pipeline_manager = PipelineManager(self._websocket_target, self.process_manager)
+
         self.app = create_flask_app()
+        self.app.config["connect"] = self.connect
+        self.app.config["disconnect"] = self.disconnect
         self.app.config["process_manager"] = self.process_manager
-        self.app.config["pipeline_manager"] = self.app_pipeline_manager
+        self.app.config["pipeline_manager"] = self.pipeline_manager
         self.app.websocket("/WSMain")(SafeDsServer.ws_main)
 
     def startup(self, port: int) -> None:
@@ -72,11 +80,35 @@ class SafeDsServer:
         """Shutdown the server."""
         self.process_manager.shutdown()
 
+    def connect(self, websocket_connection_queue: asyncio.Queue) -> None:
+        """
+        Add a websocket connection queue to relay event messages to, which are occurring during pipeline execution.
+
+        Parameters
+        ----------
+        websocket_connection_queue:
+            Message Queue for a websocket connection.
+        """
+        self._websocket_target.append(websocket_connection_queue)
+
+    def disconnect(self, websocket_connection_queue: asyncio.Queue) -> None:
+        """
+        Remove a websocket target connection queue to no longer receive messages.
+
+        Parameters
+        ----------
+        websocket_connection_queue:
+            Message Queue for a websocket connection to be removed.
+        """
+        self._websocket_target.remove(websocket_connection_queue)
+
     @staticmethod
     async def ws_main() -> None:
         """Handle websocket requests to the WSMain endpoint and delegates with the required objects."""
         await SafeDsServer._ws_main(
             quart.websocket,
+            quart.current_app.config["connect"],
+            quart.current_app.config["disconnect"],
             quart.current_app.config["process_manager"],
             quart.current_app.config["pipeline_manager"],
         )
@@ -84,6 +116,8 @@ class SafeDsServer:
     @staticmethod
     async def _ws_main(
         ws: quart.Websocket,
+        connect: Callable,
+        disconnect: Callable,
         process_manager: ProcessManager,
         pipeline_manager: PipelineManager,
     ) -> None:
@@ -101,14 +135,19 @@ class SafeDsServer:
         """
         logging.debug("Request to WSRunProgram")
         output_queue: asyncio.Queue = asyncio.Queue()
-        pipeline_manager.connect(output_queue)
-        foreground_handler = asyncio.create_task(SafeDsServer._ws_main_foreground(ws, process_manager, pipeline_manager, output_queue))
-        background_handler = asyncio.create_task(SafeDsServer._ws_main_background(ws, output_queue))
+        connect(output_queue)
+        foreground_handler = asyncio.create_task(
+            SafeDsServer._ws_main_foreground(ws, disconnect, process_manager, pipeline_manager, output_queue),
+        )
+        background_handler = asyncio.create_task(
+            SafeDsServer._ws_main_background(ws, output_queue),
+        )
         await asyncio.gather(foreground_handler, background_handler)
 
     @staticmethod
     async def _ws_main_foreground(
         ws: quart.Websocket,
+        disconnect: Callable,
         process_manager: ProcessManager,
         pipeline_manager: PipelineManager,
         output_queue: asyncio.Queue,
@@ -121,7 +160,7 @@ class SafeDsServer:
             if received_object is None:
                 logging.error(error_detail)
                 await output_queue.put(None)
-                pipeline_manager.disconnect(output_queue)
+                disconnect(output_queue)
                 await ws.close(code=1000, reason=error_short)
                 return
             match received_object.type:
@@ -135,7 +174,7 @@ class SafeDsServer:
                     except ValidationError as validation_error:
                         logging.exception("Invalid message data specified in: %s", received_message)
                         await output_queue.put(None)
-                        pipeline_manager.disconnect(output_queue)
+                        disconnect(output_queue)
                         await ws.close(code=1000, reason=str(validation_error))
                         return
 
@@ -149,7 +188,7 @@ class SafeDsServer:
                     except ValidationError as validation_error:
                         logging.exception("Invalid message data specified in: %s", received_message)
                         await output_queue.put(None)
-                        pipeline_manager.disconnect(output_queue)
+                        disconnect(output_queue)
                         await ws.close(code=1000, reason=str(validation_error))
                         return
 
