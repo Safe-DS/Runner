@@ -1,19 +1,19 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import multiprocessing
 import os
 import threading
+from collections.abc import Callable
 from concurrent.futures import ProcessPoolExecutor
 from functools import cached_property
 from threading import Lock
-from typing import TYPE_CHECKING, Literal, ParamSpec, TypeAlias, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, ParamSpec, TypeAlias, TypeVar
 
 if TYPE_CHECKING:
     from asyncio import Future
-    from collections.abc import Callable
+    from collections.abc import Coroutine
     from multiprocessing.managers import DictProxy, SyncManager
     from queue import Queue
 
@@ -23,10 +23,9 @@ if TYPE_CHECKING:
 class ProcessManager:
     """Service for managing processes and communicating between them."""
 
-    def __init__(self, targets: set[asyncio.Queue]):
-        self._websocket_target = targets
-
+    def __init__(self):
         self._lock = Lock()
+        self._on_message_callbacks: set[Callable[[Message], Coroutine[Any, Any, None]]] = set()
         self._state: _State = "initial"
 
     @cached_property
@@ -46,13 +45,11 @@ class ProcessManager:
 
     @cached_property
     def _messages_queue_thread(self) -> threading.Thread:
-        return threading.Thread(target=self._handle_queue_messages, daemon=True, args=(asyncio.get_event_loop(),))
+        return threading.Thread(daemon=True, target=self._consume_queue_messages, args=[asyncio.get_event_loop()])
 
-    def _handle_queue_messages(self, event_loop: asyncio.AbstractEventLoop) -> None:
+    def _consume_queue_messages(self, event_loop: asyncio.AbstractEventLoop) -> None:
         """
-        Relay messages from pipeline processes to the currently connected websocket endpoint.
-
-        Should be used in a dedicated thread.
+        Consume messages from the message queue and call all registered callbacks.
 
         Parameters
         ----------
@@ -60,12 +57,10 @@ class ProcessManager:
             Event Loop that handles websocket connections.
         """
         try:
-            while True:
-                message = self.get_next_message()
-                message_encoded = json.dumps(message.to_dict())
-                # only send messages to the same connection once
-                for connection in self._websocket_target:
-                    asyncio.run_coroutine_threadsafe(connection.put(message_encoded), event_loop)
+            while self._state != "shutdown":
+                message = self._message_queue.get()
+                for callback in self._on_message_callbacks:
+                    asyncio.run_coroutine_threadsafe(callback(message), event_loop)
         except BaseException as error:  # noqa: BLE001  # pragma: no cover
             logging.warning("Message queue terminated: %s", error.__repr__())  # pragma: no cover
 
@@ -111,10 +106,22 @@ class ProcessManager:
         self.startup()
         return self._manager.dict()
 
-    def get_next_message(self) -> Message:
-        """Get the next message from the message queue."""
-        self.startup()
-        return self._message_queue.get()
+    def on_message(self, callback: Callable[[Message], Coroutine[Any, Any, None]]) -> Unregister:
+        """
+        Get notified when a message is received from another process.
+
+        Parameters
+        ----------
+        callback:
+            The function to call when a message is received.
+
+        Returns
+        -------
+        unregister:
+            A function that can be called to stop receiving messages.
+        """
+        self._on_message_callbacks.add(callback)
+        return lambda: self._on_message_callbacks.remove(callback)
 
     def get_queue(self) -> Queue[Message]:
         """Get the message queue that is used to communicate between processes."""
@@ -142,3 +149,4 @@ def _warmup_worker():
 
 
 _State: TypeAlias = Literal["initial", "started", "shutdown"]
+Unregister = Callable[[], None]

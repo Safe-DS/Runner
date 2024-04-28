@@ -47,8 +47,10 @@ class SafeDsServer:
     def __init__(self) -> None:
         """Create a new server object."""
         self._websocket_target: set[asyncio.Queue] = set()
-        self._process_manager = ProcessManager(self._websocket_target)
+        self._process_manager = ProcessManager()
         self._pipeline_manager = PipelineManager(self._process_manager)
+
+        self._process_manager.on_message(self.send_message)
 
         self._app = create_flask_app()
         self._app.config["connect"] = self.connect
@@ -102,6 +104,19 @@ class SafeDsServer:
         """
         if websocket_connection_queue in self._websocket_target:
             self._websocket_target.remove(websocket_connection_queue)
+
+    async def send_message(self, message: Message) -> None:
+        """
+        Send a message to all connected websocket clients.
+
+        Parameters
+        ----------
+        message:
+            Message to be sent.
+        """
+        message_encoded = json.dumps(message.to_dict())
+        for connection in self._websocket_target:
+            await connection.put(message_encoded)
 
     @staticmethod
     async def ws_main() -> None:
