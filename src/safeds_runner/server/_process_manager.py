@@ -143,9 +143,8 @@ def _warmup_worker():
     if "PYTEST_CURRENT_TEST" in os.environ:
         return
 
-    from safeds.data.tabular.containers import Table
-
-    Table({"a": [1]}).get_column("a").plot_histogram()
+    from safeds.data.tabular.containers import Table  # pragma: no cover
+    Table({"a": [1]}).get_column("a").plot_histogram()  # pragma: no cover
 
 
 _State: TypeAlias = Literal["initial", "started", "shutdown"]
