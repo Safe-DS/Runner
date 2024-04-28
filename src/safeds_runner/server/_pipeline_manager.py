@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import asyncio
-import json
 import linecache
 import logging
 import os
 import runpy
-import threading
 import typing
 from functools import cached_property
 from pathlib import Path
@@ -51,9 +48,8 @@ class PipelineManager:
     subprocess and the main process using a shared message queue.
     """
 
-    def __init__(self, targets: list[asyncio.Queue], process_manager: ProcessManager) -> None:
+    def __init__(self, process_manager: ProcessManager) -> None:
         """Create a new PipelineManager object, which is lazily started, when needed."""
-        self._websocket_target = targets
         self._process_manager = process_manager
         self._placeholder_map: dict = {}
 
@@ -63,42 +59,6 @@ class PipelineManager:
             self._process_manager.create_shared_dict(),  # type: ignore[arg-type]
             self._process_manager.create_shared_dict(),  # type: ignore[arg-type]
         )
-
-    def startup(self) -> None:
-        """
-        Prepare the runner for running Safe-DS pipelines.
-
-        Firstly, structures shared between processes are lazily created.
-        After that a message queue handling thread is started in the main process.
-        This allows receiving messages directly from one of the pipeline processes and relaying information
-        directly to the websocket connection (to the VS Code extension).
-
-        This method should not be called during the bootstrap phase of the python interpreter, as it leads to a crash.
-        """
-        self._process_manager._handle_queue_messages = self._handle_queue_messages
-        if not self._process_manager._messages_queue_thread.is_alive():
-            self._process_manager._messages_queue_thread.start()
-
-    def _handle_queue_messages(self, event_loop: asyncio.AbstractEventLoop) -> None:
-        """
-        Relay messages from pipeline processes to the currently connected websocket endpoint.
-
-        Should be used in a dedicated thread.
-
-        Parameters
-        ----------
-        event_loop:
-            Event Loop that handles websocket connections.
-        """
-        try:
-            while True:
-                message = self._process_manager.get_next_message()
-                message_encoded = json.dumps(message.to_dict())
-                # only send messages to the same connection once
-                for connection in set(self._websocket_target):
-                    asyncio.run_coroutine_threadsafe(connection.put(message_encoded), event_loop)
-        except BaseException as error:  # noqa: BLE001  # pragma: no cover
-            logging.warning("Message queue terminated: %s", error.__repr__())  # pragma: no cover
 
     def execute_pipeline(
         self,
@@ -115,7 +75,6 @@ class PipelineManager:
         execution_id:
             Unique ID to identify this execution.
         """
-        self.startup()
         if execution_id not in self._placeholder_map:
             self._placeholder_map[execution_id] = self._process_manager.create_shared_dict()
         process = PipelineProcess(

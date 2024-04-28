@@ -46,9 +46,9 @@ class SafeDsServer:
 
     def __init__(self) -> None:
         """Create a new server object."""
-        self.process_manager = ProcessManager()
         self._websocket_target: list[asyncio.Queue] = []
-        self.pipeline_manager = PipelineManager(self._websocket_target, self.process_manager)
+        self.process_manager = ProcessManager(self._websocket_target)
+        self.pipeline_manager = PipelineManager(self.process_manager)
 
         self.app = create_flask_app()
         self.app.config["connect"] = self.connect

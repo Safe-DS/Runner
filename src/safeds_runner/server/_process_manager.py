@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import logging
 import multiprocessing
 import os
 import threading
@@ -21,7 +23,9 @@ if TYPE_CHECKING:
 class ProcessManager:
     """Service for managing processes and communicating between them."""
 
-    def __init__(self):
+    def __init__(self, targets: list[asyncio.Queue]):
+        self._websocket_target = targets
+
         self._lock = Lock()
         self._state: _State = "initial"
 
@@ -44,6 +48,27 @@ class ProcessManager:
     def _messages_queue_thread(self) -> threading.Thread:
         return threading.Thread(target=self._handle_queue_messages, daemon=True, args=(asyncio.get_event_loop(),))
 
+    def _handle_queue_messages(self, event_loop: asyncio.AbstractEventLoop) -> None:
+        """
+        Relay messages from pipeline processes to the currently connected websocket endpoint.
+
+        Should be used in a dedicated thread.
+
+        Parameters
+        ----------
+        event_loop:
+            Event Loop that handles websocket connections.
+        """
+        try:
+            while True:
+                message = self.get_next_message()
+                message_encoded = json.dumps(message.to_dict())
+                # only send messages to the same connection once
+                for connection in set(self._websocket_target):
+                    asyncio.run_coroutine_threadsafe(connection.put(message_encoded), event_loop)
+        except BaseException as error:  # noqa: BLE001  # pragma: no cover
+            logging.warning("Message queue terminated: %s", error.__repr__())  # pragma: no cover
+
     def startup(self):
         """
         Start the process manager and all associated processes.
@@ -58,6 +83,8 @@ class ProcessManager:
             _manager = self._manager
             _message_queue = self._message_queue
             _process_pool = self._process_pool
+            self._messages_queue_thread.start()
+
             self._state = "started"
             self.submit(_warmup_worker)  # Warm up one worker process
         elif self._state == "shutdown":
