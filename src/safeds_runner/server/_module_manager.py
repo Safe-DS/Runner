@@ -1,13 +1,17 @@
 """Module that contains the infrastructure for finding and loading modules in-memory."""
 
+from __future__ import annotations
+
 import importlib.abc
 import importlib.util
 import logging
 import sys
-import types
 import typing
 from abc import ABC
-from importlib.machinery import ModuleSpec
+
+if typing.TYPE_CHECKING:
+    import types
+    from importlib.machinery import ModuleSpec
 
 
 class InMemoryLoader(importlib.abc.SourceLoader, ABC):

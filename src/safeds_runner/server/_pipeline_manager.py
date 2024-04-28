@@ -1,18 +1,18 @@
 """Module that contains the infrastructure for pipeline execution in child processes."""
 
+from __future__ import annotations
+
 import asyncio
 import json
 import linecache
 import logging
 import multiprocessing
 import os
-import queue
 import runpy
 import threading
 import typing
 from concurrent.futures import ProcessPoolExecutor
 from functools import cached_property
-from multiprocessing.managers import SyncManager
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +38,10 @@ from ._messages import (
     message_type_runtime_progress,
 )
 from ._module_manager import InMemoryFinder
+
+if typing.TYPE_CHECKING:
+    import queue
+    from multiprocessing.managers import SyncManager
 
 
 class PipelineManager:

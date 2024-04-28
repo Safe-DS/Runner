@@ -1,5 +1,7 @@
 """Module containing the main entry point, for starting the Safe-DS runner."""
 
+from __future__ import annotations
+
 import logging
 import os
 
