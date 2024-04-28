@@ -23,12 +23,12 @@ pydantic = "^2.7.0"
 python-socketio = "^5.11.2"
 uvicorn = "^0.29.0"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest = "^8.1.1"
+pytest-asyncio = "^0.23.6"
 pytest-cov = "^5.0.0"
 pytest-timeout = "^2.3.1"
-pytest-asyncio = "^0.23.6"
-simple-websocket = "^1.0.0"
+python-socketio = {extras = ["asyncio-client"], version = "^5.11.2"}
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "^1.4.3"
