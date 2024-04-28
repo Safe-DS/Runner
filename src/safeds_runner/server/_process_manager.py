@@ -4,6 +4,7 @@ import multiprocessing
 import os
 from concurrent.futures import ProcessPoolExecutor
 from functools import cached_property
+from threading import Lock
 from typing import TYPE_CHECKING, Literal, ParamSpec, TypeAlias, TypeVar
 
 if TYPE_CHECKING:
@@ -19,6 +20,7 @@ class ProcessManager:
     """Service for managing processes and communicating between them."""
 
     def __init__(self):
+        self._lock = Lock()
         self._state: _State = "initial"
 
     @cached_property
@@ -42,6 +44,10 @@ class ProcessManager:
 
         Before calling this method, the process manager is not fully initialized and cannot be used.
         """
+        if self._state == "started":
+            return
+
+        self._lock.acquire()
         if self._state == "initial":
             _manager = self._manager
             _message_queue = self._message_queue
@@ -49,7 +55,9 @@ class ProcessManager:
             self._state = "started"
             self.submit(_warmup_worker)  # Warm up one worker process
         elif self._state == "shutdown":
+            self._lock.release()
             raise RuntimeError("ProcessManager has already been shutdown.")
+        self._lock.release()
 
     def shutdown(self):
         """
@@ -58,10 +66,12 @@ class ProcessManager:
         This method should be called before the program exits. After calling this method, the process manager can no
         longer be used.
         """
+        self._lock.acquire()
         if self._state == "started":
             self._manager.shutdown()
             self._process_pool.shutdown(wait=True, cancel_futures=True)
         self._state = "shutdown"
+        self._lock.release()
 
     def create_shared_dict(self) -> DictProxy:
         """Create a dictionary that can be accessed by multiple processes."""
