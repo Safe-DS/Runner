@@ -67,7 +67,7 @@ class SafeDsServer:
         async def program(sid: str, message: Any) -> None:
             try:
                 program_message = ProgramMessage(**message)
-            except ValidationError:
+            except (TypeError, ValidationError):
                 logging.exception("Invalid message data specified in: %s", message)
                 return
 
@@ -83,7 +83,7 @@ class SafeDsServer:
         async def placeholder_query(_sid: str, message: Any) -> None:
             try:
                 placeholder_query_message = QueryMessage(**message)
-            except ValidationError:
+            except (TypeError, ValidationError):
                 logging.exception("Invalid message data specified in: %s", message)
                 return
 
