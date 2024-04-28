@@ -49,7 +49,8 @@ def server() -> None:
         # Create a new event loop for the server
         asyncio.set_event_loop(asyncio.new_event_loop())
 
-        server.startup(PORT)
+        # Await the server startup
+        asyncio.get_event_loop().run_until_complete(server.startup(PORT))
 
     thread = threading.Thread(target=run_server, daemon=True)
     thread.start()
