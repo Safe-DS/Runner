@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 import subprocess
 import typing
 from pathlib import Path
 from typing import IO
+
+import psutil
 
 _project_root: Path = Path(__file__).parent / ".." / ".." / ".."
 
@@ -13,6 +17,9 @@ def test_should_runner_start_successfully() -> None:
         process_line = str(typing.cast(IO[bytes], process.stderr).readline(), "utf-8").strip()
         # Wait for first line of log
         if process_line.startswith("INFO:root:Starting Safe-DS Runner"):
-            process.kill()
+            parent = psutil.Process(process.pid)
+            for child in parent.children(recursive=True):
+                child.kill()
+            parent.kill()
             return
     assert process.poll() == 0

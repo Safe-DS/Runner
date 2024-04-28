@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import TypeAlias
 
-from safeds_runner.server._memoization_stats import MemoizationStats
+from safeds_runner.memoization._memoization_stats import MemoizationStats
 
 # Callable = Stat Key Extractor
 # A value removal strategy will reorder a list of memoized functions, based on the provided stats for each function.

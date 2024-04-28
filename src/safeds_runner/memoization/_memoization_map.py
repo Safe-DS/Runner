@@ -9,9 +9,9 @@ from typing import Any
 
 import psutil
 
-from safeds_runner.server._memoization_stats import MemoizationStats
-from safeds_runner.server._memoization_strategies import STAT_ORDER_PRIORITY
-from safeds_runner.server._memoization_utils import (
+from safeds_runner.memoization._memoization_stats import MemoizationStats
+from safeds_runner.memoization._memoization_strategies import STAT_ORDER_PRIORITY
+from safeds_runner.memoization._memoization_utils import (
     MemoizationKey,
     _create_memoization_key,
     _get_size_of_value,
