@@ -30,6 +30,8 @@ class ProcessManager:
 
     @cached_property
     def _manager(self) -> SyncManager:
+        if multiprocessing.get_start_method() != "spawn":
+            multiprocessing.set_start_method("spawn", force=True)
         return multiprocessing.Manager()
 
     @cached_property
