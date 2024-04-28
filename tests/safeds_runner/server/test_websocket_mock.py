@@ -47,9 +47,7 @@ def server() -> None:
 
     def run_server():
         # Create a new event loop for the server
-        policy = asyncio.get_event_loop_policy()
-        loop = policy.new_event_loop()
-        asyncio.set_event_loop(loop)
+        asyncio.set_event_loop(asyncio.new_event_loop())
 
         server.startup(PORT)
 
@@ -286,24 +284,22 @@ def test_should_fail_message_validation_reason_placeholder_query(
 
 
 @pytest.mark.parametrize(
-    argnames="message,expected_response_runtime_error",
+    argnames=("event", "message", "expected_response_runtime_error"),
     argvalues=[
         (
-            json.dumps(
-                {
-                    "type": "program",
-                    "id": "abcdefgh",
-                    "data": {
-                        "code": {
-                            "": {
-                                "gen_test_a": "def pipe():\n\traise Exception('Test Exception')\n",
-                                "gen_test_a_pipe": "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()",
-                            },
+            "program",
+            {
+                "id": "abcdefgh",
+                "data": {
+                    "code": {
+                        "": {
+                            "gen_test_a": "def pipe():\n\traise Exception('Test Exception')\n",
+                            "gen_test_a_pipe": "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()",
                         },
-                        "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
                     },
+                    "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
                 },
-            ),
+            },
             Message(message_type_runtime_error, "abcdefgh", {"message": "Test Exception"}),
         ),
     ],
@@ -312,13 +308,15 @@ def test_should_fail_message_validation_reason_placeholder_query(
 @pytest.mark.asyncio()
 async def test_should_execute_pipeline_return_exception(
     server: SafeDsServer,
-    message: str,
+    event: str,
+    message: dict[str, Any],
     expected_response_runtime_error: Message,
 ) -> None:
     async with socketio.AsyncSimpleClient() as sio:
-        await sio.connect(URL)
+        await sio.connect(URL, transports=["websocket"])
+        await sio.emit(event, message)
+        received_message = await sio.receive(timeout=5)
     await server.shutdown()
-    # await server.shutdown()
     # received_message = await sio.receive()
     # exception_message = Message.from_dict(json.loads(received_message))
     # assert exception_message.type == expected_response_runtime_error.type
