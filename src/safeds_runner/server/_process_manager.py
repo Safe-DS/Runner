@@ -12,8 +12,8 @@ from threading import Lock
 from typing import TYPE_CHECKING, Any, Literal, ParamSpec, TypeAlias, TypeVar
 
 if TYPE_CHECKING:
-    from asyncio import Future
     from collections.abc import Coroutine
+    from concurrent.futures import Future
     from multiprocessing.managers import DictProxy, SyncManager
     from queue import Queue
 
