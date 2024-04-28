@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import multiprocessing
 import os
+import threading
 from concurrent.futures import ProcessPoolExecutor
 from functools import cached_property
 from threading import Lock
@@ -37,6 +39,10 @@ class ProcessManager:
             max_workers=4,
             mp_context=multiprocessing.get_context("spawn"),
         )
+
+    @cached_property
+    def _messages_queue_thread(self) -> threading.Thread:
+        return threading.Thread(target=self._handle_queue_messages, daemon=True, args=(asyncio.get_event_loop(),))
 
     def startup(self):
         """

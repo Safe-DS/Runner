@@ -58,10 +58,6 @@ class PipelineManager:
         self._placeholder_map: dict = {}
 
     @cached_property
-    def _messages_queue_thread(self) -> threading.Thread:
-        return threading.Thread(target=self._handle_queue_messages, daemon=True, args=(asyncio.get_event_loop(),))
-
-    @cached_property
     def _memoization_map(self) -> MemoizationMap:
         return MemoizationMap(
             self._process_manager.create_shared_dict(),  # type: ignore[arg-type]
@@ -79,8 +75,9 @@ class PipelineManager:
 
         This method should not be called during the bootstrap phase of the python interpreter, as it leads to a crash.
         """
-        if not self._messages_queue_thread.is_alive():
-            self._messages_queue_thread.start()
+        self._process_manager._handle_queue_messages = self._handle_queue_messages
+        if not self._process_manager._messages_queue_thread.is_alive():
+            self._process_manager._messages_queue_thread.start()
 
     def _handle_queue_messages(self, event_loop: asyncio.AbstractEventLoop) -> None:
         """
