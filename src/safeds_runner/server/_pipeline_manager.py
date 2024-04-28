@@ -6,12 +6,10 @@ import asyncio
 import json
 import linecache
 import logging
-import multiprocessing
 import os
 import runpy
 import threading
 import typing
-from concurrent.futures import ProcessPoolExecutor
 from functools import cached_property
 from pathlib import Path
 from typing import Any
@@ -41,7 +39,8 @@ from ._module_manager import InMemoryFinder
 
 if typing.TYPE_CHECKING:
     import queue
-    from multiprocessing.managers import SyncManager
+
+    from ._process_manager import ProcessManager
 
 
 class PipelineManager:
@@ -52,24 +51,11 @@ class PipelineManager:
     subprocess and the main process using a shared message queue.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, process_manager: ProcessManager) -> None:
         """Create a new PipelineManager object, which is lazily started, when needed."""
+        self._process_manager = process_manager
         self._placeholder_map: dict = {}
         self._websocket_target: list[asyncio.Queue] = []
-
-    @cached_property
-    def _multiprocessing_manager(self) -> SyncManager:
-        if multiprocessing.get_start_method() != "spawn":
-            multiprocessing.set_start_method("spawn", force=True)
-        return multiprocessing.Manager()
-
-    @cached_property
-    def _messages_queue(self) -> queue.Queue[Message]:
-        return self._multiprocessing_manager.Queue()
-
-    @cached_property
-    def _process_pool(self) -> ProcessPoolExecutor:
-        return ProcessPoolExecutor(max_workers=4, mp_context=multiprocessing.get_context("spawn"))
 
     @cached_property
     def _messages_queue_thread(self) -> threading.Thread:
@@ -77,7 +63,10 @@ class PipelineManager:
 
     @cached_property
     def _memoization_map(self) -> MemoizationMap:
-        return MemoizationMap(self._multiprocessing_manager.dict(), self._multiprocessing_manager.dict())  # type: ignore[arg-type]
+        return MemoizationMap(
+            self._process_manager.create_shared_dict(),  # type: ignore[arg-type]
+            self._process_manager.create_shared_dict(),  # type: ignore[arg-type]
+        )
 
     def startup(self) -> None:
         """
@@ -90,11 +79,8 @@ class PipelineManager:
 
         This method should not be called during the bootstrap phase of the python interpreter, as it leads to a crash.
         """
-        _mq = self._messages_queue  # Initialize it here before starting a thread to avoid potential race condition
         if not self._messages_queue_thread.is_alive():
             self._messages_queue_thread.start()
-        # Ensure that pool is started
-        _pool = self._process_pool
 
     def _handle_queue_messages(self, event_loop: asyncio.AbstractEventLoop) -> None:
         """
@@ -108,8 +94,8 @@ class PipelineManager:
             Event Loop that handles websocket connections.
         """
         try:
-            while self._messages_queue is not None:
-                message = self._messages_queue.get()
+            while True:
+                message = self._process_manager.get_next_message()
                 message_encoded = json.dumps(message.to_dict())
                 # only send messages to the same connection once
                 for connection in set(self._websocket_target):
@@ -156,15 +142,15 @@ class PipelineManager:
         """
         self.startup()
         if execution_id not in self._placeholder_map:
-            self._placeholder_map[execution_id] = self._multiprocessing_manager.dict()
+            self._placeholder_map[execution_id] = self._process_manager.create_shared_dict()
         process = PipelineProcess(
             pipeline,
             execution_id,
-            self._messages_queue,
+            self._process_manager.get_queue(),
             self._placeholder_map[execution_id],
             self._memoization_map,
         )
-        process.execute(self._process_pool)
+        process.execute(self._process_manager)
 
     def get_placeholder(self, execution_id: str, placeholder_name: str) -> tuple[str | None, Any]:
         """
@@ -190,15 +176,6 @@ class PipelineManager:
         if isinstance(value, ExplicitIdentityWrapper | ExplicitIdentityWrapperLazy):
             value = value.value
         return _get_placeholder_type(value), value
-
-    def shutdown(self) -> None:
-        """
-        Shut down the multiprocessing manager to end the used subprocess.
-
-        This should only be called if this PipelineManager is not intended to be reused again.
-        """
-        self._multiprocessing_manager.shutdown()
-        self._process_pool.shutdown(wait=True, cancel_futures=True)
 
 
 class PipelineProcess:
@@ -321,13 +298,13 @@ class PipelineProcess:
         # This is a callback to log an unexpected failure, executing this is never expected
         logging.exception("Pipeline process unexpectedly failed", exc_info=error)  # pragma: no cover
 
-    def execute(self, pool: ProcessPoolExecutor) -> None:
+    def execute(self, process_manager: ProcessManager) -> None:
         """
         Execute this pipeline in a process from the provided process pool.
 
         Results, progress and errors are communicated back to the main process.
         """
-        future = pool.submit(self._execute)
+        future = process_manager.submit(self._execute)
         exception = future.exception()
         if exception is not None:
             self._catch_subprocess_error(exception)  # pragma: no cover

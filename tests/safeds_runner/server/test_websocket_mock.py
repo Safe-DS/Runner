@@ -157,7 +157,7 @@ async def test_should_fail_message_validation_ws(websocket_message: str) -> None
         except WebsocketDisconnectError as _disconnect:
             disconnected = True
         assert disconnected
-    sds_server.app_pipeline_manager.shutdown()
+    sds_server.shutdown()
 
 
 @pytest.mark.parametrize(
@@ -332,7 +332,7 @@ async def test_should_execute_pipeline_return_exception(
             assert isinstance(frame["file"], str)
             assert "line" in frame
             assert isinstance(frame["line"], int)
-    sds_server.app_pipeline_manager.shutdown()
+    sds_server.shutdown()
 
 
 @pytest.mark.parametrize(
@@ -447,7 +447,7 @@ async def test_should_execute_pipeline_return_valid_placeholder(
             received_message = await test_websocket.receive()
             next_message = Message.from_dict(json.loads(received_message))
             assert next_message == expected_responses.pop(0)
-    sds_server.app_pipeline_manager.shutdown()
+    sds_server.shutdown()
 
 
 @pytest.mark.parametrize(
@@ -519,7 +519,7 @@ async def test_should_successfully_execute_simple_flow(messages: list[str], expe
         received_message = await test_websocket.receive()
         query_result_invalid = Message.from_dict(json.loads(received_message))
         assert query_result_invalid == expected_response
-    sds_server.app_pipeline_manager.shutdown()
+    sds_server.shutdown()
 
 
 @pytest.mark.parametrize(
@@ -548,7 +548,7 @@ async def helper_should_shut_itself_down_run_in_subprocess_async(sub_messages: l
     async with test_client.websocket("/WSMain") as test_websocket:
         for message in sub_messages:
             await test_websocket.send(message)
-    sds_server.app_pipeline_manager.shutdown()
+    sds_server.shutdown()
 
 
 @pytest.mark.timeout(45)

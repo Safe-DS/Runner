@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import atexit
 import logging
 import os
 
@@ -24,3 +25,4 @@ def start_server(port: int) -> None:
 
     safeds_server = SafeDsServer()
     safeds_server.startup(port)  # pragma: no cover
+    atexit.register(lambda: safeds_server.shutdown)  # pragma: no cover

@@ -22,6 +22,7 @@ from ._messages import (
     parse_validate_message,
 )
 from ._pipeline_manager import PipelineManager
+from ._process_manager import ProcessManager
 
 
 def create_flask_app() -> quart.app.Quart:
@@ -41,8 +42,10 @@ class SafeDsServer:
 
     def __init__(self) -> None:
         """Create a new server object."""
-        self.app_pipeline_manager = PipelineManager()
+        self.process_manager = ProcessManager()
+        self.app_pipeline_manager = PipelineManager(self.process_manager)
         self.app = create_flask_app()
+        self.app.config["process_manager"] = self.process_manager
         self.app.config["pipeline_manager"] = self.app_pipeline_manager
         self.app.websocket("/WSMain")(SafeDsServer.ws_main)
 
@@ -55,6 +58,7 @@ class SafeDsServer:
         port:
             Port to listen on
         """
+        self.process_manager.startup()
         logging.info("Starting Safe-DS Runner on port %s", str(port))
         serve_config = hypercorn.config.Config()
         # Only bind to host=127.0.0.1. Connections from other devices should not be accepted
@@ -64,13 +68,25 @@ class SafeDsServer:
         event_loop.run_until_complete(hypercorn.asyncio.serve(self.app, serve_config))
         event_loop.run_forever()  # pragma: no cover
 
+    def shutdown(self) -> None:
+        """Shutdown the server."""
+        self.process_manager.shutdown()
+
     @staticmethod
     async def ws_main() -> None:
         """Handle websocket requests to the WSMain endpoint and delegates with the required objects."""
-        await SafeDsServer._ws_main(quart.websocket, quart.current_app.config["pipeline_manager"])
+        await SafeDsServer._ws_main(
+            quart.websocket,
+            quart.current_app.config["process_manager"],
+            quart.current_app.config["pipeline_manager"],
+        )
 
     @staticmethod
-    async def _ws_main(ws: quart.Websocket, pipeline_manager: PipelineManager) -> None:
+    async def _ws_main(
+        ws: quart.Websocket,
+        process_manager: ProcessManager,
+        pipeline_manager: PipelineManager,
+    ) -> None:
         """
         Handle websocket requests to the WSMain endpoint.
 
@@ -86,13 +102,14 @@ class SafeDsServer:
         logging.debug("Request to WSRunProgram")
         output_queue: asyncio.Queue = asyncio.Queue()
         pipeline_manager.connect(output_queue)
-        foreground_handler = asyncio.create_task(SafeDsServer._ws_main_foreground(ws, pipeline_manager, output_queue))
+        foreground_handler = asyncio.create_task(SafeDsServer._ws_main_foreground(ws, process_manager, pipeline_manager, output_queue))
         background_handler = asyncio.create_task(SafeDsServer._ws_main_background(ws, output_queue))
         await asyncio.gather(foreground_handler, background_handler)
 
     @staticmethod
     async def _ws_main_foreground(
         ws: quart.Websocket,
+        process_manager: ProcessManager,
         pipeline_manager: PipelineManager,
         output_queue: asyncio.Queue,
     ) -> None:
@@ -110,7 +127,7 @@ class SafeDsServer:
             match received_object.type:
                 case "shutdown":
                     logging.debug("Requested shutdown...")
-                    pipeline_manager.shutdown()
+                    process_manager.shutdown()
                     sys.exit(0)
                 case "program":
                     try:
