@@ -53,16 +53,12 @@ class SafeDsServer:
         message:
             Message to be sent.
         """
+        message_encoded = json.dumps(message.data)
+
         asyncio.run_coroutine_threadsafe(
             self._sio.emit("event", "data"),
-            asyncio.get_running_loop()
+            asyncio.get_event_loop()
         )
-        message_encoded = json.dumps(message.data)
-        # await self._sio.emit(
-        #     "event", "data", to="abcdefgh"
-        # )
-
-        # await self._sio.emit(message.type, message_encoded, to=message.id)
 
     def _register_event_handlers(self, sio: socketio.AsyncServer) -> None:
         @sio.on("program")
@@ -74,8 +70,7 @@ class SafeDsServer:
                 return
 
             await sio.enter_room(sid, program_message.id)
-            sio.start_background_task(
-                self._pipeline_manager.execute_pipeline,
+            self._pipeline_manager.execute_pipeline(
                 program_message.data,
                 program_message.id,
             )
