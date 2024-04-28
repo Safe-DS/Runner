@@ -46,7 +46,7 @@ class SafeDsServer:
         self.app.config["pipeline_manager"] = self.app_pipeline_manager
         self.app.websocket("/WSMain")(SafeDsServer.ws_main)
 
-    def listen(self, port: int) -> None:
+    def startup(self, port: int) -> None:
         """
         Listen on the specified port for incoming connections to the runner.
 

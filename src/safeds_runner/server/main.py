@@ -23,4 +23,4 @@ def start_server(port: int) -> None:
     os.environ["PYTHONHASHSEED"] = str(1396986624)
 
     safeds_server = SafeDsServer()
-    safeds_server.listen(port)  # pragma: no cover
+    safeds_server.startup(port)  # pragma: no cover
