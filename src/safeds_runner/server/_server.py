@@ -54,9 +54,8 @@ class SafeDsServer:
             Message to be sent.
         """
         message_encoded = json.dumps(message.data)
-
         asyncio.run_coroutine_threadsafe(
-            self._sio.emit("event", "data"),
+            self._sio.emit(message.type, message_encoded, to=message.id),
             asyncio.get_event_loop()
         )
 
