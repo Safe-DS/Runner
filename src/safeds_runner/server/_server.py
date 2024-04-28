@@ -30,12 +30,14 @@ class SafeDsServer:
         self._process_manager.on_message(self.send_message)
         self._register_event_handlers(self._sio)
 
-    def startup(self, port: int) -> None:
+    async def startup(self, port: int) -> None:
         """Start the server on the specified port."""
         self._process_manager.startup()
 
         logging.info("Starting Safe-DS Runner on port %s", str(port))
-        uvicorn.run(self._app, host="127.0.0.1", port=port)
+        config = uvicorn.config.Config(self._app, host='127.0.0.1', port=port)
+        server = uvicorn.server.Server(config)
+        await server.serve()
 
     async def shutdown(self) -> None:
         """Shutdown the server."""
