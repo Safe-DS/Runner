@@ -316,21 +316,24 @@ async def test_should_execute_pipeline_return_exception(
     async with socketio.AsyncSimpleClient() as sio:
         await sio.connect(URL, transports=["websocket"])
         await sio.emit(event, message)
-        received_message = await sio.receive(timeout=5)
+        [event, received_message] = await sio.receive(timeout=5)
+        exception_message = Message.from_dict({
+            "type": event,
+            "data": json.loads(received_message),
+            "id": message["id"]
+        })
+        assert exception_message.type == expected_response_runtime_error.type
+        assert exception_message.id == expected_response_runtime_error.id
+        assert isinstance(exception_message.data, dict)
+        assert exception_message.data["message"] == expected_response_runtime_error.data["message"]
+        assert isinstance(exception_message.data["backtrace"], list)
+        assert len(exception_message.data["backtrace"]) > 0
+        for frame in exception_message.data["backtrace"]:
+            assert "file" in frame
+            assert isinstance(frame["file"], str)
+            assert "line" in frame
+            assert isinstance(frame["line"], int)
     await server.shutdown()
-    # received_message = await sio.receive()
-    # exception_message = Message.from_dict(json.loads(received_message))
-    # assert exception_message.type == expected_response_runtime_error.type
-    # assert exception_message.id == expected_response_runtime_error.id
-    # assert isinstance(exception_message.data, dict)
-    # assert exception_message.data["message"] == expected_response_runtime_error.data["message"]
-    # assert isinstance(exception_message.data["backtrace"], list)
-    # assert len(exception_message.data["backtrace"]) > 0
-    # for frame in exception_message.data["backtrace"]:
-    #     assert "file" in frame
-    #     assert isinstance(frame["file"], str)
-    #     assert "line" in frame
-    #     assert isinstance(frame["line"], int)
 
 
 @pytest.mark.parametrize(
