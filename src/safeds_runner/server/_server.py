@@ -46,7 +46,7 @@ class SafeDsServer:
 
     def __init__(self) -> None:
         """Create a new server object."""
-        self._websocket_target: list[asyncio.Queue] = []
+        self._websocket_target: set[asyncio.Queue] = set()
         self._process_manager = ProcessManager(self._websocket_target)
         self._pipeline_manager = PipelineManager(self._process_manager)
 
@@ -89,7 +89,7 @@ class SafeDsServer:
         websocket_connection_queue:
             Message Queue for a websocket connection.
         """
-        self._websocket_target.append(websocket_connection_queue)
+        self._websocket_target.add(websocket_connection_queue)
 
     def disconnect(self, websocket_connection_queue: asyncio.Queue) -> None:
         """
@@ -100,7 +100,8 @@ class SafeDsServer:
         websocket_connection_queue:
             Message Queue for a websocket connection to be removed.
         """
-        self._websocket_target.remove(websocket_connection_queue)
+        if websocket_connection_queue in self._websocket_target:
+            self._websocket_target.remove(websocket_connection_queue)
 
     @staticmethod
     async def ws_main() -> None:

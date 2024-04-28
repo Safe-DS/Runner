@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 class ProcessManager:
     """Service for managing processes and communicating between them."""
 
-    def __init__(self, targets: list[asyncio.Queue]):
+    def __init__(self, targets: set[asyncio.Queue]):
         self._websocket_target = targets
 
         self._lock = Lock()
@@ -64,7 +64,7 @@ class ProcessManager:
                 message = self.get_next_message()
                 message_encoded = json.dumps(message.to_dict())
                 # only send messages to the same connection once
-                for connection in set(self._websocket_target):
+                for connection in self._websocket_target:
                     asyncio.run_coroutine_threadsafe(connection.put(message_encoded), event_loop)
         except BaseException as error:  # noqa: BLE001  # pragma: no cover
             logging.warning("Message queue terminated: %s", error.__repr__())  # pragma: no cover
