@@ -25,8 +25,8 @@ class ProcessManager:
 
     def __init__(self):
         self._lock = Lock()
-        self._on_message_callbacks: set[Callable[[Message], Coroutine[Any, Any, None]]] = set()
         self._state: _State = "initial"
+        self._on_message_callbacks: set[Callable[[Message], Coroutine[Any, Any, None]]] = set()
 
     @cached_property
     def _manager(self) -> SyncManager:
@@ -37,15 +37,15 @@ class ProcessManager:
         return self._manager.Queue()
 
     @cached_property
+    def _message_queue_thread(self) -> threading.Thread:
+        return threading.Thread(daemon=True, target=self._consume_queue_messages, args=[asyncio.get_event_loop()])
+
+    @cached_property
     def _process_pool(self) -> ProcessPoolExecutor:
         return ProcessPoolExecutor(
             max_workers=4,
             mp_context=multiprocessing.get_context("spawn"),
         )
-
-    @cached_property
-    def _messages_queue_thread(self) -> threading.Thread:
-        return threading.Thread(daemon=True, target=self._consume_queue_messages, args=[asyncio.get_event_loop()])
 
     def _consume_queue_messages(self, event_loop: asyncio.AbstractEventLoop) -> None:
         """
@@ -78,7 +78,7 @@ class ProcessManager:
             _manager = self._manager
             _message_queue = self._message_queue
             _process_pool = self._process_pool
-            self._messages_queue_thread.start()
+            self._message_queue_thread.start()
 
             self._state = "started"
             self.submit(_warmup_worker)  # Warm up one worker process
