@@ -8,12 +8,11 @@ from queue import Queue
 from typing import Any
 
 import pytest
-from safeds_runner.server import _pipeline_manager
-from safeds_runner.server._memoization_map import (
+from safeds_runner.memoization._memoization_map import (
     MemoizationMap,
     MemoizationStats,
 )
-from safeds_runner.server._memoization_strategies import (
+from safeds_runner.memoization._memoization_strategies import (
     STAT_ORDER_LRU,
     STAT_ORDER_MISS_RATE,
     STAT_ORDER_MRU,
@@ -21,7 +20,8 @@ from safeds_runner.server._memoization_strategies import (
     STAT_ORDER_TIME_SAVED,
     StatOrderExtractor,
 )
-from safeds_runner.server._memoization_utils import _make_hashable
+from safeds_runner.memoization._memoization_utils import _make_hashable
+from safeds_runner.server import _pipeline_manager
 from safeds_runner.server._messages import ProgramMessageData, ProgramMessageMainInformation
 from safeds_runner.server._pipeline_manager import (
     PipelineProcess,
@@ -232,8 +232,8 @@ def test_memoization_dynamic(
         "fully_qualified_function_name",
     ),
     argvalues=[
-        (BaseClass(), "method1", [], {}, [], "tests.safeds_runner.server.test_memoization.BaseClass.method1"),
-        (ChildClass(), "method1", [], {}, [], "tests.safeds_runner.server.test_memoization.ChildClass.method1"),
+        (BaseClass(), "method1", [], {}, [], "tests.safeds_runner.memoization.test_memoization.BaseClass.method1"),
+        (ChildClass(), "method1", [], {}, [], "tests.safeds_runner.memoization.test_memoization.ChildClass.method1"),
     ],
     ids=[
         "member_call_base",

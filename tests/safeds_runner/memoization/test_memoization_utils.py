@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 from safeds.data.image.containers import Image
 from safeds.data.tabular.containers import Table
-from safeds_runner.server._memoization_utils import (
+from safeds_runner.memoization._memoization_utils import (
     ExplicitIdentityWrapper,
     ExplicitIdentityWrapperLazy,
     _get_size_of_value,

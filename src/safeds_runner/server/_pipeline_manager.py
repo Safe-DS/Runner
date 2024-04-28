@@ -18,14 +18,15 @@ from typing import Any
 
 import stack_data
 
-from ._memoization_map import MemoizationMap
-from ._memoization_utils import (
+from safeds_runner.memoization._memoization_map import MemoizationMap
+from safeds_runner.memoization._memoization_utils import (
     ExplicitIdentityWrapper,
     ExplicitIdentityWrapperLazy,
     _has_explicit_identity_memory,
     _is_deterministically_hashable,
     _is_not_primitive,
 )
+
 from ._messages import (
     Message,
     ProgramMessageData,
