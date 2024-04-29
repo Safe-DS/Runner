@@ -24,8 +24,6 @@ from safeds_runner.memoization._memoization_utils import (
 )
 from safeds_runner.server.messages._messages import (
     ProgramMessageData,
-    create_placeholder_description,
-    message_type_placeholder_type,
 )
 
 from ._module_manager import InMemoryFinder
@@ -61,7 +59,7 @@ class PipelineManager:
     async def execute_pipeline(
         self,
         pipeline: ProgramMessageData,
-        execution_id: str,
+        run_id: str,
     ) -> None:
         """
         Run a Safe-DS pipeline.
@@ -70,27 +68,27 @@ class PipelineManager:
         ----------
         pipeline:
             Message object that contains the information to run a pipeline.
-        execution_id:
+        run_id:
             Unique ID to identify this execution.
         """
-        if execution_id not in self._placeholder_map:
-            self._placeholder_map[execution_id] = await self._process_manager.create_shared_dict()
+        if run_id not in self._placeholder_map:
+            self._placeholder_map[run_id] = await self._process_manager.create_shared_dict()
         process = PipelineProcess(
             pipeline,
-            execution_id,
+            run_id,
             await self._process_manager.get_queue(),
-            self._placeholder_map[execution_id],
+            self._placeholder_map[run_id],
             await self._memoization_map,
         )
         await process.execute(self._process_manager)
 
-    def get_placeholder(self, execution_id: str, placeholder_name: str) -> tuple[str | None, Any]:
+    def get_placeholder(self, run_id: str, placeholder_name: str) -> tuple[str | None, Any]:
         """
         Get a placeholder type and value for an execution id and placeholder name.
 
         Parameters
         ----------
-        execution_id:
+        run_id:
             Unique ID identifying the execution in which the placeholder was calculated.
         placeholder_name:
             Name of the placeholder.
@@ -100,11 +98,11 @@ class PipelineManager:
         placeholder:
             Tuple containing placeholder type and placeholder value, or (None, None) if the placeholder does not exist.
         """
-        if execution_id not in self._placeholder_map:
+        if run_id not in self._placeholder_map:
             return None, None
-        if placeholder_name not in self._placeholder_map[execution_id]:
+        if placeholder_name not in self._placeholder_map[run_id]:
             return None, None
-        value = self._placeholder_map[execution_id][placeholder_name]
+        value = self._placeholder_map[run_id][placeholder_name]
         if isinstance(value, ExplicitIdentityWrapper | ExplicitIdentityWrapperLazy):
             value = value.value
         return _get_placeholder_type(value), value
@@ -116,7 +114,7 @@ class PipelineProcess:
     def __init__(
         self,
         pipeline: ProgramMessageData,
-        execution_id: str,
+        run_id: str,
         messages_queue: queue.Queue[OutgoingMessage],
         placeholder_map: dict[str, Any],
         memoization_map: MemoizationMap,
@@ -128,7 +126,7 @@ class PipelineProcess:
         ----------
         pipeline:
             Message object that contains the information to run a pipeline.
-        execution_id:
+        run_id:
             Unique ID to identify this process.
         messages_queue:
             A queue to write outgoing messages to.
@@ -138,7 +136,7 @@ class PipelineProcess:
             A map to save memoizable functions in.
         """
         self._pipeline = pipeline
-        self._id = execution_id
+        self._id = run_id
         self._messages_queue = messages_queue
         self._placeholder_map = placeholder_map
         self._memoization_map = memoization_map
@@ -149,7 +147,7 @@ class PipelineProcess:
     def _send_exception(self, exception: BaseException) -> None:
         self._send_message(
             create_runtime_error_message(
-                id_=self._id,
+                run_id=self._id,
                 message=exception.__str__(),
                 stacktrace=get_stacktrace(exception),
             ),
@@ -201,7 +199,7 @@ class PipelineProcess:
     def _execute(self) -> None:
         logging.info(
             "Executing %s.%s.%s...",
-            self._pipeline.main.modulepath,
+            self._pipeline.main.module_path,
             self._pipeline.main.module,
             self._pipeline.main.pipeline,
         )
@@ -218,8 +216,8 @@ class PipelineProcess:
             runpy.run_module(
                 (
                     main_module
-                    if len(self._pipeline.main.modulepath) == 0
-                    else f"{self._pipeline.main.modulepath}.{main_module}"
+                    if len(self._pipeline.main.module_path) == 0
+                    else f"{self._pipeline.main.module_path}.{main_module}"
                 ),
                 run_name="__main__",
                 alter_sys=True,

@@ -9,6 +9,7 @@ import pytest
 import socketio
 from pydantic import ValidationError
 from safeds_runner.server._server import SafeDsServer
+from safeds_runner.server.messages._incoming import RunMessagePayload, VirtualModule
 from safeds_runner.server.messages._outgoing import RuntimeErrorMessagePayload
 
 PORT = 17394
@@ -45,30 +46,29 @@ async def client() -> socketio.AsyncSimpleClient:
     argnames=("sent_event", "sent_payload", "expected_event", "expected_payload"),
     argvalues=[
         (
-            "program",
-            {
-                "id": "abcdefgh",
-                "data": {
-                    "code": {
-                        "": {
-                            "gen_test_a_pipe": (
-                                "if __name__ == '__main__':"
-                                "    raise Exception('Test Exception')"
-                            ),
-                        },
-                    },
-                    "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
-                },
-            },
+            "run",
+            RunMessagePayload(
+                run_id="raise_exception",
+                code=[
+                    VirtualModule(
+                        absolute_module_name="main",
+                        code=(
+                            "if __name__ == '__main__':"
+                            "    raise Exception('Test Exception')"
+                        ),
+                    ),
+                ],
+                main_absolute_module_name="main",
+            ),
             "runtime_error",
             RuntimeErrorMessagePayload(
-                id="abcdefgh",
+                run_id="raise_exception",
                 message="Test Exception",
                 stacktrace=[],
             ),
         ),
     ],
-    ids=["raise_exception"],
+    ids=["runtime_error"],
 )
 @pytest.mark.usefixtures("_server")
 async def test_runtime_error(

@@ -1,6 +1,5 @@
 """Module containing the server, endpoints and utility functions."""
 import asyncio
-import json
 import logging
 import sys
 from typing import Any
@@ -11,12 +10,8 @@ from pydantic import ValidationError
 
 from safeds_runner.server.messages._messages import (
     ProgramMessage,
-    QueryMessage,
-    create_placeholder_value,
-    message_type_placeholder_value,
 )
 
-from ._json_encoder import SafeDsEncoder
 from ._pipeline_manager import PipelineManager
 from ._process_manager import ProcessManager
 from .messages._outgoing import OutgoingMessage
@@ -60,18 +55,18 @@ class SafeDsServer:
             self._sio.emit(
                 message.event,
                 message.payload.model_dump_json(),
-                to=message.payload.id,
+                to=message.payload.run_id,
             ),
             asyncio.get_event_loop(),
         )
 
     def _register_event_handlers(self, sio: socketio.AsyncServer) -> None:
-        @sio.on("program")
-        async def program(sid: str, message: Any) -> None:
+        @sio.event
+        async def run(sid: str, payload: Any) -> None:
             try:
-                program_message = ProgramMessage(**message)
+                program_message = ProgramMessage(**payload)
             except (TypeError, ValidationError):
-                logging.exception("Invalid message data specified in: %s", message)
+                logging.exception("Invalid message data specified in: %s", payload)
                 return
 
             await sio.enter_room(sid, program_message.id)
@@ -81,49 +76,49 @@ class SafeDsServer:
             )
             # await sio.leave_room(sid, program_message.id)
 
-        @sio.on("placeholder_query")
-        async def placeholder_query(_sid: str, message: Any) -> None:
-            try:
-                placeholder_query_message = QueryMessage(**message)
-            except (TypeError, ValidationError):
-                logging.exception("Invalid message data specified in: %s", message)
-                return
+        # @sio.event
+        # async def placeholder_query(_sid: str, payload: Any) -> None:
+        #     try:
+        #         placeholder_query_message = QueryMessage(**payload)
+        #     except (TypeError, ValidationError):
+        #         logging.exception("Invalid message data specified in: %s", payload)
+        #         return
+        #
+        #     placeholder_type, placeholder_value = self._pipeline_manager.get_placeholder(
+        #         placeholder_query_message.id,
+        #         placeholder_query_message.data.name,
+        #     )
+        #
+        #     if placeholder_type is None:
+        #         # Send back empty type / value, to communicate that no placeholder exists (yet)
+        #         # Use name from query to allow linking a response to a request on the peer
+        #         data = json.dumps(create_placeholder_value(placeholder_query_message.data, "", ""))
+        #         await sio.emit(message_type_placeholder_value, data, to=placeholder_query_message.id)
+        #         return
+        #
+        #     try:
+        #         data = json.dumps(
+        #             create_placeholder_value(
+        #                 placeholder_query_message.data,
+        #                 placeholder_type,
+        #                 placeholder_value,
+        #             ),
+        #             cls=SafeDsEncoder,
+        #         )
+        #     except TypeError:
+        #         # if the value can't be encoded send back that the value exists but is not displayable
+        #         data = json.dumps(
+        #             create_placeholder_value(
+        #                 placeholder_query_message.data,
+        #                 placeholder_type,
+        #                 "<Not displayable>",
+        #             ),
+        #         )
+        #
+        #     await sio.emit(message_type_placeholder_value, data, to=placeholder_query_message.id)
 
-            placeholder_type, placeholder_value = self._pipeline_manager.get_placeholder(
-                placeholder_query_message.id,
-                placeholder_query_message.data.name,
-            )
-
-            if placeholder_type is None:
-                # Send back empty type / value, to communicate that no placeholder exists (yet)
-                # Use name from query to allow linking a response to a request on the peer
-                data = json.dumps(create_placeholder_value(placeholder_query_message.data, "", ""))
-                await sio.emit(message_type_placeholder_value, data, to=placeholder_query_message.id)
-                return
-
-            try:
-                data = json.dumps(
-                    create_placeholder_value(
-                        placeholder_query_message.data,
-                        placeholder_type,
-                        placeholder_value,
-                    ),
-                    cls=SafeDsEncoder,
-                )
-            except TypeError:
-                # if the value can't be encoded send back that the value exists but is not displayable
-                data = json.dumps(
-                    create_placeholder_value(
-                        placeholder_query_message.data,
-                        placeholder_type,
-                        "<Not displayable>",
-                    ),
-                )
-
-            await sio.emit(message_type_placeholder_value, data, to=placeholder_query_message.id)
-
-        @sio.on("shutdown")
-        async def shutdown():
+        @sio.event
+        async def shutdown(_sid: str, _payload: Any):
             logging.debug("Requested shutdown...")
             await self.shutdown()
             sys.exit(0)

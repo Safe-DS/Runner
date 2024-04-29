@@ -13,6 +13,8 @@ if typing.TYPE_CHECKING:
     import types
     from importlib.machinery import ModuleSpec
 
+    from safeds_runner.server.messages._incoming import VirtualModule
+
 
 class InMemoryLoader(importlib.abc.SourceLoader, ABC):
     """Load a virtual python module from a byte array and a filename."""
@@ -67,7 +69,7 @@ class InMemoryLoader(importlib.abc.SourceLoader, ABC):
 class InMemoryFinder(importlib.abc.MetaPathFinder):
     """Find python modules in an in-memory dictionary."""
 
-    def __init__(self, code: dict[str, dict[str, str]]):
+    def __init__(self, code: list[VirtualModule]):
         """
         Create a new in-memory finder.
 
@@ -77,10 +79,20 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
             A dictionary containing the code to be executed,
             grouped by module path containing a mapping from module name to module code.
         """
-        self.code = code
-        self.allowed_packages = set(code.keys())
+        self.code: dict[str, dict[str, str]] = {}
+        for module in code:
+            split = module.absolute_module_name.rsplit(sep=".", maxsplit=1)
+            module_path = split[0] if len(split) > 1 else ""
+            module_name = split[1]
+
+            if module_path not in self.code:
+                self.code[module_path] = {}
+
+            self.code[module_path][module_name] = module.code
+
+        self.allowed_packages = set(self.code.keys())
         self.imports_to_remove: set[str] = set()
-        for key in code:
+        for key in self.code:
             self._add_possible_packages_for_package_path(key)
 
     def _add_possible_packages_for_package_path(self, package_path: str) -> None:
