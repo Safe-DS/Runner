@@ -39,8 +39,25 @@ class ProcessManager:
         return self._manager.Queue()
 
     @cached_property
-    def _message_queue_thread(self) -> threading.Thread:
-        return threading.Thread(daemon=True, target=self._consume_queue_messages, args=[asyncio.get_event_loop()])
+    def _message_queue_consumer(self) -> threading.Thread:
+        def _consume_queue_messages(event_loop: asyncio.AbstractEventLoop) -> None:
+            """
+            Consume messages from the message queue and call all registered callbacks.
+
+            Parameters
+            ----------
+            event_loop:
+                Event Loop that handles websocket connections.
+            """
+            try:
+                while self._state != "shutdown":
+                    message = self._message_queue.get()
+                    for callback in self._on_message_callbacks:
+                        asyncio.run_coroutine_threadsafe(callback(message), event_loop)
+            except BaseException as error:  # noqa: BLE001  # pragma: no cover
+                logging.warning("Message queue terminated: %s", error.__repr__())  # pragma: no cover
+
+        return threading.Thread(daemon=True, target=_consume_queue_messages, args=[asyncio.get_event_loop()])
 
     @cached_property
     def _worker_process_pool(self) -> ProcessPoolExecutor:
@@ -48,23 +65,6 @@ class ProcessManager:
             max_workers=4,
             mp_context=multiprocessing.get_context("spawn"),
         )
-
-    def _consume_queue_messages(self, event_loop: asyncio.AbstractEventLoop) -> None:
-        """
-        Consume messages from the message queue and call all registered callbacks.
-
-        Parameters
-        ----------
-        event_loop:
-            Event Loop that handles websocket connections.
-        """
-        try:
-            while self._state != "shutdown":
-                message = self._message_queue.get()
-                for callback in self._on_message_callbacks:
-                    asyncio.run_coroutine_threadsafe(callback(message), event_loop)
-        except BaseException as error:  # noqa: BLE001  # pragma: no cover
-            logging.warning("Message queue terminated: %s", error.__repr__())  # pragma: no cover
 
     async def startup(self) -> None:
         """
@@ -81,7 +81,7 @@ class ProcessManager:
             _manager = self._manager
             _message_queue = self._message_queue
             _worker_process_pool = self._worker_process_pool
-            self._message_queue_thread.start()
+            self._message_queue_consumer.start()
 
             # Set state to started before warm up to prevent endless recursion
             self._state = "started"
