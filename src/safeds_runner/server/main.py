@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import atexit
 import logging
 import os
 
@@ -23,4 +25,4 @@ def start_server(port: int) -> None:
     os.environ["PYTHONHASHSEED"] = str(1396986624)
 
     safeds_server = SafeDsServer()
-    safeds_server.startup(port)  # pragma: no cover
+    asyncio.run(safeds_server.startup(port))
