@@ -8,7 +8,6 @@ from asyncio import CancelledError, Task
 from collections.abc import Callable
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from functools import cached_property
-from threading import Lock
 from typing import TYPE_CHECKING, Any, Literal, ParamSpec, TypeAlias, TypeVar
 
 if TYPE_CHECKING:
@@ -24,7 +23,6 @@ class ProcessManager:
     """Service for managing processes and communicating between them."""
 
     def __init__(self) -> None:
-        self._lock = Lock()
         self._state: _State = "initial"
         self._on_message_callbacks: set[Callable[[MessageFromServer], Coroutine[Any, Any, None]]] = set()
 
@@ -64,7 +62,7 @@ class ProcessManager:
             mp_context=multiprocessing.get_context("spawn"),
         )
 
-    async def startup(self) -> None:
+    def startup(self) -> None:
         """
         Start the process manager and all associated processes.
 
@@ -73,7 +71,6 @@ class ProcessManager:
         if self._state == "started":
             return
 
-        self._lock.acquire()
         if self._state == "initial":
             # Initialize all cached properties
             _manager = self._manager
@@ -85,30 +82,25 @@ class ProcessManager:
             self._state = "started"
 
             # Warm up one worker process
-            await self.submit(_warmup_worker)
+            self.submit(_warmup_worker)
         elif self._state == "shutdown":
-            self._lock.release()
             raise RuntimeError("ProcessManager has already been shutdown.")
-        self._lock.release()
 
-    async def shutdown(self) -> None:
+    def shutdown(self) -> None:
         """
         Shutdown the process manager and all associated processes.
 
         This method should be called before the program exits. After calling this method, the process manager can no
         longer be used.
         """
-        self._lock.acquire()
         if self._state == "started":
             self._worker_process_pool.shutdown(wait=True, cancel_futures=True)
             self._message_queue_consumer.cancel()
             self._manager.shutdown()
         self._state = "shutdown"
-        self._lock.release()
 
-    async def create_shared_dict(self) -> DictProxy:
+    def create_shared_dict(self) -> DictProxy:
         """Create a dictionary that can be accessed by multiple processes."""
-        await self.startup()
         return self._manager.dict()
 
     def on_message(self, callback: Callable[[MessageFromServer], Coroutine[Any, Any, None]]) -> Unregister:
@@ -128,17 +120,15 @@ class ProcessManager:
         self._on_message_callbacks.add(callback)
         return lambda: self._on_message_callbacks.remove(callback)
 
-    async def get_queue(self) -> queue.Queue[MessageFromServer]:
+    def get_queue(self) -> queue.Queue[MessageFromServer]:
         """Get the message queue that is used to communicate between processes."""
-        await self.startup()
         return self._message_queue
 
     _P = ParamSpec("_P")
     _T = TypeVar("_T")
 
-    async def submit(self, func: Callable[_P, _T], /, *args: _P.args, **kwargs: _P.kwargs) -> Future[_T]:
+    def submit(self, func: Callable[_P, _T], /, *args: _P.args, **kwargs: _P.kwargs) -> Future[_T]:
         """Submit a function to be executed by a worker process."""
-        await self.startup()
         return self._worker_process_pool.submit(func, *args, **kwargs)
 
 
