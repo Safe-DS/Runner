@@ -77,13 +77,18 @@ class ProcessManager:
 
         self._lock.acquire()
         if self._state == "initial":
+            # Initialize all cached properties
             _manager = self._manager
             _message_queue = self._message_queue
             _process_pool = self._process_pool
             self._message_queue_thread.start()
 
+
+            # Set state to started before warm up to prevent endless recursion
             self._state = "started"
-            await self.submit(_warmup_worker)  # Warm up one worker process
+
+            # Warm up one worker process
+            await self.submit(_warmup_worker)
         elif self._state == "shutdown":
             self._lock.release()
             raise RuntimeError("ProcessManager has already been shutdown.")
