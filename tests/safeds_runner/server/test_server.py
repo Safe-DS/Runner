@@ -112,7 +112,7 @@ async def test_runtime_warning(
     # Stacktrace should not be empty
     assert len(runtime_warning_payload.stacktrace) > 0
 
-    # Check the rest of the data
+    # Rest of the data should be correct
     runtime_warning_payload.stacktrace = []
     assert runtime_warning_payload == expected_response.payload
 
@@ -166,7 +166,7 @@ async def test_runtime_error(
     # Stacktrace should not be empty
     assert len(runtime_error_payload.stacktrace) > 0
 
-    # Check the rest of the data
+    # Rest of the data should be correct
     runtime_error_payload.stacktrace = []
     assert runtime_error_payload == expected_response.payload
 
@@ -177,37 +177,34 @@ SHUTDOWN_PORT = PORT + 1
 SHUTDOWN_URL = f"http://localhost:{SHUTDOWN_PORT}"
 
 
-def test_shutdown() -> None:
-    process = multiprocessing.Process(target=sync_run_shutdown_server)
+async def test_shutdown() -> None:
+    # Start the server that should be shut down
+    process = multiprocessing.Process(target=run_server_to_shutdown)
     process.start()
-    process.join(3 * BASE_TIMEOUT)
 
-    # Kill the server if it did not shut down in time
+    # Send a shutdown message
+    async with socketio.AsyncSimpleClient() as client_:
+        await client_.connect(SHUTDOWN_URL, transports=["websocket"])
+        await client_.emit(create_shutdown_message().event)
+
+        # Joining on the process can lead to a loss of the shutdown message
+        for _ in range(10 * BASE_TIMEOUT):
+            if not process.is_alive():
+                break
+            await asyncio.sleep(0.1)
+
+    # Kill the process and all child processes if it did not shut down in time
     if process.is_alive():
         parent = psutil.Process(process.pid)
         for child in parent.children(recursive=True):
             child.kill()
         pytest.fail("Server did not shut down in time.")
 
+    # Check the exit code
     assert process.exitcode == 0
 
 
-def sync_run_shutdown_server():
-    asyncio.run(run_shutdown_server())
-
-
-async def run_shutdown_server():
-    # Start the server
+def run_server_to_shutdown():
     server = SafeDsServer()
     server._sio.eio.start_service_task = False
-
-    def run_server():
-        asyncio.run(server.startup(SHUTDOWN_PORT))
-
-    thread = threading.Thread(target=run_server, daemon=True)
-    thread.start()
-
-    # Connect with a client and send a shutdown message
-    async with socketio.AsyncSimpleClient() as shutdown_client:
-        await shutdown_client.connect(SHUTDOWN_URL, transports=["websocket"])
-        await shutdown_client.emit(create_shutdown_message().event)
+    asyncio.run(server.startup(SHUTDOWN_PORT))
