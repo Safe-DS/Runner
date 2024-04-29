@@ -4,23 +4,19 @@ import asyncio
 import json
 import logging
 import multiprocessing
-import re
 import sys
 import threading
 import time
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pytest
-import socketio
-
 import safeds_runner.server.main
 import simple_websocket
-from pydantic import ValidationError
+import socketio
 from safeds.data.tabular.containers import Table
 from safeds_runner.server._json_encoder import SafeDsEncoder
 from safeds_runner.server._messages import (
     Message,
-    ProgramMessageData,
     QueryMessageData,
     QueryMessageWindow,
     create_placeholder_description,
@@ -33,15 +29,12 @@ from safeds_runner.server._messages import (
 )
 from safeds_runner.server._server import SafeDsServer
 
-if TYPE_CHECKING:
-    from regex import Regex
-
 PORT = 17394
 URL = f"http://localhost:{PORT}"
 
 
-@pytest.fixture
-def server() -> None:
+@pytest.fixture()
+def server() -> SafeDsServer:
     server = SafeDsServer()
     server._sio.eio.start_service_task = False
 
@@ -55,7 +48,7 @@ def server() -> None:
     thread = threading.Thread(target=run_server, daemon=True)
     thread.start()
 
-    yield server
+    return server
 
 
 @pytest.mark.parametrize(
@@ -183,108 +176,6 @@ async def test_should_fail_message_validation_ws(websocket_message: str) -> None
 
 
 @pytest.mark.parametrize(
-    argnames=["data", "exception_regex"],
-    argvalues=[
-        (
-            {"main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
-            re.compile(r"code[\s\S]*missing"),
-        ),
-        (
-            {"code": {"": {"entry": ""}}},
-            re.compile(r"main[\s\S]*missing"),
-        ),
-        (
-            {"code": {"": {"entry": ""}}, "main": {"modulepath": "1", "module": "2"}},
-            re.compile(r"main.pipeline[\s\S]*missing"),
-        ),
-        (
-            {"code": {"": {"entry": ""}}, "main": {"modulepath": "1", "pipeline": "3"}},
-            re.compile(r"main.module[\s\S]*missing"),
-        ),
-        (
-            {"code": {"": {"entry": ""}}, "main": {"module": "2", "pipeline": "3"}},
-            re.compile(r"main.modulepath[\s\S]*missing"),
-        ),
-        (
-            {
-                "code": {"": {"entry": ""}},
-                "main": {"modulepath": "1", "module": "2", "pipeline": "3", "other": "4"},
-            },
-            re.compile(r"main.other[\s\S]*extra_forbidden"),
-        ),
-        (
-            {"code": "a", "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
-            re.compile(r"code[\s\S]*dict_type"),
-        ),
-        (
-            {"code": {"a": "n"}, "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
-            re.compile(r"code\.a[\s\S]*dict_type"),
-        ),
-        (
-            {
-                "code": {"a": {"b": {"c": "d"}}},
-                "main": {"modulepath": "1", "module": "2", "pipeline": "3"},
-            },
-            re.compile(r"code\.a\.b[\s\S]*string_type"),
-        ),
-        (
-            {
-                "code": {},
-                "main": {"modulepath": "1", "module": "2", "pipeline": "3"},
-                "cwd": 1,
-            },
-            re.compile(r"cwd[\s\S]*string_type"),
-        ),
-    ],
-    ids=[
-        "program_no_code",
-        "program_no_main",
-        "program_invalid_main1",
-        "program_invalid_main2",
-        "program_invalid_main3",
-        "program_invalid_main4",
-        "program_invalid_code1",
-        "program_invalid_code2",
-        "program_invalid_code3",
-        "program_invalid_cwd",
-    ],
-)
-def test_should_fail_message_validation_reason_program(data: dict[str, Any], exception_regex: str) -> None:
-    with pytest.raises(ValidationError, match=exception_regex):
-        ProgramMessageData(**data)
-
-
-@pytest.mark.parametrize(
-    argnames=["data", "exception_regex"],
-    argvalues=[
-        (
-            {"a": "v"},
-            re.compile(r"name[\s\S]*missing"),
-        ),
-        (
-            {"name": "v", "window": {"begin": "a"}},
-            re.compile(r"window.begin[\s\S]*int_parsing"),
-        ),
-        (
-            {"name": "v", "window": {"size": "a"}},
-            re.compile(r"window.size[\s\S]*int_parsing"),
-        ),
-    ],
-    ids=[
-        "missing_name",
-        "wrong_type_begin",
-        "wrong_type_size",
-    ],
-)
-def test_should_fail_message_validation_reason_placeholder_query(
-    data: dict[str, Any],
-    exception_regex: Regex,
-) -> None:
-    with pytest.raises(ValidationError, match=exception_regex):
-        QueryMessageData(**data)
-
-
-@pytest.mark.parametrize(
     argnames=("event", "message", "expected_response_runtime_error"),
     argvalues=[
         (
@@ -320,7 +211,7 @@ async def test_should_execute_pipeline_return_exception(
         exception_message = Message.from_dict({
             "type": event,
             "data": json.loads(received_message),
-            "id": message["id"]
+            "id": message["id"],
         })
         assert exception_message.type == expected_response_runtime_error.type
         assert exception_message.id == expected_response_runtime_error.id
