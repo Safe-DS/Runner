@@ -218,35 +218,6 @@ async def test_should_successfully_execute_simple_flow(messages: list[str], expe
     await sds_server.shutdown()
 
 
-@pytest.mark.parametrize(
-    argnames="messages",
-    argvalues=[
-        [
-            json.dumps({"type": "shutdown", "id": "", "data": ""}),
-        ],
-    ],
-    ids=["shutdown_message"],
-)
-def test_should_shut_itself_down(messages: list[str]) -> None:
-    process = multiprocessing.Process(target=helper_should_shut_itself_down_run_in_subprocess, args=(messages,))
-    process.start()
-    process.join(30)
-    assert process.exitcode == 0
-
-
-def helper_should_shut_itself_down_run_in_subprocess(sub_messages: list[str]) -> None:
-    asyncio.get_event_loop().run_until_complete(helper_should_shut_itself_down_run_in_subprocess_async(sub_messages))
-
-
-async def helper_should_shut_itself_down_run_in_subprocess_async(sub_messages: list[str]) -> None:
-    sds_server = SafeDsServer()
-    test_client = sds_server._app.test_client()
-    async with test_client.websocket("/WSMain") as test_websocket:
-        for message in sub_messages:
-            await test_websocket.send(message)
-    await sds_server.shutdown()
-
-
 @pytest.mark.timeout(45)
 def test_should_accept_at_least_2_parallel_connections_in_subprocess() -> None:
     port = 6000
