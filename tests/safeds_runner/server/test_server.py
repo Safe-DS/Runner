@@ -55,6 +55,13 @@ async def client() -> socketio.AsyncSimpleClient:
         yield sio
 
 
+@pytest.fixture()
+async def client_2() -> socketio.AsyncSimpleClient:
+    async with socketio.AsyncSimpleClient() as sio:
+        await sio.connect(URL, transports=["websocket"])
+        yield sio
+
+
 # Test runtime warning -------------------------------------------------------------------------------------------------
 
 @pytest.mark.parametrize(
@@ -104,9 +111,9 @@ async def test_runtime_warning(
 
     # Stacktrace should not be empty
     assert len(runtime_warning_payload.stacktrace) > 0
-    runtime_warning_payload.stacktrace = []
 
     # Check the rest of the data
+    runtime_warning_payload.stacktrace = []
     assert runtime_warning_payload == expected_response.payload
 
 
@@ -158,9 +165,9 @@ async def test_runtime_error(
 
     # Stacktrace should not be empty
     assert len(runtime_error_payload.stacktrace) > 0
-    runtime_error_payload.stacktrace = []
 
     # Check the rest of the data
+    runtime_error_payload.stacktrace = []
     assert runtime_error_payload == expected_response.payload
 
 
