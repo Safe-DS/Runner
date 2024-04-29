@@ -66,7 +66,7 @@ class ProcessManager:
         except BaseException as error:  # noqa: BLE001  # pragma: no cover
             logging.warning("Message queue terminated: %s", error.__repr__())  # pragma: no cover
 
-    def startup(self) -> None:
+    async def startup(self) -> None:
         """
         Start the process manager and all associated processes.
 
@@ -83,13 +83,13 @@ class ProcessManager:
             self._message_queue_thread.start()
 
             self._state = "started"
-            self.submit(_warmup_worker)  # Warm up one worker process
+            await self.submit(_warmup_worker)  # Warm up one worker process
         elif self._state == "shutdown":
             self._lock.release()
             raise RuntimeError("ProcessManager has already been shutdown.")
         self._lock.release()
 
-    def shutdown(self) -> None:
+    async def shutdown(self) -> None:
         """
         Shutdown the process manager and all associated processes.
 
@@ -103,9 +103,9 @@ class ProcessManager:
         self._state = "shutdown"
         self._lock.release()
 
-    def create_shared_dict(self) -> DictProxy:
+    async def create_shared_dict(self) -> DictProxy:
         """Create a dictionary that can be accessed by multiple processes."""
-        self.startup()
+        await self.startup()
         return self._manager.dict()
 
     def on_message(self, callback: Callable[[Message], Coroutine[Any, Any, None]]) -> Unregister:
@@ -125,17 +125,17 @@ class ProcessManager:
         self._on_message_callbacks.add(callback)
         return lambda: self._on_message_callbacks.remove(callback)
 
-    def get_queue(self) -> Queue[Message]:
+    async def get_queue(self) -> Queue[Message]:
         """Get the message queue that is used to communicate between processes."""
-        self.startup()
+        await self.startup()
         return self._message_queue
 
     _P = ParamSpec("_P")
     _T = TypeVar("_T")
 
-    def submit(self, func: Callable[_P, _T], /, *args: _P.args, **kwargs: _P.kwargs) -> Future[_T]:
+    async def submit(self, func: Callable[_P, _T], /, *args: _P.args, **kwargs: _P.kwargs) -> Future[_T]:
         """Submit a function to be executed by a worker process."""
-        self.startup()
+        await self.startup()
         return self._process_pool.submit(func, *args, **kwargs)
 
 

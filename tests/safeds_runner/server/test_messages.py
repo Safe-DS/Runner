@@ -82,6 +82,7 @@ def test_should_fail_message_validation_reason_program(data: dict[str, Any], exc
     with pytest.raises(ValidationError, match=exception_regex):
         ProgramMessageData(**data)
 
+
 @pytest.mark.parametrize(
     argnames=["data", "exception_regex"],
     argvalues=[

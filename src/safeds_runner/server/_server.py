@@ -11,10 +11,11 @@ from pydantic import ValidationError
 
 from ._json_encoder import SafeDsEncoder
 from ._messages import (
+    Message,
     ProgramMessage,
     QueryMessage,
     create_placeholder_value,
-    message_type_placeholder_value, Message,
+    message_type_placeholder_value,
 )
 from ._pipeline_manager import PipelineManager
 from ._process_manager import ProcessManager
@@ -32,16 +33,16 @@ class SafeDsServer:
 
     async def startup(self, port: int) -> None:
         """Start the server on the specified port."""
-        self._process_manager.startup()
+        await self._process_manager.startup()
 
         logging.info("Starting Safe-DS Runner on port %s", str(port))
-        config = uvicorn.config.Config(self._app, host='127.0.0.1', port=port)
+        config = uvicorn.config.Config(self._app, host="127.0.0.1", port=port)
         server = uvicorn.server.Server(config)
         await server.serve()
 
     async def shutdown(self) -> None:
         """Shutdown the server."""
-        self._process_manager.shutdown()
+        await self._process_manager.shutdown()
         await self._sio.shutdown()
 
     async def send_message(self, message: Message) -> None:
@@ -56,7 +57,7 @@ class SafeDsServer:
         message_encoded = json.dumps(message.data)
         asyncio.run_coroutine_threadsafe(
             self._sio.emit(message.type, message_encoded, to=message.id),
-            asyncio.get_event_loop()
+            asyncio.get_event_loop(),
         )
 
     def _register_event_handlers(self, sio: socketio.AsyncServer) -> None:
@@ -69,7 +70,7 @@ class SafeDsServer:
                 return
 
             await sio.enter_room(sid, program_message.id)
-            self._pipeline_manager.execute_pipeline(
+            await self._pipeline_manager.execute_pipeline(
                 program_message.data,
                 program_message.id,
             )
