@@ -54,13 +54,13 @@ class PipelineManager:
         self._placeholder_map: dict = {}
 
     @cached_property
-    def _memoization_map(self) -> MemoizationMap:
+    async def _memoization_map(self) -> MemoizationMap:
         return MemoizationMap(
-            self._process_manager.create_shared_dict(),  # type: ignore[arg-type]
-            self._process_manager.create_shared_dict(),  # type: ignore[arg-type]
+            await self._process_manager.create_shared_dict(),  # type: ignore[arg-type]
+            await self._process_manager.create_shared_dict(),  # type: ignore[arg-type]
         )
 
-    def execute_pipeline(
+    async def execute_pipeline(
         self,
         pipeline: ProgramMessageData,
         execution_id: str,
@@ -76,15 +76,15 @@ class PipelineManager:
             Unique ID to identify this execution.
         """
         if execution_id not in self._placeholder_map:
-            self._placeholder_map[execution_id] = self._process_manager.create_shared_dict()
+            self._placeholder_map[execution_id] = await self._process_manager.create_shared_dict()
         process = PipelineProcess(
             pipeline,
             execution_id,
-            self._process_manager.get_queue(),
+            await self._process_manager.get_queue(),
             self._placeholder_map[execution_id],
-            self._memoization_map,
+            await self._memoization_map,
         )
-        process.execute(self._process_manager)
+        await process.execute(self._process_manager)
 
     def get_placeholder(self, execution_id: str, placeholder_name: str) -> tuple[str | None, Any]:
         """
@@ -232,13 +232,13 @@ class PipelineProcess:
         # This is a callback to log an unexpected failure, executing this is never expected
         logging.exception("Pipeline process unexpectedly failed", exc_info=error)  # pragma: no cover
 
-    def execute(self, process_manager: ProcessManager) -> None:
+    async def execute(self, process_manager: ProcessManager) -> None:
         """
         Execute this pipeline in a process from the provided process pool.
 
         Results, progress and errors are communicated back to the main process.
         """
-        future = process_manager.submit(self._execute)
+        future = await process_manager.submit(self._execute)
         exception = future.exception()
         if exception is not None:
             self._catch_subprocess_error(exception)  # pragma: no cover
