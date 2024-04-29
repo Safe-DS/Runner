@@ -51,10 +51,10 @@ class PipelineManager:
         self._process_manager = process_manager
 
     @cached_property
-    async def _memoization_map(self) -> MemoizationMap:
+    def _memoization_map(self) -> MemoizationMap:
         return MemoizationMap(
-            await self._process_manager.create_shared_dict(),  # type: ignore[arg-type]
-            await self._process_manager.create_shared_dict(),  # type: ignore[arg-type]
+            self._process_manager.create_shared_dict(),  # type: ignore[arg-type]
+            self._process_manager.create_shared_dict(),  # type: ignore[arg-type]
         )
 
     async def execute_pipeline(self, payload: RunMessagePayload) -> None:
@@ -68,8 +68,8 @@ class PipelineManager:
         """
         process = PipelineProcess(
             payload,
-            await self._process_manager.get_queue(),
-            await self._memoization_map,
+            self._process_manager.get_queue(),
+            self._memoization_map,
         )
         await process.execute(self._process_manager)
 
@@ -201,7 +201,7 @@ class PipelineProcess:
 
         Results, progress and errors are communicated back to the main process.
         """
-        future = await process_manager.submit(self._execute)
+        future = process_manager.submit(self._execute)
         exception = future.exception()
         if exception is not None:
             self._catch_subprocess_error(exception)  # pragma: no cover

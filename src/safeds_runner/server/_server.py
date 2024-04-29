@@ -29,16 +29,16 @@ class SafeDsServer:
 
     async def startup(self, port: int) -> None:
         """Start the server on the specified port."""
-        await self._process_manager.startup()
+        self._process_manager.startup()
 
-        logging.info("Starting Safe-DS Runner on port %s", str(port))
+        logging.info("Starting Safe-DS Runner on port %s...", str(port))
         config = uvicorn.config.Config(self._app, host="127.0.0.1", port=port)
         server = uvicorn.server.Server(config)
         await server.serve()
 
     async def shutdown(self) -> None:
         """Shutdown the server."""
-        await self._process_manager.shutdown()
+        self._process_manager.shutdown()
         await self._sio.shutdown()
 
     async def send_message(self, message: MessageFromServer) -> None:
@@ -122,7 +122,7 @@ class SafeDsServer:
 
         @sio.event
         async def shutdown(_sid: str, _payload: Any):
-            logging.debug("Requested shutdown...")
+            logging.debug("Shutting down...")
             await self.shutdown()
             sys.exit(0)
 

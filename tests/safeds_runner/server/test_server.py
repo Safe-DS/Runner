@@ -25,7 +25,7 @@ PORT = 17394
 URL = f"http://localhost:{PORT}"
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 async def _server() -> None:
     # Start the server
     server = SafeDsServer()
