@@ -5,22 +5,21 @@ from abc import ABC
 from pydantic import BaseModel, ConfigDict
 
 
-class IncomingMessage(BaseModel):
+class MessageToServer(BaseModel):
     event: str
-    payload: IncomingMessagePayload
+    payload: MessageToServerPayload
 
     model_config = ConfigDict(extra="forbid")
 
 
-class IncomingMessagePayload(BaseModel, ABC):
+class MessageToServerPayload(BaseModel, ABC):
     pass
 
 
-class RunMessagePayload(IncomingMessagePayload):
+class RunMessagePayload(MessageToServerPayload):
     run_id: str
     code: list[VirtualModule]
     main_absolute_module_name: str
-
     cwd: str | None = None
     table_window: Window | None = None
 
@@ -52,9 +51,28 @@ class Window(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class ShutdownMessagePayload(IncomingMessagePayload):
+class ShutdownMessagePayload(MessageToServerPayload):
     model_config = ConfigDict(extra="forbid")
 
 
-def create_shutdown_message() -> IncomingMessage:
-    return IncomingMessage(event="shutdown", payload=ShutdownMessagePayload())
+def create_run_message(
+    run_id: str,
+    code: list[VirtualModule],
+    main_absolute_module_name: str,
+    cwd: str | None = None,
+    table_window: Window | None = None,
+) -> MessageToServer:
+    return MessageToServer(
+        event="run",
+        payload=RunMessagePayload(
+            run_id=run_id,
+            code=code,
+            main_absolute_module_name=main_absolute_module_name,
+            cwd=cwd,
+            table_window=table_window,
+        ),
+    )
+
+
+def create_shutdown_message() -> MessageToServer:
+    return MessageToServer(event="shutdown", payload=ShutdownMessagePayload())

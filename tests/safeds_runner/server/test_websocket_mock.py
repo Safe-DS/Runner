@@ -10,14 +10,14 @@ import time
 from typing import Any
 
 import pytest
-from pydantic import ValidationError
-
 import safeds_runner.server.main
 import simple_websocket
 import socketio
+from pydantic import ValidationError
 from safeds.data.tabular.containers import Table
 from safeds_runner.server._json_encoder import SafeDsEncoder
 from safeds_runner.server._server import SafeDsServer
+from safeds_runner.server.messages._from_server import RuntimeErrorMessagePayload
 from safeds_runner.server.messages._messages import (
     Message,
     QueryMessageData,
@@ -29,7 +29,6 @@ from safeds_runner.server.messages._messages import (
     message_type_placeholder_value,
     message_type_runtime_progress,
 )
-from safeds_runner.server.messages._outgoing import RuntimeErrorMessagePayload
 
 PORT = 17394
 URL = f"http://localhost:{PORT}"

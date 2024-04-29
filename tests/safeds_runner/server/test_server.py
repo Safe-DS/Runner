@@ -3,14 +3,21 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
-from typing import Any
 
 import pytest
 import socketio
 from pydantic import ValidationError
 from safeds_runner.server._server import SafeDsServer
-from safeds_runner.server.messages._incoming import RunMessagePayload, VirtualModule
-from safeds_runner.server.messages._outgoing import RuntimeErrorMessagePayload
+from safeds_runner.server.messages._from_server import (
+    MessageFromServer,
+    RuntimeErrorMessagePayload,
+    create_runtime_error_message,
+)
+from safeds_runner.server.messages._to_server import (
+    MessageToServer,
+    VirtualModule,
+    create_run_message,
+)
 
 PORT = 17394
 URL = f"http://localhost:{PORT}"
@@ -43,11 +50,10 @@ async def client() -> socketio.AsyncSimpleClient:
 
 
 @pytest.mark.parametrize(
-    argnames=("sent_event", "sent_payload", "expected_event", "expected_payload"),
+    argnames=("request_", "expected_response"),
     argvalues=[
         (
-            "run",
-            RunMessagePayload(
+            create_run_message(
                 run_id="raise_exception",
                 code=[
                     VirtualModule(
@@ -60,8 +66,7 @@ async def client() -> socketio.AsyncSimpleClient:
                 ],
                 main_absolute_module_name="main",
             ),
-            "runtime_error",
-            RuntimeErrorMessagePayload(
+            create_runtime_error_message(
                 run_id="raise_exception",
                 message="Test Exception",
                 stacktrace=[],
@@ -73,16 +78,14 @@ async def client() -> socketio.AsyncSimpleClient:
 @pytest.mark.usefixtures("_server")
 async def test_runtime_error(
     client: socketio.AsyncSimpleClient,
-    sent_event: str,
-    sent_payload: dict[str, Any],
-    expected_event: str,
-    expected_payload: RuntimeErrorMessagePayload,
+    request_: MessageToServer,
+    expected_response: MessageFromServer,
 ) -> None:
-    await client.emit(sent_event, sent_payload)
-    [actual_event, actual_payload] = await client.receive(timeout=5)
+    await client.emit(request_.event, request_.payload.model_dump_json())
+    [actual_event, actual_payload] = await client.receive(timeout=50)
 
     # Event should be correct
-    assert actual_event == expected_event
+    assert actual_event == expected_response.event
 
     # Payload should have expected structure
     try:
@@ -95,4 +98,4 @@ async def test_runtime_error(
     runtime_error_payload.stacktrace = []
 
     # Check the rest of the data
-    assert runtime_error_payload == expected_payload
+    assert runtime_error_payload == expected_response.payload

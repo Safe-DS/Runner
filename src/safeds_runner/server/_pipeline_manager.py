@@ -22,18 +22,16 @@ from safeds_runner.memoization._memoization_utils import (
     _is_deterministically_hashable,
     _is_not_primitive,
 )
-from safeds_runner.server.messages._messages import (
-    ProgramMessageData,
-)
 
 from ._module_manager import InMemoryFinder
-from .messages._outgoing import StacktraceEntry, create_done_message, create_runtime_error_message
+from .messages._from_server import StacktraceEntry, create_done_message, create_runtime_error_message
 
 if typing.TYPE_CHECKING:
     import queue
 
     from ._process_manager import ProcessManager
-    from .messages._outgoing import OutgoingMessage
+    from .messages._from_server import MessageFromServer
+    from .messages._to_server import RunMessagePayload
 
 
 class PipelineManager:
@@ -45,9 +43,7 @@ class PipelineManager:
     """
 
     def __init__(self, process_manager: ProcessManager) -> None:
-        """Create a new PipelineManager object, which is lazily started, when needed."""
         self._process_manager = process_manager
-        self._placeholder_map: dict = {}
 
     @cached_property
     async def _memoization_map(self) -> MemoizationMap:
@@ -56,56 +52,21 @@ class PipelineManager:
             await self._process_manager.create_shared_dict(),  # type: ignore[arg-type]
         )
 
-    async def execute_pipeline(
-        self,
-        pipeline: ProgramMessageData,
-        run_id: str,
-    ) -> None:
+    async def execute_pipeline(self, payload: RunMessagePayload) -> None:
         """
         Run a Safe-DS pipeline.
 
         Parameters
         ----------
-        pipeline:
-            Message object that contains the information to run a pipeline.
-        run_id:
-            Unique ID to identify this execution.
+        payload:
+            Information about the pipeline to run.
         """
-        if run_id not in self._placeholder_map:
-            self._placeholder_map[run_id] = await self._process_manager.create_shared_dict()
         process = PipelineProcess(
-            pipeline,
-            run_id,
+            payload,
             await self._process_manager.get_queue(),
-            self._placeholder_map[run_id],
             await self._memoization_map,
         )
         await process.execute(self._process_manager)
-
-    def get_placeholder(self, run_id: str, placeholder_name: str) -> tuple[str | None, Any]:
-        """
-        Get a placeholder type and value for an execution id and placeholder name.
-
-        Parameters
-        ----------
-        run_id:
-            Unique ID identifying the execution in which the placeholder was calculated.
-        placeholder_name:
-            Name of the placeholder.
-
-        Returns
-        -------
-        placeholder:
-            Tuple containing placeholder type and placeholder value, or (None, None) if the placeholder does not exist.
-        """
-        if run_id not in self._placeholder_map:
-            return None, None
-        if placeholder_name not in self._placeholder_map[run_id]:
-            return None, None
-        value = self._placeholder_map[run_id][placeholder_name]
-        if isinstance(value, ExplicitIdentityWrapper | ExplicitIdentityWrapperLazy):
-            value = value.value
-        return _get_placeholder_type(value), value
 
 
 class PipelineProcess:
@@ -113,10 +74,8 @@ class PipelineProcess:
 
     def __init__(
         self,
-        pipeline: ProgramMessageData,
-        run_id: str,
-        messages_queue: queue.Queue[OutgoingMessage],
-        placeholder_map: dict[str, Any],
+        payload: RunMessagePayload,
+        messages_queue: queue.Queue[MessageFromServer],
         memoization_map: MemoizationMap,
     ):
         """
@@ -124,30 +83,24 @@ class PipelineProcess:
 
         Parameters
         ----------
-        pipeline:
-            Message object that contains the information to run a pipeline.
-        run_id:
-            Unique ID to identify this process.
+        payload:
+            Information about the pipeline to run.
         messages_queue:
             A queue to write outgoing messages to.
-        placeholder_map:
-            A map to save calculated placeholders in.
         memoization_map:
-            A map to save memoizable functions in.
+            A map to save results of memoizable functions in.
         """
-        self._pipeline = pipeline
-        self._id = run_id
+        self._payload = payload
         self._messages_queue = messages_queue
-        self._placeholder_map = placeholder_map
         self._memoization_map = memoization_map
 
-    def _send_message(self, message: OutgoingMessage) -> None:
+    def _send_message(self, message: MessageFromServer) -> None:
         self._messages_queue.put(message)
 
     def _send_exception(self, exception: BaseException) -> None:
         self._send_message(
             create_runtime_error_message(
-                run_id=self._id,
+                run_id=self._payload.run_id,
                 message=exception.__str__(),
                 stacktrace=get_stacktrace(exception),
             ),
@@ -179,11 +132,12 @@ class PipelineProcess:
             and _has_explicit_identity_memory(value)
         ):
             value = ExplicitIdentityWrapper.existing(value)
-        self._placeholder_map[placeholder_name] = value
-        self._send_message(
-            message_type_placeholder_type,
-            create_placeholder_description(placeholder_name, placeholder_type),
-        )
+        # TODO
+        # self._placeholder_map[placeholder_name] = value
+        # self._send_message(
+        #     message_type_placeholder_type,
+        #     create_placeholder_description(placeholder_name, placeholder_type),
+        # )
 
     def get_memoization_map(self) -> MemoizationMap:
         """
@@ -197,32 +151,23 @@ class PipelineProcess:
         return self._memoization_map
 
     def _execute(self) -> None:
-        logging.info(
-            "Executing %s.%s.%s...",
-            self._pipeline.main.module_path,
-            self._pipeline.main.module,
-            self._pipeline.main.pipeline,
-        )
-        pipeline_finder = InMemoryFinder(self._pipeline.code)
+        logging.info("Executing %s...", self._payload.main_absolute_module_name)
+
+        pipeline_finder = InMemoryFinder(self._payload.code)
         pipeline_finder.attach()
-        main_module = f"gen_{self._pipeline.main.module}_{self._pipeline.main.pipeline}"
         # Populate current_pipeline global, so child process can save placeholders in correct location
         globals()["current_pipeline"] = self
 
-        if self._pipeline.cwd is not None:
-            os.chdir(self._pipeline.cwd)  # pragma: no cover
+        if self._payload.cwd is not None:
+            os.chdir(self._payload.cwd)  # pragma: no cover
 
         try:
             runpy.run_module(
-                (
-                    main_module
-                    if len(self._pipeline.main.module_path) == 0
-                    else f"{self._pipeline.main.module_path}.{main_module}"
-                ),
+                self._payload.main_absolute_module_name,
                 run_name="__main__",
                 alter_sys=True,
             )
-            self._send_message(create_done_message(self._id))
+            self._send_message(create_done_message(self._payload.run_id))
         except BaseException as error:  # noqa: BLE001
             self._send_exception(error)
         finally:

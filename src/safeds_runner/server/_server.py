@@ -1,5 +1,6 @@
 """Module containing the server, endpoints and utility functions."""
 import asyncio
+import json
 import logging
 import sys
 from typing import Any
@@ -8,13 +9,10 @@ import socketio
 import uvicorn
 from pydantic import ValidationError
 
-from safeds_runner.server.messages._messages import (
-    ProgramMessage,
-)
-
 from ._pipeline_manager import PipelineManager
 from ._process_manager import ProcessManager
-from .messages._outgoing import OutgoingMessage
+from .messages._from_server import MessageFromServer
+from .messages._to_server import RunMessagePayload
 
 
 class SafeDsServer:
@@ -42,7 +40,7 @@ class SafeDsServer:
         await self._process_manager.shutdown()
         await self._sio.shutdown()
 
-    async def send_message(self, message: OutgoingMessage) -> None:
+    async def send_message(self, message: MessageFromServer) -> None:
         """
         Send a message to all interested clients.
 
@@ -64,16 +62,15 @@ class SafeDsServer:
         @sio.event
         async def run(sid: str, payload: Any) -> None:
             try:
-                program_message = ProgramMessage(**payload)
+                if isinstance(payload, str):
+                    payload = json.loads(payload)
+                run_message_payload = RunMessagePayload(**payload)
             except (TypeError, ValidationError):
                 logging.exception("Invalid message data specified in: %s", payload)
                 return
 
-            await sio.enter_room(sid, program_message.id)
-            await self._pipeline_manager.execute_pipeline(
-                program_message.data,
-                program_message.id,
-            )
+            await sio.enter_room(sid, run_message_payload.run_id)
+            await self._pipeline_manager.execute_pipeline(run_message_payload)
             # await sio.leave_room(sid, program_message.id)
 
         # @sio.event
