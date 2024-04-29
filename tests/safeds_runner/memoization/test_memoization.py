@@ -31,6 +31,9 @@ from safeds_runner.server._pipeline_manager import (
     memoized_dynamic_call,
     memoized_static_call,
 )
+from safeds_runner.server.messages._to_server import RunMessagePayload
+
+
 # from safeds_runner.server.messages._messages import ProgramMessageData, ProgramMessageMainInformation
 
 
@@ -60,11 +63,16 @@ def test_memoization_static_already_present_values(
     hidden_arguments: list,
     expected_result: Any,
 ) -> None:
-    _pipeline_manager.current_pipeline = PipelineProcess("", ProgramMessageData(code={},
-                                                                                main=ProgramMessageMainInformation(
-                                                                                    modulepath="", module="",
-                                                                                    pipeline="")), Queue(), {},
-                                                         MemoizationMap({}, {}))
+    _pipeline_manager.current_pipeline = PipelineProcess(
+        RunMessagePayload(
+            run_id="",
+            code=[],
+            main_absolute_module_name="",
+        ),
+        Queue(),
+        MemoizationMap({}, {})
+    )
+
     _pipeline_manager.current_pipeline.get_memoization_map()._map_values[
         (
             fully_qualified_function_name,
@@ -115,11 +123,16 @@ def test_memoization_static_not_present_values(
     hidden_arguments: list,
     expected_result: Any,
 ) -> None:
-    _pipeline_manager.current_pipeline = PipelineProcess("", ProgramMessageData(code={},
-                                                                                main=ProgramMessageMainInformation(
-                                                                                    modulepath="", module="",
-                                                                                    pipeline="")), Queue(), {},
-                                                         MemoizationMap({}, {}))
+    _pipeline_manager.current_pipeline = PipelineProcess(
+        RunMessagePayload(
+            run_id="",
+            code=[],
+            main_absolute_module_name="",
+        ),
+        Queue(),
+        MemoizationMap({}, {})
+    )
+
     # Save value in map
     result = memoized_static_call(
         fully_qualified_function_name,
@@ -191,11 +204,15 @@ def test_memoization_dynamic(
     hidden_arguments: list,
     expected_result: Any,
 ) -> None:
-    _pipeline_manager.current_pipeline = PipelineProcess("", ProgramMessageData(code={},
-                                                                                main=ProgramMessageMainInformation(
-                                                                                    modulepath="", module="",
-                                                                                    pipeline="")), Queue(), {},
-                                                         MemoizationMap({}, {}))
+    _pipeline_manager.current_pipeline = PipelineProcess(
+        RunMessagePayload(
+            run_id="",
+            code=[],
+            main_absolute_module_name="",
+        ),
+        Queue(),
+        MemoizationMap({}, {})
+    )
 
     # Save value in map
     result = memoized_dynamic_call(
@@ -244,11 +261,15 @@ def test_memoization_dynamic_contains_correct_fully_qualified_name(
     hidden_arguments: list,
     fully_qualified_function_name: Any,
 ) -> None:
-    _pipeline_manager.current_pipeline = PipelineProcess("", ProgramMessageData(code={},
-                                                                                main=ProgramMessageMainInformation(
-                                                                                    modulepath="", module="",
-                                                                                    pipeline="")), Queue(), {},
-                                                         MemoizationMap({}, {}))
+    _pipeline_manager.current_pipeline = PipelineProcess(
+        RunMessagePayload(
+            run_id="",
+            code=[],
+            main_absolute_module_name="",
+        ),
+        Queue(),
+        MemoizationMap({}, {})
+    )
     # Save value in map
     result = memoized_dynamic_call(
         receiver,
@@ -294,12 +315,15 @@ def test_memoization_dynamic_not_base_name(
     hidden_arguments: list,
     fully_qualified_function_name: Any,
 ) -> None:
-    _pipeline_manager.current_pipeline = PipelineProcess("", ProgramMessageData(code={},
-                                                                                main=ProgramMessageMainInformation(
-                                                                                    modulepath="", module="",
-                                                                                    pipeline="")), Queue(), {},
-                                                         MemoizationMap({}, {}))
-
+    _pipeline_manager.current_pipeline = PipelineProcess(
+        RunMessagePayload(
+            run_id="",
+            code=[],
+            main_absolute_module_name="",
+        ),
+        Queue(),
+        MemoizationMap({}, {})
+    )
     # Save value in map
     result = memoized_dynamic_call(
         receiver,
@@ -349,11 +373,15 @@ def test_memoization_static_unhashable_values(
     hidden_arguments: list,
     expected_result: Any,
 ) -> None:
-    _pipeline_manager.current_pipeline = PipelineProcess("", ProgramMessageData(code={},
-                                                                                main=ProgramMessageMainInformation(
-                                                                                    modulepath="", module="",
-                                                                                    pipeline="")), Queue(), {},
-                                                         MemoizationMap({}, {}))
+    _pipeline_manager.current_pipeline = PipelineProcess(
+        RunMessagePayload(
+            run_id="",
+            code=[],
+            main_absolute_module_name="",
+        ),
+        Queue(),
+        MemoizationMap({}, {})
+    )
     result = memoized_static_call(
         fully_qualified_function_name,
         callable_,
@@ -567,11 +595,15 @@ def test_memoization_limited_static_not_present_values(
         {"a": MemoizationStats([10], [30], [40], [20]), "b": MemoizationStats([10], [30], [40], [20])},
     )
     memo_map.max_size = 45
-    _pipeline_manager.current_pipeline = PipelineProcess("", ProgramMessageData(code={},
-                                                                                main=ProgramMessageMainInformation(
-                                                                                    modulepath="", module="",
-                                                                                    pipeline="")), Queue(), {},
-                                                         memo_map)
+    _pipeline_manager.current_pipeline = PipelineProcess(
+        RunMessagePayload(
+            run_id="",
+            code=[],
+            main_absolute_module_name="",
+        ),
+        Queue(),
+        memo_map
+    )
     # Save value in map
     result = memoized_static_call(
         fully_qualified_function_name,
