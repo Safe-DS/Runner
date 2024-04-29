@@ -1,113 +1,138 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pytest
 from pydantic import ValidationError
-# from safeds_runner.server.messages._messages import ProgramMessageData, QueryMessageData
+
+from safeds_runner.server.messages._to_server import RunMessagePayload
 
 if TYPE_CHECKING:
-    from regex import Regex
+    from typing import Any
 
 
 @pytest.mark.parametrize(
     argnames=["data", "exception_regex"],
     argvalues=[
-        (
-            {"main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
+        (  # valid_minimal
+            {
+                "run_id": "id",
+                "code": [],
+                "main_absolute_module_name": "main",
+            },
+            None,
+        ),
+        (  # valid_with_code
+            {
+                "run_id": "id",
+                "code": [
+                    {"absolute_module_name": "main", "code": "code"},
+                ],
+                "main_absolute_module_name": "main",
+            },
+            None
+        ),
+        (  # valid_with_cwd
+            {
+                "run_id": "id",
+                "code": [],
+                "main_absolute_module_name": "main",
+                "cwd": "cwd",
+            },
+            None,
+        ),
+        (  # valid_with_table_window
+            {
+                "run_id": "id",
+                "code": [],
+                "main_absolute_module_name": "main",
+                "table_window": {"start": 0, "size": 1},
+            },
+            None,
+        ),
+        (  # invalid_no_run_id
+            {
+                "code": [],
+                "main_absolute_module_name": "main",
+            },
+            re.compile(r"run_id[\s\S]*missing"),
+        ),
+        (  # invalid_wrong_type_run_id
+            {
+                "run_id": 1,
+                "code": [],
+                "main_absolute_module_name": "main",
+            },
+            re.compile(r"run_id[\s\S]*string_type"),
+        ),
+        (  # invalid_no_code
+            {
+                "run_id": "id",
+                "main_absolute_module_name": "main",
+            },
             re.compile(r"code[\s\S]*missing"),
         ),
-        (
-            {"code": {"": {"entry": ""}}},
-            re.compile(r"main[\s\S]*missing"),
-        ),
-        (
-            {"code": {"": {"entry": ""}}, "main": {"modulepath": "1", "module": "2"}},
-            re.compile(r"main.pipeline[\s\S]*missing"),
-        ),
-        (
-            {"code": {"": {"entry": ""}}, "main": {"modulepath": "1", "pipeline": "3"}},
-            re.compile(r"main.module[\s\S]*missing"),
-        ),
-        (
-            {"code": {"": {"entry": ""}}, "main": {"module": "2", "pipeline": "3"}},
-            re.compile(r"main.modulepath[\s\S]*missing"),
-        ),
-        (
+        (  # invalid_wrong_type_code
             {
-                "code": {"": {"entry": ""}},
-                "main": {"modulepath": "1", "module": "2", "pipeline": "3", "other": "4"},
+                "run_id": "id",
+                "code": "a",
+                "main_absolute_module_name": "main",
             },
-            re.compile(r"main.other[\s\S]*extra_forbidden"),
+            re.compile(r"code[\s\S]*list_type"),
         ),
-        (
-            {"code": "a", "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
-            re.compile(r"code[\s\S]*dict_type"),
-        ),
-        (
-            {"code": {"a": "n"}, "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
-            re.compile(r"code\.a[\s\S]*dict_type"),
-        ),
-        (
+        (  # invalid_no_main_absolute_module_name
             {
-                "code": {"a": {"b": {"c": "d"}}},
-                "main": {"modulepath": "1", "module": "2", "pipeline": "3"},
+                "run_id": "id",
+                "code": [],
             },
-            re.compile(r"code\.a\.b[\s\S]*string_type"),
+            re.compile(r"main_absolute_module_name[\s\S]*missing"),
         ),
-        (
+        (  # invalid_wrong_type_main_absolute_module_name
             {
-                "code": {},
-                "main": {"modulepath": "1", "module": "2", "pipeline": "3"},
+                "run_id": "id",
+                "code": [],
+                "main_absolute_module_name": 1,
+            },
+            re.compile(r"main_absolute_module_name[\s\S]*string_type"),
+        ),
+        (  # invalid_wrong_type_cwd
+            {
+                "run_id": "id",
+                "code": [],
+                "main_absolute_module_name": "main",
                 "cwd": 1,
             },
             re.compile(r"cwd[\s\S]*string_type"),
         ),
+        (  # invalid_wrong_type_table_window
+            {
+                "run_id": "id",
+                "code": [],
+                "main_absolute_module_name": "main",
+                "table_window": 1,
+            },
+            re.compile(r"table_window[\s\S]*model_type"),
+        )
     ],
     ids=[
-        "program_no_code",
-        "program_no_main",
-        "program_invalid_main1",
-        "program_invalid_main2",
-        "program_invalid_main3",
-        "program_invalid_main4",
-        "program_invalid_code1",
-        "program_invalid_code2",
-        "program_invalid_code3",
-        "program_invalid_cwd",
+        "valid_minimal",
+        "valid_with_code",
+        "valid_with_cwd",
+        "valid_with_table_window",
+        "invalid_no_run_id",
+        "invalid_wrong_type_run_id",
+        "invalid_no_code",
+        "invalid_wrong_type_code",
+        "invalid_no_main_absolute_module_name",
+        "invalid_wrong_type_main_absolute_module_name",
+        "invalid_wrong_type_cwd",
+        "invalid_wrong_type_table_window",
     ],
 )
-def test_should_fail_message_validation_reason_program(data: dict[str, Any], exception_regex: str) -> None:
-    with pytest.raises(ValidationError, match=exception_regex):
-        ProgramMessageData(**data)
-
-
-@pytest.mark.parametrize(
-    argnames=["data", "exception_regex"],
-    argvalues=[
-        (
-            {"a": "v"},
-            re.compile(r"name[\s\S]*missing"),
-        ),
-        (
-            {"name": "v", "window": {"begin": "a"}},
-            re.compile(r"window.begin[\s\S]*int_parsing"),
-        ),
-        (
-            {"name": "v", "window": {"size": "a"}},
-            re.compile(r"window.size[\s\S]*int_parsing"),
-        ),
-    ],
-    ids=[
-        "missing_name",
-        "wrong_type_begin",
-        "wrong_type_size",
-    ],
-)
-def test_should_fail_message_validation_reason_placeholder_query(
-    data: dict[str, Any],
-    exception_regex: Regex,
-) -> None:
-    with pytest.raises(ValidationError, match=exception_regex):
-        QueryMessageData(**data)
+def test_validate_run_message_payload(data: dict[str, Any], exception_regex: str | None) -> None:
+    if exception_regex is None:
+        RunMessagePayload(**data)
+    else:
+        with pytest.raises(ValidationError, match=exception_regex):
+            RunMessagePayload(**data)
