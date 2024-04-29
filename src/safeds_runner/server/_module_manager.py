@@ -13,7 +13,7 @@ if typing.TYPE_CHECKING:
     import types
     from importlib.machinery import ModuleSpec
 
-    from safeds_runner.server.messages._incoming import VirtualModule
+    from safeds_runner.server.messages._to_server import VirtualModule
 
 
 class InMemoryLoader(importlib.abc.SourceLoader, ABC):
@@ -83,7 +83,7 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
         for module in code:
             split = module.absolute_module_name.rsplit(sep=".", maxsplit=1)
             module_path = split[0] if len(split) > 1 else ""
-            module_name = split[1]
+            module_name = split[1] if len(split) > 1 else split[0]
 
             if module_path not in self.code:
                 self.code[module_path] = {}

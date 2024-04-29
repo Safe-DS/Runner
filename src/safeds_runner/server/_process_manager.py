@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from concurrent.futures import Future
     from multiprocessing.managers import DictProxy, SyncManager
 
-    from safeds_runner.server.messages._outgoing import OutgoingMessage
+    from safeds_runner.server.messages._from_server import MessageFromServer
 
 
 class ProcessManager:
@@ -26,7 +26,7 @@ class ProcessManager:
     def __init__(self) -> None:
         self._lock = Lock()
         self._state: _State = "initial"
-        self._on_message_callbacks: set[Callable[[OutgoingMessage], Coroutine[Any, Any, None]]] = set()
+        self._on_message_callbacks: set[Callable[[MessageFromServer], Coroutine[Any, Any, None]]] = set()
 
     @cached_property
     def _manager(self) -> SyncManager:
@@ -35,7 +35,7 @@ class ProcessManager:
         return multiprocessing.Manager()
 
     @cached_property
-    def _message_queue(self) -> queue.Queue[OutgoingMessage]:
+    def _message_queue(self) -> queue.Queue[MessageFromServer]:
         return self._manager.Queue()
 
     @cached_property
@@ -111,7 +111,7 @@ class ProcessManager:
         await self.startup()
         return self._manager.dict()
 
-    def on_message(self, callback: Callable[[OutgoingMessage], Coroutine[Any, Any, None]]) -> Unregister:
+    def on_message(self, callback: Callable[[MessageFromServer], Coroutine[Any, Any, None]]) -> Unregister:
         """
         Get notified when a message is received from another process.
 
@@ -128,7 +128,7 @@ class ProcessManager:
         self._on_message_callbacks.add(callback)
         return lambda: self._on_message_callbacks.remove(callback)
 
-    async def get_queue(self) -> queue.Queue[OutgoingMessage]:
+    async def get_queue(self) -> queue.Queue[MessageFromServer]:
         """Get the message queue that is used to communicate between processes."""
         await self.startup()
         return self._message_queue
