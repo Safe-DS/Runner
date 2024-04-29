@@ -34,21 +34,22 @@ URL = f"http://localhost:{PORT}"
 
 
 @pytest.fixture()
-def server() -> SafeDsServer:
+async def _server() -> None:
+    # Start the server
     server = SafeDsServer()
     server._sio.eio.start_service_task = False
 
     def run_server():
-        # Create a new event loop for the server
-        asyncio.set_event_loop(asyncio.new_event_loop())
-
-        # Await the server startup
-        asyncio.get_event_loop().run_until_complete(server.startup(PORT))
+        asyncio.run(server.startup(PORT))
 
     thread = threading.Thread(target=run_server, daemon=True)
     thread.start()
 
-    return server
+    # Run the actual test
+    yield
+
+    # Shutdown the server
+    await server.shutdown()
 
 
 @pytest.mark.parametrize(
@@ -197,9 +198,8 @@ async def test_should_fail_message_validation_ws(websocket_message: str) -> None
     ],
     ids=["raise_exception"],
 )
-@pytest.mark.asyncio()
+@pytest.mark.usefixtures("_server")
 async def test_should_execute_pipeline_return_exception(
-    server: SafeDsServer,
     event: str,
     message: dict[str, Any],
     expected_response_runtime_error: Message,
@@ -224,7 +224,6 @@ async def test_should_execute_pipeline_return_exception(
             assert isinstance(frame["file"], str)
             assert "line" in frame
             assert isinstance(frame["line"], int)
-    await server.shutdown()
 
 
 @pytest.mark.parametrize(
