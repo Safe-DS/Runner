@@ -43,7 +43,7 @@ class ProcessManager:
         return threading.Thread(daemon=True, target=self._consume_queue_messages, args=[asyncio.get_event_loop()])
 
     @cached_property
-    def _process_pool(self) -> ProcessPoolExecutor:
+    def _worker_process_pool(self) -> ProcessPoolExecutor:
         return ProcessPoolExecutor(
             max_workers=4,
             mp_context=multiprocessing.get_context("spawn"),
@@ -80,9 +80,8 @@ class ProcessManager:
             # Initialize all cached properties
             _manager = self._manager
             _message_queue = self._message_queue
-            _process_pool = self._process_pool
+            _worker_process_pool = self._worker_process_pool
             self._message_queue_thread.start()
-
 
             # Set state to started before warm up to prevent endless recursion
             self._state = "started"
@@ -104,7 +103,7 @@ class ProcessManager:
         self._lock.acquire()
         if self._state == "started":
             self._manager.shutdown()
-            self._process_pool.shutdown(wait=True, cancel_futures=True)
+            self._worker_process_pool.shutdown(wait=True, cancel_futures=True)
         self._state = "shutdown"
         self._lock.release()
 
@@ -141,7 +140,7 @@ class ProcessManager:
     async def submit(self, func: Callable[_P, _T], /, *args: _P.args, **kwargs: _P.kwargs) -> Future[_T]:
         """Submit a function to be executed by a worker process."""
         await self.startup()
-        return self._process_pool.submit(func, *args, **kwargs)
+        return self._worker_process_pool.submit(func, *args, **kwargs)
 
 
 def _warmup_worker() -> None:
