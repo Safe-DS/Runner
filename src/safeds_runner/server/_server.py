@@ -1,4 +1,5 @@
 """Module containing the server, endpoints and utility functions."""
+import asyncio
 import json
 import logging
 import sys
@@ -124,7 +125,7 @@ class SafeDsServer:
         async def shutdown(_sid: str, *_args: Any) -> None:
             logging.info("Shutting down...")
             await self.shutdown()
-            sys.exit(0)
+            asyncio.get_running_loop().call_soon_threadsafe(sys.exit, 0)
 
         @sio.on("*")
         async def catch_all(event: str, *_args: Any) -> None:
