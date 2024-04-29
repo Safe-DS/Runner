@@ -67,7 +67,7 @@ class SafeDsServer:
 
     def _register_event_handlers(self, sio: socketio.AsyncServer) -> None:
         @sio.event
-        async def run(sid: str, payload: Any) -> None:
+        async def run(sid: str, payload: Any = None) -> None:
             try:
                 if isinstance(payload, str):
                     payload = json.loads(payload)
@@ -121,11 +121,12 @@ class SafeDsServer:
         #     await sio.emit(message_type_placeholder_value, data, to=placeholder_query_message.id)
 
         @sio.event
-        async def shutdown(_sid: str, _payload: Any):
-            logging.debug("Shutting down...")
+        async def shutdown(_sid: str, _payload: Any = None) -> None:
+            logging.info("Shutting down...")
             await self.shutdown()
             sys.exit(0)
 
         @sio.on("*")
-        async def catch_all(event: str):
-            logging.warning("Invalid message type: %s", event)
+        async def catch_all(event: str) -> str:
+            logging.exception("Invalid message type: %s", event)
+            return "Invalid message type"
