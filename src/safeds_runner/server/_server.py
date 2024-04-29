@@ -9,16 +9,17 @@ import socketio
 import uvicorn
 from pydantic import ValidationError
 
-from ._json_encoder import SafeDsEncoder
-from ._messages import (
-    Message,
+from safeds_runner.server.messages._messages import (
     ProgramMessage,
     QueryMessage,
     create_placeholder_value,
     message_type_placeholder_value,
 )
+
+from ._json_encoder import SafeDsEncoder
 from ._pipeline_manager import PipelineManager
 from ._process_manager import ProcessManager
+from .messages._outgoing import OutgoingMessage
 
 
 class SafeDsServer:
@@ -46,18 +47,21 @@ class SafeDsServer:
         await self._process_manager.shutdown()
         await self._sio.shutdown()
 
-    async def send_message(self, message: Message) -> None:
+    async def send_message(self, message: OutgoingMessage) -> None:
         """
-        Send a message to all connected websocket clients.
+        Send a message to all interested clients.
 
         Parameters
         ----------
         message:
             Message to be sent.
         """
-        message_encoded = json.dumps(message.data)
         asyncio.run_coroutine_threadsafe(
-            self._sio.emit(message.type, message_encoded, to=message.id),
+            self._sio.emit(
+                message.event,
+                message.payload.model_dump_json(),
+                to=message.payload.id,
+            ),
             asyncio.get_event_loop(),
         )
 
