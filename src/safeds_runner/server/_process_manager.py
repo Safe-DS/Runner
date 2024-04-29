@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import atexit
 import logging
 import multiprocessing
 import os
@@ -28,9 +27,6 @@ class ProcessManager:
         self._lock = Lock()
         self._state: _State = "initial"
         self._on_message_callbacks: set[Callable[[Message], Coroutine[Any, Any, None]]] = set()
-
-        # Shutdown when the process is terminated
-        atexit.register(self.shutdown)
 
     @cached_property
     def _manager(self) -> SyncManager:
