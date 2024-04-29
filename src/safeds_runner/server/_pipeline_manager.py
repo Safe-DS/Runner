@@ -7,6 +7,7 @@ import logging
 import os
 import runpy
 import typing
+import warnings
 from functools import cached_property
 from pathlib import Path
 from typing import Any
@@ -23,7 +24,12 @@ from safeds_runner.memoization._memoization_utils import (
 )
 
 from ._module_manager import InMemoryFinder
-from .messages._from_server import StacktraceEntry, create_done_message, create_runtime_error_message
+from .messages._from_server import (
+    StacktraceEntry,
+    create_done_message,
+    create_runtime_error_message,
+    create_runtime_warning_message,
+)
 
 if typing.TYPE_CHECKING:
     import queue
@@ -96,6 +102,16 @@ class PipelineProcess:
     def _send_message(self, message: MessageFromServer) -> None:
         self._messages_queue.put(message)
 
+    def _send_warnings(self, warnings_: list[warnings.WarningMessage]) -> None:
+        for warning in warnings_:
+            self._send_message(
+                create_runtime_warning_message(
+                    run_id=self._payload.run_id,
+                    message=str(warning.message),
+                    stacktrace=[StacktraceEntry(file=warning.filename, line=warning.lineno)],
+                ),
+            )
+
     def _send_exception(self, exception: BaseException) -> None:
         self._send_message(
             create_runtime_error_message(
@@ -161,15 +177,17 @@ class PipelineProcess:
             os.chdir(self._payload.cwd)  # pragma: no cover
 
         try:
-            runpy.run_module(
-                self._payload.main_absolute_module_name,
-                run_name="__main__",
-                alter_sys=True,
-            )
-            self._send_message(create_done_message(self._payload.run_id))
+            with warnings.catch_warnings(record=True) as collected_warnings:
+                runpy.run_module(
+                    self._payload.main_absolute_module_name,
+                    run_name="__main__",
+                    alter_sys=True,
+                )
+                self._send_warnings(collected_warnings)
         except BaseException as error:  # noqa: BLE001
             self._send_exception(error)
         finally:
+            self._send_message(create_done_message(self._payload.run_id))
             linecache.clearcache()
             pipeline_finder.detach()
 

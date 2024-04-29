@@ -1,8 +1,8 @@
 """Module containing the server, endpoints and utility functions."""
-import asyncio
 import json
 import logging
 import sys
+from asyncio import Lock
 from typing import Any
 
 import socketio
@@ -11,7 +11,7 @@ from pydantic import ValidationError
 
 from ._pipeline_manager import PipelineManager
 from ._process_manager import ProcessManager
-from .messages._from_server import MessageFromServer
+from .messages._from_server import DoneMessagePayload, MessageFromServer
 from .messages._to_server import RunMessagePayload
 
 
@@ -21,6 +21,7 @@ class SafeDsServer:
         self._app = socketio.ASGIApp(self._sio)
         self._process_manager = ProcessManager()
         self._pipeline_manager = PipelineManager(self._process_manager)
+        self._lock = Lock()
 
         # Add event handlers
         self._process_manager.on_message(self.send_message)
@@ -49,14 +50,20 @@ class SafeDsServer:
         message:
             Message to be sent.
         """
-        asyncio.run_coroutine_threadsafe(
-            self._sio.emit(
-                message.event,
-                message.payload.model_dump_json(),
-                to=message.payload.run_id,
-            ),
-            asyncio.get_event_loop(),
+        await self._lock.acquire()
+
+        # Send the message to the client
+        await self._sio.emit(
+            message.event,
+            message.payload.model_dump_json(),
+            to=message.payload.run_id,
         )
+
+        # Close the room if the message is a done message
+        if isinstance(message.payload, DoneMessagePayload):
+            await self._sio.close_room(message.payload.run_id)
+
+        self._lock.release()
 
     def _register_event_handlers(self, sio: socketio.AsyncServer) -> None:
         @sio.event
@@ -71,7 +78,6 @@ class SafeDsServer:
 
             await sio.enter_room(sid, run_message_payload.run_id)
             await self._pipeline_manager.execute_pipeline(run_message_payload)
-            # await sio.leave_room(sid, program_message.id)
 
         # @sio.event
         # async def placeholder_query(_sid: str, payload: Any) -> None:
