@@ -4,18 +4,18 @@ import asyncio
 import logging
 import multiprocessing
 import os
-import threading
+from asyncio import CancelledError, Task
 from collections.abc import Callable
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from functools import cached_property
 from threading import Lock
 from typing import TYPE_CHECKING, Any, Literal, ParamSpec, TypeAlias, TypeVar
 
 if TYPE_CHECKING:
+    import queue
     from collections.abc import Coroutine
     from concurrent.futures import Future
     from multiprocessing.managers import DictProxy, SyncManager
-    from queue import Queue
 
     from safeds_runner.server._messages import Message
 
@@ -35,29 +35,27 @@ class ProcessManager:
         return multiprocessing.Manager()
 
     @cached_property
-    def _message_queue(self) -> Queue[Message]:
+    def _message_queue(self) -> queue.Queue[Message]:
         return self._manager.Queue()
 
     @cached_property
-    def _message_queue_consumer(self) -> threading.Thread:
-        def _consume_queue_messages(event_loop: asyncio.AbstractEventLoop) -> None:
-            """
-            Consume messages from the message queue and call all registered callbacks.
+    def _message_queue_consumer(self) -> Task:
+        async def _consume() -> None:
+            """Consume messages from the message queue and call all registered callbacks."""
+            executor = ThreadPoolExecutor(max_workers=1)
+            loop = asyncio.get_running_loop()
 
-            Parameters
-            ----------
-            event_loop:
-                Event Loop that handles websocket connections.
-            """
             try:
                 while self._state != "shutdown":
-                    message = self._message_queue.get()
+                    message = await loop.run_in_executor(executor, self._message_queue.get)
                     for callback in self._on_message_callbacks:
-                        asyncio.run_coroutine_threadsafe(callback(message), event_loop)
-            except BaseException as error:  # noqa: BLE001  # pragma: no cover
-                logging.warning("Message queue terminated: %s", error.__repr__())  # pragma: no cover
+                        asyncio.run_coroutine_threadsafe(callback(message), loop)
+            except CancelledError as error:  # pragma: no cover
+                logging.info("Message queue terminated: %s", error.__repr__())  # pragma: no cover
+            finally:
+                executor.shutdown(wait=True, cancel_futures=True)
 
-        return threading.Thread(daemon=True, target=_consume_queue_messages, args=[asyncio.get_event_loop()])
+        return asyncio.create_task(_consume())
 
     @cached_property
     def _worker_process_pool(self) -> ProcessPoolExecutor:
@@ -80,8 +78,8 @@ class ProcessManager:
             # Initialize all cached properties
             _manager = self._manager
             _message_queue = self._message_queue
+            _message_queue_consumer = self._message_queue_consumer
             _worker_process_pool = self._worker_process_pool
-            self._message_queue_consumer.start()
 
             # Set state to started before warm up to prevent endless recursion
             self._state = "started"
@@ -102,8 +100,9 @@ class ProcessManager:
         """
         self._lock.acquire()
         if self._state == "started":
-            self._manager.shutdown()
             self._worker_process_pool.shutdown(wait=True, cancel_futures=True)
+            self._message_queue_consumer.cancel()
+            self._manager.shutdown()
         self._state = "shutdown"
         self._lock.release()
 
@@ -129,7 +128,7 @@ class ProcessManager:
         self._on_message_callbacks.add(callback)
         return lambda: self._on_message_callbacks.remove(callback)
 
-    async def get_queue(self) -> Queue[Message]:
+    async def get_queue(self) -> queue.Queue[Message]:
         """Get the message queue that is used to communicate between processes."""
         await self.startup()
         return self._message_queue
