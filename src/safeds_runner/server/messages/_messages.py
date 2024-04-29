@@ -252,25 +252,6 @@ def create_placeholder_value(placeholder_query: QueryMessageData, type_: str, va
     return message
 
 
-def create_runtime_error_description(message: str, backtrace: list[dict[str, Any]]) -> dict[str, Any]:
-    """
-    Create the message data of a runtime error message containing error information and a backtrace.
-
-    Parameters
-    ----------
-    message:
-        Error information message.
-    backtrace:
-        Python backtrace of the error. Each list entry represents a stack frame.
-
-    Returns
-    -------
-    message_data:
-        Message data of "runtime_error" messages.
-    """
-    return {"message": message, "backtrace": backtrace}
-
-
 def create_runtime_progress_done() -> str:
     """
     Create the message data of a runtime progress message containing 'done'.

@@ -22,23 +22,20 @@ from safeds_runner.memoization._memoization_utils import (
     _is_deterministically_hashable,
     _is_not_primitive,
 )
-
-from ._messages import (
-    Message,
+from safeds_runner.server.messages._messages import (
     ProgramMessageData,
     create_placeholder_description,
-    create_runtime_error_description,
-    create_runtime_progress_done,
     message_type_placeholder_type,
-    message_type_runtime_error,
-    message_type_runtime_progress,
 )
+
 from ._module_manager import InMemoryFinder
+from .messages._outgoing import StacktraceEntry, create_done_message, create_runtime_error_message
 
 if typing.TYPE_CHECKING:
     import queue
 
     from ._process_manager import ProcessManager
+    from .messages._outgoing import OutgoingMessage
 
 
 class PipelineManager:
@@ -120,7 +117,7 @@ class PipelineProcess:
         self,
         pipeline: ProgramMessageData,
         execution_id: str,
-        messages_queue: queue.Queue[Message],
+        messages_queue: queue.Queue[OutgoingMessage],
         placeholder_map: dict[str, Any],
         memoization_map: MemoizationMap,
     ):
@@ -146,12 +143,17 @@ class PipelineProcess:
         self._placeholder_map = placeholder_map
         self._memoization_map = memoization_map
 
-    def _send_message(self, message_type: str, value: dict[Any, Any] | str) -> None:
-        self._messages_queue.put(Message(message_type, self._id, value))
+    def _send_message(self, message: OutgoingMessage) -> None:
+        self._messages_queue.put(message)
 
     def _send_exception(self, exception: BaseException) -> None:
-        backtrace = get_backtrace_info(exception)
-        self._send_message(message_type_runtime_error, create_runtime_error_description(exception.__str__(), backtrace))
+        self._send_message(
+            create_runtime_error_message(
+                id_=self._id,
+                message=exception.__str__(),
+                stacktrace=get_stacktrace(exception),
+            ),
+        )
 
     def save_placeholder(self, placeholder_name: str, value: Any) -> None:
         """
@@ -222,7 +224,7 @@ class PipelineProcess:
                 run_name="__main__",
                 alter_sys=True,
             )
-            self._send_message(message_type_runtime_progress, create_runtime_progress_done())
+            self._send_message(create_done_message(self._id))
         except BaseException as error:  # noqa: BLE001
             self._send_exception(error)
         finally:
@@ -418,9 +420,9 @@ def absolute_path(filenames: str | list[str]) -> str | list[str]:
     return str(Path(filenames).resolve())
 
 
-def get_backtrace_info(error: BaseException) -> list[dict[str, Any]]:
+def get_stacktrace(error: BaseException) -> list[StacktraceEntry]:
     """
-    Create a simplified backtrace from an exception.
+    Create a simplified stacktrace from an exception.
 
     Parameters
     ----------
@@ -432,10 +434,8 @@ def get_backtrace_info(error: BaseException) -> list[dict[str, Any]]:
     backtrace_info:
         List containing file and line information for each stack frame.
     """
-    backtrace_list = []
-    for frame in traceback.extract_tb(error.__traceback__):
-        backtrace_list.append({"file": frame.filename, "line": frame.lineno})
-    return backtrace_list
+    frames = traceback.extract_tb(error.__traceback__)
+    return [StacktraceEntry(file=frame.filename, line=int(frame.lineno)) for frame in reversed(list(frames))]
 
 
 def _get_placeholder_type(value: Any) -> str:

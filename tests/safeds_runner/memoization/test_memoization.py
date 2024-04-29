@@ -24,7 +24,7 @@ from safeds_runner.memoization._memoization_strategies import (
 )
 from safeds_runner.memoization._memoization_utils import _make_hashable
 from safeds_runner.server import _pipeline_manager
-from safeds_runner.server._messages import ProgramMessageData, ProgramMessageMainInformation
+from safeds_runner.server.messages._messages import ProgramMessageData, ProgramMessageMainInformation
 from safeds_runner.server._pipeline_manager import (
     PipelineProcess,
     absolute_path,

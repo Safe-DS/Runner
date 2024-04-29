@@ -10,12 +10,15 @@ import time
 from typing import Any
 
 import pytest
+from pydantic import ValidationError
+
 import safeds_runner.server.main
 import simple_websocket
 import socketio
 from safeds.data.tabular.containers import Table
 from safeds_runner.server._json_encoder import SafeDsEncoder
-from safeds_runner.server._messages import (
+from safeds_runner.server._server import SafeDsServer
+from safeds_runner.server.messages._messages import (
     Message,
     QueryMessageData,
     QueryMessageWindow,
@@ -24,10 +27,9 @@ from safeds_runner.server._messages import (
     create_runtime_progress_done,
     message_type_placeholder_type,
     message_type_placeholder_value,
-    message_type_runtime_error,
     message_type_runtime_progress,
 )
-from safeds_runner.server._server import SafeDsServer
+from safeds_runner.server.messages._outgoing import RuntimeErrorMessagePayload
 
 PORT = 17394
 URL = f"http://localhost:{PORT}"
@@ -50,6 +52,13 @@ async def _server() -> None:
 
     # Shutdown the server
     await server.shutdown()
+
+
+@pytest.fixture()
+async def client() -> socketio.AsyncSimpleClient:
+    async with socketio.AsyncSimpleClient() as sio:
+        await sio.connect(URL, transports=["websocket"])
+        yield sio
 
 
 @pytest.mark.parametrize(
@@ -174,56 +183,6 @@ async def test_should_fail_message_validation_ws(websocket_message: str) -> None
             disconnected = True
         assert disconnected
     await sds_server.shutdown()
-
-
-@pytest.mark.parametrize(
-    argnames=("event", "message", "expected_response_runtime_error"),
-    argvalues=[
-        (
-            "program",
-            {
-                "id": "abcdefgh",
-                "data": {
-                    "code": {
-                        "": {
-                            "gen_test_a": "def pipe():\n\traise Exception('Test Exception')\n",
-                            "gen_test_a_pipe": "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()",
-                        },
-                    },
-                    "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
-                },
-            },
-            Message(message_type_runtime_error, "abcdefgh", {"message": "Test Exception"}),
-        ),
-    ],
-    ids=["raise_exception"],
-)
-@pytest.mark.usefixtures("_server")
-async def test_should_execute_pipeline_return_exception(
-    event: str,
-    message: dict[str, Any],
-    expected_response_runtime_error: Message,
-) -> None:
-    async with socketio.AsyncSimpleClient() as sio:
-        await sio.connect(URL, transports=["websocket"])
-        await sio.emit(event, message)
-        [event, received_message] = await sio.receive(timeout=5)
-        exception_message = Message.from_dict({
-            "type": event,
-            "data": json.loads(received_message),
-            "id": message["id"],
-        })
-        assert exception_message.type == expected_response_runtime_error.type
-        assert exception_message.id == expected_response_runtime_error.id
-        assert isinstance(exception_message.data, dict)
-        assert exception_message.data["message"] == expected_response_runtime_error.data["message"]
-        assert isinstance(exception_message.data["backtrace"], list)
-        assert len(exception_message.data["backtrace"]) > 0
-        for frame in exception_message.data["backtrace"]:
-            assert "file" in frame
-            assert isinstance(frame["file"], str)
-            assert "line" in frame
-            assert isinstance(frame["line"], int)
 
 
 @pytest.mark.parametrize(

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 from pydantic import ValidationError
-from safeds_runner.server._messages import ProgramMessageData, QueryMessageData
+from safeds_runner.server.messages._messages import ProgramMessageData, QueryMessageData
 
 if TYPE_CHECKING:
     from regex import Regex
