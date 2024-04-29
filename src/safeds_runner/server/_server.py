@@ -1,5 +1,6 @@
 """Module containing the server, endpoints and utility functions."""
 import asyncio
+import atexit
 import json
 import logging
 import sys
@@ -28,8 +29,10 @@ class SafeDsServer:
         self._process_manager = ProcessManager()
         self._pipeline_manager = PipelineManager(self._process_manager)
 
+        # Add event handlers
         self._process_manager.on_message(self.send_message)
         self._register_event_handlers(self._sio)
+        atexit.register(self.shutdown)
 
     async def startup(self, port: int) -> None:
         """Start the server on the specified port."""
