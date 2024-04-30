@@ -25,15 +25,28 @@ from safeds_runner.memoization._memoization_strategies import (
 )
 from safeds_runner.memoization._memoization_utils import _make_hashable
 from safeds_runner.server import _pipeline_manager
-from safeds_runner.server._pipeline_manager import (
-    PipelineProcess,
-)
+from safeds_runner.server._pipeline_manager import PipelineProcess
 from safeds_runner.server.messages._to_server import RunMessagePayload
 
 
 class UnhashableClass:
     def __hash__(self) -> int:
         raise TypeError("unhashable type")
+
+
+@pytest.fixture()
+def current_pipeline_process() -> PipelineProcess:
+    _pipeline_manager._current_pipeline_process = PipelineProcess(
+        RunMessagePayload(
+            run_id="",
+            code=[],
+            main_absolute_module_name="",
+        ),
+        Queue(),
+        MemoizationMap({}, {}),
+    )
+
+    return _pipeline_manager._current_pipeline_process
 
 
 @pytest.mark.parametrize(
@@ -51,30 +64,21 @@ class UnhashableClass:
     ids=["function_pure", "function_impure_readfile"],
 )
 def test_memoization_static_already_present_values(
+    current_pipeline_process: PipelineProcess,
     fully_qualified_function_name: str,
     positional_arguments: list,
     keyword_arguments: dict,
     hidden_arguments: list,
     expected_result: Any,
 ) -> None:
-    _pipeline_manager.current_pipeline = PipelineProcess(
-        RunMessagePayload(
-            run_id="",
-            code=[],
-            main_absolute_module_name="",
-        ),
-        Queue(),
-        MemoizationMap({}, {}),
-    )
-
-    _pipeline_manager.current_pipeline.get_memoization_map()._map_values[
+    current_pipeline_process.get_memoization_map()._map_values[
         (
             fully_qualified_function_name,
             _make_hashable(positional_arguments),
             _make_hashable(hidden_arguments),
         )
     ] = expected_result
-    _pipeline_manager.current_pipeline.get_memoization_map()._map_stats[fully_qualified_function_name] = (
+    current_pipeline_process.get_memoization_map()._map_stats[fully_qualified_function_name] = (
         MemoizationStats(
             [time.perf_counter_ns()],
             [],
@@ -109,6 +113,7 @@ def test_memoization_static_already_present_values(
     ],
     ids=["function_pure", "function_impure_readfile", "function_dict", "function_lambda"],
 )
+@pytest.mark.usefixtures("current_pipeline_process")
 def test_memoization_static_not_present_values(
     fully_qualified_function_name: str,
     callable_: typing.Callable,
@@ -117,15 +122,6 @@ def test_memoization_static_not_present_values(
     hidden_arguments: list,
     expected_result: Any,
 ) -> None:
-    _pipeline_manager.current_pipeline = PipelineProcess(
-        RunMessagePayload(
-            run_id="",
-            code=[],
-            main_absolute_module_name="",
-        ),
-        Queue(),
-        MemoizationMap({}, {}),
-    )
 
     # Save value in map
     result = memoized_static_call(
@@ -190,6 +186,7 @@ class ChildClass(BaseClass):
         "member_call_keyword_only_argument",
     ],
 )
+@pytest.mark.usefixtures("current_pipeline_process")
 def test_memoization_dynamic(
     receiver: Any,
     function_name: str,
@@ -198,15 +195,6 @@ def test_memoization_dynamic(
     hidden_arguments: list,
     expected_result: Any,
 ) -> None:
-    _pipeline_manager.current_pipeline = PipelineProcess(
-        RunMessagePayload(
-            run_id="",
-            code=[],
-            main_absolute_module_name="",
-        ),
-        Queue(),
-        MemoizationMap({}, {}),
-    )
 
     # Save value in map
     result = memoized_dynamic_call(
@@ -247,6 +235,7 @@ def test_memoization_dynamic(
         "member_call_child",
     ],
 )
+@pytest.mark.usefixtures("current_pipeline_process")
 def test_memoization_dynamic_contains_correct_fully_qualified_name(
     receiver: Any,
     function_name: str,
@@ -255,15 +244,7 @@ def test_memoization_dynamic_contains_correct_fully_qualified_name(
     hidden_arguments: list,
     fully_qualified_function_name: Any,
 ) -> None:
-    _pipeline_manager.current_pipeline = PipelineProcess(
-        RunMessagePayload(
-            run_id="",
-            code=[],
-            main_absolute_module_name="",
-        ),
-        Queue(),
-        MemoizationMap({}, {}),
-    )
+
     # Save value in map
     result = memoized_dynamic_call(
         receiver,
@@ -301,6 +282,7 @@ def test_memoization_dynamic_contains_correct_fully_qualified_name(
         "member_call_child",
     ],
 )
+@pytest.mark.usefixtures("current_pipeline_process")
 def test_memoization_dynamic_not_base_name(
     receiver: Any,
     function_name: str,
@@ -309,15 +291,7 @@ def test_memoization_dynamic_not_base_name(
     hidden_arguments: list,
     fully_qualified_function_name: Any,
 ) -> None:
-    _pipeline_manager.current_pipeline = PipelineProcess(
-        RunMessagePayload(
-            run_id="",
-            code=[],
-            main_absolute_module_name="",
-        ),
-        Queue(),
-        MemoizationMap({}, {}),
-    )
+
     # Save value in map
     result = memoized_dynamic_call(
         receiver,
@@ -359,6 +333,7 @@ def test_memoization_dynamic_not_base_name(
         "unhashable_hidden_arguments",
     ],
 )
+@pytest.mark.usefixtures("current_pipeline_process")
 def test_memoization_static_unhashable_values(
     fully_qualified_function_name: str,
     callable_: typing.Callable,
@@ -367,15 +342,7 @@ def test_memoization_static_unhashable_values(
     hidden_arguments: list,
     expected_result: Any,
 ) -> None:
-    _pipeline_manager.current_pipeline = PipelineProcess(
-        RunMessagePayload(
-            run_id="",
-            code=[],
-            main_absolute_module_name="",
-        ),
-        Queue(),
-        MemoizationMap({}, {}),
-    )
+
     result = memoized_static_call(
         fully_qualified_function_name,
         callable_,
@@ -561,7 +528,7 @@ def test_memoization_limited_static_not_present_values(
         {"a": MemoizationStats([10], [30], [40], [20]), "b": MemoizationStats([10], [30], [40], [20])},
     )
     memo_map.max_size = 45
-    _pipeline_manager.current_pipeline = PipelineProcess(
+    _pipeline_manager._current_pipeline_process = PipelineProcess(
         RunMessagePayload(
             run_id="",
             code=[],
