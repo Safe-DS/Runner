@@ -6,6 +6,17 @@ from pydantic import BaseModel, ConfigDict
 
 
 class MessageToServer(BaseModel):
+    """
+    Message sent from the client to the server.
+
+    Attributes
+    ----------
+    event:
+        Event type of the message.
+    payload:
+        Payload of the message.
+    """
+
     event: str
     payload: MessageToServerPayload
 
@@ -13,10 +24,27 @@ class MessageToServer(BaseModel):
 
 
 class MessageToServerPayload(BaseModel, ABC):
-    pass
+    """Base class for payloads of messages sent from the client to the server."""
 
 
 class RunMessagePayload(MessageToServerPayload):
+    """
+    Payload for a 'run' message.
+
+    Attributes
+    ----------
+    run_id:
+        Identifier for the program run.
+    code:
+        Code of the program.
+    main_absolute_module_name:
+        Absolute name of the main module.
+    cwd:
+        Current working directory.
+    table_window:
+        Window to get for placeholders of type 'Table'.
+    """
+
     run_id: str
     code: list[VirtualModule]
     main_absolute_module_name: str
@@ -30,7 +58,7 @@ class VirtualModule(BaseModel):
     """
     Information about a virtual module.
 
-    Parameters
+    Attributes
     ----------
     absolute_module_name:
         Path of the module (`from <absolute_module_name> import ...`).
@@ -45,6 +73,17 @@ class VirtualModule(BaseModel):
 
 
 class Window(BaseModel):
+    """
+    Window of a placeholder value.
+
+    Attributes
+    ----------
+    start:
+        Start index of the window.
+    size:
+        Size of the window.
+    """
+
     start: int
     size: int
 
@@ -62,6 +101,7 @@ def create_run_message(
     cwd: str | None = None,
     table_window: Window | None = None,
 ) -> MessageToServer:
+    """Create a 'run' message."""
     return MessageToServer(
         event="run",
         payload=RunMessagePayload(
@@ -75,4 +115,5 @@ def create_run_message(
 
 
 def create_shutdown_message() -> MessageToServer:
+    """Create a 'shutdown' message."""
     return MessageToServer(event="shutdown", payload=ShutdownMessagePayload())
