@@ -2,6 +2,7 @@
 import asyncio
 import json
 import logging
+import signal
 import sys
 from asyncio import Lock
 from typing import Any
@@ -31,6 +32,7 @@ class SafeDsServer:
     async def startup(self, port: int) -> None:
         """Start the server on the specified port."""
         self._process_manager.startup()
+        signal.signal(signal.SIGINT, self._interrupt_handler)
 
         logging.info("Starting Safe-DS Runner on port %s...", str(port))
         config = uvicorn.config.Config(self._app, host="127.0.0.1", port=port)
@@ -66,6 +68,10 @@ class SafeDsServer:
 
         self._lock.release()
 
+    def _interrupt_handler(self, _signal: Any, _frame: Any) -> None:
+        """Handle the interrupt signal."""
+        asyncio.get_running_loop().create_task(self.shutdown())
+
     def _register_event_handlers(self, sio: socketio.AsyncServer) -> None:
         @sio.event
         async def run(sid: str, payload: Any = None) -> None:
@@ -79,47 +85,6 @@ class SafeDsServer:
 
             await sio.enter_room(sid, run_message_payload.run_id)
             await self._pipeline_manager.execute_pipeline(run_message_payload)
-
-        # @sio.event
-        # async def placeholder_query(_sid: str, payload: Any) -> None:
-        #     try:
-        #         placeholder_query_message = QueryMessage(**payload)
-        #     except (TypeError, ValidationError):
-        #         logging.exception("Invalid message data specified in: %s", payload)
-        #         return
-        #
-        #     placeholder_type, placeholder_value = self._pipeline_manager.get_placeholder(
-        #         placeholder_query_message.id,
-        #         placeholder_query_message.data.name,
-        #     )
-        #
-        #     if placeholder_type is None:
-        #         # Send back empty type / value, to communicate that no placeholder exists (yet)
-        #         # Use name from query to allow linking a response to a request on the peer
-        #         data = json.dumps(create_placeholder_value(placeholder_query_message.data, "", ""))
-        #         await sio.emit(message_type_placeholder_value, data, to=placeholder_query_message.id)
-        #         return
-        #
-        #     try:
-        #         data = json.dumps(
-        #             create_placeholder_value(
-        #                 placeholder_query_message.data,
-        #                 placeholder_type,
-        #                 placeholder_value,
-        #             ),
-        #             cls=SafeDsEncoder,
-        #         )
-        #     except TypeError:
-        #         # if the value can't be encoded send back that the value exists but is not displayable
-        #         data = json.dumps(
-        #             create_placeholder_value(
-        #                 placeholder_query_message.data,
-        #                 placeholder_type,
-        #                 "<Not displayable>",
-        #             ),
-        #         )
-        #
-        #     await sio.emit(message_type_placeholder_value, data, to=placeholder_query_message.id)
 
         @sio.event
         async def shutdown(_sid: str, *_args: Any) -> None:
