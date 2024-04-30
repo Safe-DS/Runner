@@ -1,6 +1,6 @@
 from typing import Any
 
-from safeds_runner.server._pipeline_manager import current_pipeline
+from safeds_runner.server import _pipeline_manager
 
 
 def report_placeholder_computed(placeholder_name: str) -> None:
@@ -12,8 +12,8 @@ def report_placeholder_computed(placeholder_name: str) -> None:
     placeholder_name:
         Name of the placeholder.
     """
-    if current_pipeline is not None:
-        current_pipeline.report_placeholder_computed(placeholder_name)
+    if _pipeline_manager.current_pipeline is not None:
+        _pipeline_manager.current_pipeline.report_placeholder_computed(placeholder_name)
 
 
 def report_placeholder_value(placeholder_name: str, value: Any) -> None:
@@ -27,5 +27,5 @@ def report_placeholder_value(placeholder_name: str, value: Any) -> None:
     value:
         Value of the placeholder.
     """
-    if current_pipeline is not None:
-        current_pipeline.report_placeholder_value(placeholder_name, value)
+    if _pipeline_manager.current_pipeline is not None:
+        _pipeline_manager.current_pipeline.report_placeholder_value(placeholder_name, value)
