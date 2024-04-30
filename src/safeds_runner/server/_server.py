@@ -3,7 +3,6 @@ import asyncio
 import json
 import logging
 import signal
-import sys
 from asyncio import Lock
 from typing import Any
 
@@ -68,10 +67,6 @@ class SafeDsServer:
 
         self._lock.release()
 
-    def _interrupt_handler(self, _signal: Any, _frame: Any) -> None:
-        """Handle the interrupt signal."""
-        asyncio.get_running_loop().create_task(self.shutdown())
-
     def _register_event_handlers(self, sio: socketio.AsyncServer) -> None:
         @sio.event
         async def run(sid: str, payload: Any = None) -> None:
@@ -87,11 +82,14 @@ class SafeDsServer:
             await self._pipeline_manager.execute_pipeline(run_message_payload)
 
         @sio.event
-        async def shutdown(_sid: str, *_args: Any) -> None:
+        def shutdown(_sid: str, *_args: Any) -> None:
             logging.info("Shutting down...")
-            await self.shutdown()
-            asyncio.get_running_loop().call_soon_threadsafe(sys.exit, 0)
+            signal.raise_signal(signal.SIGINT)
 
         @sio.on("*")
-        async def catch_all(event: str, *_args: Any) -> None:
+        def catch_all(event: str, *_args: Any) -> None:
             logging.exception("Invalid message type: %s", event)
+
+    def _interrupt_handler(self, _signal: Any, _frame: Any) -> None:
+        """Handle the interrupt signal."""
+        asyncio.get_running_loop().create_task(self.shutdown())
