@@ -25,13 +25,13 @@ class SafeDsServer:
         self._lock = Lock()
 
         # Add event handlers
-        self._process_manager.on_message(self.send_message)
+        signal.signal(signal.SIGINT, self._interrupt_handler)
+        self._process_manager.on_message(self._send_message)
         self._register_event_handlers(self._sio)
 
     async def startup(self, port: int) -> None:
         """Start the server on the specified port."""
         self._process_manager.startup()
-        signal.signal(signal.SIGINT, self._interrupt_handler)
 
         logging.info("Starting Safe-DS Runner on port %s...", str(port))
         config = uvicorn.config.Config(self._app, host="127.0.0.1", port=port)
@@ -43,7 +43,11 @@ class SafeDsServer:
         self._process_manager.shutdown()
         await self._sio.shutdown()
 
-    async def send_message(self, message: MessageFromServer) -> None:
+    def _interrupt_handler(self, _signal: Any, _frame: Any) -> None:
+        """Handle the interrupt signal."""
+        asyncio.get_running_loop().create_task(self.shutdown())
+
+    async def _send_message(self, message: MessageFromServer) -> None:
         """
         Send a message to all interested clients.
 
@@ -75,7 +79,7 @@ class SafeDsServer:
                     payload = json.loads(payload)
                 run_message_payload = RunMessagePayload(**payload)
             except (TypeError, ValidationError):
-                logging.exception("Invalid message data specified in: %s", payload)
+                logging.exception("Invalid run message payload: %s", payload)
                 return
 
             await sio.enter_room(sid, run_message_payload.run_id)
@@ -89,7 +93,3 @@ class SafeDsServer:
         @sio.on("*")
         def catch_all(event: str, *_args: Any) -> None:
             logging.exception("Invalid message type: %s", event)
-
-    def _interrupt_handler(self, _signal: Any, _frame: Any) -> None:
-        """Handle the interrupt signal."""
-        asyncio.get_running_loop().create_task(self.shutdown())
