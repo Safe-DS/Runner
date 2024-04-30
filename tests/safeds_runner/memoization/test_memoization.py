@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import sys
-import tempfile
 import time
 import typing
-from datetime import UTC, datetime
-from pathlib import Path
 from queue import Queue
 from typing import Any
 
 import pytest
+from safeds_runner import (
+    memoized_dynamic_call,
+    memoized_static_call,
+)
 from safeds_runner.memoization._memoization_map import (
     MemoizationMap,
     MemoizationStats,
@@ -26,15 +27,8 @@ from safeds_runner.memoization._memoization_utils import _make_hashable
 from safeds_runner.server import _pipeline_manager
 from safeds_runner.server._pipeline_manager import (
     PipelineProcess,
-    absolute_path,
-    file_mtime,
-    memoized_dynamic_call,
-    memoized_static_call,
 )
 from safeds_runner.server.messages._to_server import RunMessagePayload
-
-
-# from safeds_runner.server.messages._messages import ProgramMessageData, ProgramMessageMainInformation
 
 
 class UnhashableClass:
@@ -70,7 +64,7 @@ def test_memoization_static_already_present_values(
             main_absolute_module_name="",
         ),
         Queue(),
-        MemoizationMap({}, {})
+        MemoizationMap({}, {}),
     )
 
     _pipeline_manager.current_pipeline.get_memoization_map()._map_values[
@@ -88,7 +82,7 @@ def test_memoization_static_already_present_values(
             [sys.getsizeof(expected_result)],
         )
     )
-    result = _pipeline_manager.memoized_static_call(
+    result = memoized_static_call(
         fully_qualified_function_name,
         lambda *_: None,
         positional_arguments,
@@ -130,7 +124,7 @@ def test_memoization_static_not_present_values(
             main_absolute_module_name="",
         ),
         Queue(),
-        MemoizationMap({}, {})
+        MemoizationMap({}, {}),
     )
 
     # Save value in map
@@ -211,7 +205,7 @@ def test_memoization_dynamic(
             main_absolute_module_name="",
         ),
         Queue(),
-        MemoizationMap({}, {})
+        MemoizationMap({}, {}),
     )
 
     # Save value in map
@@ -268,7 +262,7 @@ def test_memoization_dynamic_contains_correct_fully_qualified_name(
             main_absolute_module_name="",
         ),
         Queue(),
-        MemoizationMap({}, {})
+        MemoizationMap({}, {}),
     )
     # Save value in map
     result = memoized_dynamic_call(
@@ -322,7 +316,7 @@ def test_memoization_dynamic_not_base_name(
             main_absolute_module_name="",
         ),
         Queue(),
-        MemoizationMap({}, {})
+        MemoizationMap({}, {}),
     )
     # Save value in map
     result = memoized_dynamic_call(
@@ -380,7 +374,7 @@ def test_memoization_static_unhashable_values(
             main_absolute_module_name="",
         ),
         Queue(),
-        MemoizationMap({}, {})
+        MemoizationMap({}, {}),
     )
     result = memoized_static_call(
         fully_qualified_function_name,
@@ -390,34 +384,6 @@ def test_memoization_static_unhashable_values(
         hidden_arguments,
     )
     assert result == expected_result
-
-
-def test_file_mtime_exists() -> None:
-    with tempfile.NamedTemporaryFile() as file:
-        mtime = file_mtime(file.name)
-        assert mtime is not None
-
-
-def test_file_mtime_exists_list() -> None:
-    with tempfile.NamedTemporaryFile() as file:
-        mtime = file_mtime([file.name, file.name])
-        assert isinstance(mtime, list)
-        assert all(it is not None for it in mtime)
-
-
-def test_file_mtime_not_exists() -> None:
-    mtime = file_mtime(f"file_not_exists.{datetime.now(tz=UTC).timestamp()}")
-    assert mtime is None
-
-
-def test_absolute_path() -> None:
-    result = absolute_path("table.csv")
-    assert Path(result).is_absolute()
-
-
-def test_absolute_path_list() -> None:
-    result = absolute_path(["table.csv"])
-    assert all(Path(it).is_absolute() for it in result)
 
 
 @pytest.mark.parametrize(
@@ -602,7 +568,7 @@ def test_memoization_limited_static_not_present_values(
             main_absolute_module_name="",
         ),
         Queue(),
-        memo_map
+        memo_map,
     )
     # Save value in map
     result = memoized_static_call(
