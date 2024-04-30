@@ -70,10 +70,10 @@ async def client_2() -> socketio.AsyncSimpleClient:
 @pytest.mark.parametrize(
     argnames=("correspondence_client_1", "correspondence_client_2"),
     argvalues=[
-        (  # simple_done
+        (  # simple
             [
                 create_run_message(
-                    run_id="simple_done",
+                    run_id="simple",
                     code=[
                         VirtualModule(
                             absolute_module_name="main",
@@ -85,15 +85,102 @@ async def client_2() -> socketio.AsyncSimpleClient:
                     ],
                     main_absolute_module_name="main",
                 ),
-                create_done_message(run_id="simple_done"),
+                create_done_message(run_id="simple"),
             ],
             [],
         ),
-
-        (  # simple_progress
+        (  # simple_two_clients
             [
                 create_run_message(
-                    run_id="simple_progress",
+                    run_id="simple_two_clients_1",
+                    code=[
+                        VirtualModule(
+                            absolute_module_name="main",
+                            code=(
+                                "if __name__ == '__main__':\n"
+                                "    print('Hello, World!')\n"
+                            ),
+                        ),
+                    ],
+                    main_absolute_module_name="main",
+                ),
+                create_done_message(run_id="simple_two_clients_1"),
+            ],
+            [
+                create_run_message(
+                    run_id="simple_two_clients_2",
+                    code=[
+                        VirtualModule(
+                            absolute_module_name="main",
+                            code=(
+                                "if __name__ == '__main__':\n"
+                                "    print('Hello, World!')\n"
+                            ),
+                        ),
+                    ],
+                    main_absolute_module_name="main",
+                ),
+                create_done_message(run_id="simple_two_clients_2"),
+            ],
+        ),
+        (  # multiple_modules_import
+            [
+                create_run_message(
+                    run_id="multiple_modules_import",
+                    code=[
+                        VirtualModule(
+                            absolute_module_name="module_1",
+                            code=(
+                                "def hello_world():\n"
+                                "    return 'Hello, World!'\n"
+                            ),
+                        ),
+                        VirtualModule(
+                            absolute_module_name="main",
+                            code=(
+                                "import module_1\n"
+                                "if __name__ == '__main__':\n"
+                                "    print(module_1.hello_world())\n"
+                            ),
+                        ),
+                    ],
+                    main_absolute_module_name="main",
+                ),
+                create_done_message(run_id="multiple_modules_import"),
+            ],
+            [],
+        ),
+        (  # multiple_modules_from_import
+            [
+                create_run_message(
+                    run_id="multiple_modules_from_import",
+                    code=[
+                        VirtualModule(
+                            absolute_module_name="module_1",
+                            code=(
+                                "def hello_world():\n"
+                                "    return 'Hello, World!'\n"
+                            ),
+                        ),
+                        VirtualModule(
+                            absolute_module_name="main",
+                            code=(
+                                "from module_1 import hello_world\n"
+                                "if __name__ == '__main__':\n"
+                                "    print(hello_world())\n"
+                            ),
+                        ),
+                    ],
+                    main_absolute_module_name="main",
+                ),
+                create_done_message(run_id="multiple_modules_from_import"),
+            ],
+            [],
+        ),
+        (  # report_placeholder_computed
+            [
+                create_run_message(
+                    run_id="report_placeholder_computed",
                     code=[
                         VirtualModule(
                             absolute_module_name="main",
@@ -107,18 +194,100 @@ async def client_2() -> socketio.AsyncSimpleClient:
                     main_absolute_module_name="main",
                 ),
                 create_progress_message(
-                    run_id="simple_progress",
+                    run_id="report_placeholder_computed",
                     placeholder_name="test",
                     percentage=100,
                 ),
-                create_done_message(run_id="simple_progress"),
+                create_done_message(run_id="report_placeholder_computed"),
             ],
             [],
         ),
+        (  # report_placeholder_computed_multiple_placeholders
+            [
+                create_run_message(
+                    run_id="report_placeholder_computed_multiple_placeholders",
+                    code=[
+                        VirtualModule(
+                            absolute_module_name="main",
+                            code=(
+                                "import safeds_runner\n"
+                                "if __name__ == '__main__':\n"
+                                "    safeds_runner.report_placeholder_computed('test_1')\n"
+                                "    safeds_runner.report_placeholder_computed('test_2')\n"
+                            ),
+                        ),
+                    ],
+                    main_absolute_module_name="main",
+                ),
+                create_progress_message(
+                    run_id="report_placeholder_computed_multiple_placeholders",
+                    placeholder_name="test_1",
+                    percentage=100,
+                ),
+                create_progress_message(
+                    run_id="report_placeholder_computed_multiple_placeholders",
+                    placeholder_name="test_2",
+                    percentage=100,
+                ),
+                create_done_message(run_id="report_placeholder_computed_multiple_placeholders"),
+            ],
+            [],
+        ),
+        (  # report_placeholder_computed_two_clients
+            [
+                create_run_message(
+                    run_id="report_placeholder_computed_two_clients_1",
+                    code=[
+                        VirtualModule(
+                            absolute_module_name="main",
+                            code=(
+                                "import safeds_runner\n"
+                                "if __name__ == '__main__':\n"
+                                "    safeds_runner.report_placeholder_computed('test_1')\n"
+                            ),
+                        ),
+                    ],
+                    main_absolute_module_name="main",
+                ),
+                create_progress_message(
+                    run_id="report_placeholder_computed_two_clients_1",
+                    placeholder_name="test_1",
+                    percentage=100,
+                ),
+                create_done_message(run_id="report_placeholder_computed_two_clients_1"),
+            ],
+            [
+                create_run_message(
+                    run_id="report_placeholder_computed_two_clients_2",
+                    code=[
+                        VirtualModule(
+                            absolute_module_name="main",
+                            code=(
+                                "import safeds_runner\n"
+                                "if __name__ == '__main__':\n"
+                                "    safeds_runner.report_placeholder_computed('test_2')\n"
+                            ),
+                        ),
+                    ],
+                    main_absolute_module_name="main",
+                ),
+                create_progress_message(
+                    run_id="report_placeholder_computed_two_clients_2",
+                    placeholder_name="test_2",
+                    percentage=100,
+                ),
+                create_done_message(run_id="report_placeholder_computed_two_clients_2"),
+            ],
+        ),
     ],
     ids=[
-        "simple_done",
-        "simple_progress",
+        "simple",
+        "simple_two_clients",
+        "multiple_modules_import",
+        "multiple_modules_from_import",
+        "report_placeholder_computed",
+        "report_placeholder_computed_multiple_placeholders",
+        "report_placeholder_computed_two_clients",
     ],
 )
 @pytest.mark.usefixtures("_server")
