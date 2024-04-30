@@ -112,18 +112,6 @@
 #             assert next_message == expected_responses.pop(0)
 #     await sds_server.shutdown()
 #
-# )
-# @pytest.mark.asyncio()
-# async def test_should_successfully_execute_simple_flow(messages: list[str], expected_response: Message) -> None:
-#     sds_server = SafeDsServer()
-#     test_client = sds_server._app.test_client()
-#     async with test_client.websocket("/WSMain") as test_websocket:
-#         for message in messages:
-#             await test_websocket.send(message)
-#         received_message = await test_websocket.receive()
-#         query_result_invalid = Message.from_dict(json.loads(received_message))
-#         assert query_result_invalid == expected_response
-#     await sds_server.shutdown()
 #
 # @pytest.mark.parametrize(
 #     argnames="query,type_,value,result",
