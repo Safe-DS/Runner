@@ -14,19 +14,11 @@ from typing import Any
 import stack_data
 
 from safeds_runner.memoization._memoization_map import MemoizationMap
-from safeds_runner.memoization._memoization_utils import (
-    ExplicitIdentityWrapper,
-    ExplicitIdentityWrapperLazy,
-    _has_explicit_identity_memory,
-    _is_deterministically_hashable,
-    _is_not_primitive,
-)
 
 from ._module_manager import InMemoryFinder
 from .messages._from_server import (
     StacktraceEntry,
     create_done_message,
-    create_progress_message,
     create_runtime_error_message,
     create_runtime_warning_message,
 )
@@ -99,78 +91,6 @@ class PipelineProcess:
         self._messages_queue = messages_queue
         self._memoization_map = memoization_map
 
-    def _send_message(self, message: MessageFromServer) -> None:
-        self._messages_queue.put(message)
-
-    def _send_warnings(self, warnings_: list[warnings.WarningMessage]) -> None:
-        for warning in warnings_:
-            self._send_message(
-                create_runtime_warning_message(
-                    run_id=self._payload.run_id,
-                    message=str(warning.message),
-                    stacktrace=[StacktraceEntry(file=warning.filename, line=warning.lineno)],
-                ),
-            )
-
-    def _send_exception(self, exception: BaseException) -> None:
-        self._send_message(
-            create_runtime_error_message(
-                run_id=self._payload.run_id,
-                message=exception.__str__(),
-                stacktrace=get_stacktrace(exception),
-            ),
-        )
-
-    def report_placeholder_value(self, placeholder_name: str, value: Any) -> None:
-        """
-        Report the value of a placeholder.
-
-        Parameters
-        ----------
-        placeholder_name:
-            Name of the placeholder.
-        value:
-            Value of the placeholder.
-        """
-        from safeds.data.image.containers import Image
-
-        if isinstance(value, Image):
-            import torch
-
-            value = Image(value._image_tensor, torch.device("cpu"))
-        placeholder_type = _get_placeholder_type(value)
-        if _is_deterministically_hashable(value) and _has_explicit_identity_memory(value):
-            value = ExplicitIdentityWrapperLazy.existing(value)
-        elif (
-            not _is_deterministically_hashable(value)
-            and _is_not_primitive(value)
-            and _has_explicit_identity_memory(value)
-        ):
-            value = ExplicitIdentityWrapper.existing(value)
-        # TODO
-        # self._placeholder_map[placeholder_name] = value
-        # self._send_message(
-        #     message_type_placeholder_type,
-        #     create_placeholder_description(placeholder_name, placeholder_type),
-        # )
-
-    def report_placeholder_computed(self, placeholder_name: str) -> None:
-        """
-        Report that a placeholder has been computed.
-
-        Parameters
-        ----------
-        placeholder_name:
-            Name of the placeholder.
-        """
-        self._send_message(
-            create_progress_message(
-                run_id=self._payload.run_id,
-                placeholder_name=placeholder_name,
-                percentage=100,
-            ),
-        )
-
     def get_memoization_map(self) -> MemoizationMap:
         """
         Get the shared memoization map.
@@ -182,13 +102,37 @@ class PipelineProcess:
         """
         return self._memoization_map
 
+    def send_message(self, message: MessageFromServer) -> None:
+        """
+        Send a message to all interested clients.
+
+        Parameters
+        ----------
+        message:
+            Message to send.
+        """
+        self._messages_queue.put(message)
+
+    async def execute(self, process_manager: ProcessManager) -> None:
+        """
+        Execute this pipeline in a process from the provided process pool.
+
+        Results, progress and errors are communicated back to the main process.
+        """
+        future = process_manager.submit(self._execute)
+        exception = future.exception()
+        if exception is not None:
+            self._catch_subprocess_error(exception)  # pragma: no cover
+
     def _execute(self) -> None:
         logging.info("Executing %s...", self._payload.main_absolute_module_name)
 
         pipeline_finder = InMemoryFinder(self._payload.code)
         pipeline_finder.attach()
-        # Populate current_pipeline global, so child process can save placeholders in correct location
-        globals()["current_pipeline"] = self
+
+        # Populate _current_pipeline global, so interface methods can access it
+        global _current_pipeline_process  # noqa: PLW0603
+        _current_pipeline_process = self
 
         if self._payload.cwd is not None:
             os.chdir(self._payload.cwd)  # pragma: no cover
@@ -204,7 +148,7 @@ class PipelineProcess:
         except BaseException as error:  # noqa: BLE001
             self._send_exception(error)
         finally:
-            self._send_message(create_done_message(self._payload.run_id))
+            self.send_message(create_done_message(self._payload.run_id))
             # Needed for `getSource` to work correctly when the process is reused
             linecache.clearcache()
             pipeline_finder.detach()
@@ -213,20 +157,40 @@ class PipelineProcess:
         # This is a callback to log an unexpected failure, executing this is never expected
         logging.exception("Pipeline process unexpectedly failed", exc_info=error)  # pragma: no cover
 
-    async def execute(self, process_manager: ProcessManager) -> None:
-        """
-        Execute this pipeline in a process from the provided process pool.
+    def _send_warnings(self, warnings_: list[warnings.WarningMessage]) -> None:
+        for warning in warnings_:
+            self.send_message(
+                create_runtime_warning_message(
+                    run_id=self._payload.run_id,
+                    message=str(warning.message),
+                    stacktrace=[StacktraceEntry(file=warning.filename, line=warning.lineno)],
+                ),
+            )
 
-        Results, progress and errors are communicated back to the main process.
-        """
-        future = process_manager.submit(self._execute)
-        exception = future.exception()
-        if exception is not None:
-            self._catch_subprocess_error(exception)  # pragma: no cover
+    def _send_exception(self, exception: BaseException) -> None:
+        self.send_message(
+            create_runtime_error_message(
+                run_id=self._payload.run_id,
+                message=exception.__str__(),
+                stacktrace=get_stacktrace(exception),
+            ),
+        )
 
 
 # Pipeline process object visible in child process
-current_pipeline: PipelineProcess | None = None
+_current_pipeline_process: PipelineProcess | None = None
+
+
+def get_current_pipeline_process() -> PipelineProcess | None:
+    """
+    Get the current pipeline process.
+
+    Returns
+    -------
+    current_pipeline:
+        Current pipeline process.
+    """
+    return _current_pipeline_process
 
 
 def get_stacktrace(error: BaseException) -> list[StacktraceEntry]:
@@ -281,90 +245,3 @@ def _get_placeholder_type(value: Any) -> str:
                     return object_name
         case _:  # pragma: no cover
             return "Any"  # pragma: no cover
-
-
-        # @sio.event
-        # async def placeholder_query(_sid: str, payload: Any) -> None:
-        #     try:
-        #         placeholder_query_message = QueryMessage(**payload)
-        #     except (TypeError, ValidationError):
-        #         logging.exception("Invalid message data specified in: %s", payload)
-        #         return
-        #
-        #     placeholder_type, placeholder_value = self._pipeline_manager.get_placeholder(
-        #         placeholder_query_message.id,
-        #         placeholder_query_message.data.name,
-        #     )
-        #
-        #     if placeholder_type is None:
-        #         # Send back empty type / value, to communicate that no placeholder exists (yet)
-        #         # Use name from query to allow linking a response to a request on the peer
-        #         data = json.dumps(create_placeholder_value(placeholder_query_message.data, "", ""))
-        #         await sio.emit(message_type_placeholder_value, data, to=placeholder_query_message.id)
-        #         return
-        #
-        #     try:
-        #         data = json.dumps(
-        #             create_placeholder_value(
-        #                 placeholder_query_message.data,
-        #                 placeholder_type,
-        #                 placeholder_value,
-        #             ),
-        #             cls=SafeDsEncoder,
-        #         )
-        #     except TypeError:
-        #         # if the value can't be encoded send back that the value exists but is not displayable
-        #         data = json.dumps(
-        #             create_placeholder_value(
-        #                 placeholder_query_message.data,
-        #                 placeholder_type,
-        #                 "<Not displayable>",
-        #             ),
-        #         )
-        #
-        #     await sio.emit(message_type_placeholder_value, data, to=placeholder_query_message.id)
-
-
-
-    # TODO: move into process that creates placeholder value messages
-# def create_placeholder_value(placeholder_query: QueryMessageData, type_: str, value: Any) -> dict[str, Any]:
-#     """
-#     Create the message data of a placeholder value message containing name, type and the actual value.
-#
-#     If the query only requests a subset of the data and the placeholder type supports this,
-#     the response will contain only a subset and the information about the subset.
-#
-#     Parameters
-#     ----------
-#     placeholder_query:
-#         Query of the placeholder.
-#     type_:
-#         Type of the placeholder.
-#     value:
-#         Value of the placeholder.
-#
-#     Returns
-#     -------
-#     message_data:
-#         Message data of "placeholder_value" messages.
-#     """
-#     import safeds.data.tabular.containers
-#
-#     message: dict[str, Any] = {"name": placeholder_query.name, "type": type_}
-#     # Start Index >= 0
-#     start_index = max(placeholder_query.window.begin if placeholder_query.window.begin is not None else 0, 0)
-#     # End Index >= Start Index
-#     end_index = (
-#         (start_index + max(placeholder_query.window.size, 0)) if placeholder_query.window.size is not None else None
-#     )
-#     if isinstance(value, safeds.data.tabular.containers.Table) and (
-#         placeholder_query.window.begin is not None or placeholder_query.window.size is not None
-#     ):
-#         max_index = value.number_of_rows
-#         # End Index <= Number Of Rows
-#         end_index = min(end_index, value.number_of_rows) if end_index is not None else None
-#         value = value.slice_rows(start=start_index, end=end_index)
-#         window_information: dict[str, int] = {"begin": start_index, "size": value.number_of_rows, "max": max_index}
-#         message["window"] = window_information
-#     message["value"] = value
-#     return message

@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing
 from typing import Any
 
-from safeds_runner.server import _pipeline_manager
+from safeds_runner.server._pipeline_manager import get_current_pipeline_process
 
 
 def memoized_static_call(
@@ -36,10 +36,11 @@ def memoized_static_call(
     result:
         The result of the specified function, if any exists.
     """
-    if _pipeline_manager.current_pipeline is None:
+    current_pipeline = get_current_pipeline_process()
+    if current_pipeline is None:
         return None  # pragma: no cover
 
-    memoization_map = _pipeline_manager.current_pipeline.get_memoization_map()
+    memoization_map = current_pipeline.get_memoization_map()
     return memoization_map.memoized_function_call(
         fully_qualified_function_name,
         callable_,
@@ -80,7 +81,8 @@ def memoized_dynamic_call(
     result:
         The result of the specified function, if any exists.
     """
-    if _pipeline_manager.current_pipeline is None:
+    current_pipeline = get_current_pipeline_process()
+    if current_pipeline is None:
         return None  # pragma: no cover
 
     fully_qualified_function_name = (
@@ -90,7 +92,7 @@ def memoized_dynamic_call(
     member = getattr(receiver, function_name)
     callable_ = member.__func__
 
-    memoization_map = _pipeline_manager.current_pipeline.get_memoization_map()
+    memoization_map = get_current_pipeline_process().get_memoization_map()
     return memoization_map.memoized_function_call(
         fully_qualified_function_name,
         callable_,
