@@ -9,7 +9,6 @@ import runpy
 import typing
 import warnings
 from functools import cached_property
-from pathlib import Path
 from typing import Any
 
 import stack_data
@@ -27,6 +26,7 @@ from ._module_manager import InMemoryFinder
 from .messages._from_server import (
     StacktraceEntry,
     create_done_message,
+    create_progress_message,
     create_runtime_error_message,
     create_runtime_warning_message,
 )
@@ -121,16 +121,16 @@ class PipelineProcess:
             ),
         )
 
-    def save_placeholder(self, placeholder_name: str, value: Any) -> None:
+    def report_placeholder_value(self, placeholder_name: str, value: Any) -> None:
         """
-        Save a calculated placeholder in the map.
+        Report the value of a placeholder.
 
         Parameters
         ----------
         placeholder_name:
             Name of the placeholder.
         value:
-            Actual value of the placeholder.
+            Value of the placeholder.
         """
         from safeds.data.image.containers import Image
 
@@ -153,6 +153,23 @@ class PipelineProcess:
         #     message_type_placeholder_type,
         #     create_placeholder_description(placeholder_name, placeholder_type),
         # )
+
+    def report_placeholder_computed(self, placeholder_name: str) -> None:
+        """
+        Report that a placeholder has been computed.
+
+        Parameters
+        ----------
+        placeholder_name:
+            Name of the placeholder.
+        """
+        self._send_message(
+            create_progress_message(
+                run_id=self._payload.run_id,
+                placeholder_name=placeholder_name,
+                percentage=100,
+            ),
+        )
 
     def get_memoization_map(self) -> MemoizationMap:
         """
@@ -188,6 +205,7 @@ class PipelineProcess:
             self._send_exception(error)
         finally:
             self._send_message(create_done_message(self._payload.run_id))
+            # Needed for `getSource` to work correctly when the process is reused
             linecache.clearcache()
             pipeline_finder.detach()
 
@@ -209,175 +227,6 @@ class PipelineProcess:
 
 # Pipeline process object visible in child process
 current_pipeline: PipelineProcess | None = None
-
-
-def save_placeholder(placeholder_name: str, value: Any) -> None:
-    """
-    Save a placeholder for the current running pipeline.
-
-    Parameters
-    ----------
-    placeholder_name:
-        Name of the placeholder.
-    value:
-        Actual value of the placeholder.
-    """
-    if current_pipeline is not None:
-        current_pipeline.save_placeholder(placeholder_name, value)
-
-
-def memoized_static_call(
-    fully_qualified_function_name: str,
-    callable_: typing.Callable,
-    positional_arguments: list[Any],
-    keyword_arguments: dict[str, Any],
-    hidden_arguments: list[Any],
-) -> Any:
-    """
-    Call a function that can be memoized and save the result.
-
-    If a function has been previously memoized, the previous result may be reused.
-
-    Parameters
-    ----------
-    fully_qualified_function_name:
-        Fully qualified function name
-    callable_:
-        Function that is called and memoized if the result was not found in the memoization map
-    positional_arguments:
-        List of positions arguments for the function
-    keyword_arguments:
-        Dictionary of keyword arguments for the function
-    hidden_arguments:
-        List of hidden arguments for the function. This is used for memoizing some impure functions.
-
-    Returns
-    -------
-    result:
-        The result of the specified function, if any exists
-    """
-    if current_pipeline is None:
-        return None  # pragma: no cover
-
-    memoization_map = current_pipeline.get_memoization_map()
-    return memoization_map.memoized_function_call(
-        fully_qualified_function_name,
-        callable_,
-        positional_arguments,
-        keyword_arguments,
-        hidden_arguments,
-    )
-
-
-def memoized_dynamic_call(
-    receiver: Any,
-    function_name: str,
-    positional_arguments: list[Any],
-    keyword_arguments: dict[str, Any],
-    hidden_arguments: list[Any],
-) -> Any:
-    """
-    Dynamically call a function that can be memoized and save the result.
-
-    If a function has been previously memoized, the previous result may be reused.
-    Dynamically calling in this context means, that if a callable is provided (e.g. if default parameters are set), it will be called.
-    If no such callable is provided, the function name will be used to look up the function on the instance passed as the first parameter in the parameter list.
-
-    Parameters
-    ----------
-    receiver : Any
-        Instance the function should be called on
-    function_name:
-        Simple function name
-    positional_arguments:
-        List of positions arguments for the function
-    keyword_arguments:
-        Dictionary of keyword arguments for the function
-    hidden_arguments:
-        List of hidden parameters for the function. This is used for memoizing some impure functions.
-
-    Returns
-    -------
-    result:
-        The result of the specified function, if any exists
-    """
-    if current_pipeline is None:
-        return None  # pragma: no cover
-
-    fully_qualified_function_name = (
-        receiver.__class__.__module__ + "." + receiver.__class__.__qualname__ + "." + function_name
-    )
-
-    member = getattr(receiver, function_name)
-    callable_ = member.__func__
-
-    memoization_map = current_pipeline.get_memoization_map()
-    return memoization_map.memoized_function_call(
-        fully_qualified_function_name,
-        callable_,
-        [receiver, *positional_arguments],
-        keyword_arguments,
-        hidden_arguments,
-    )
-
-
-@typing.overload
-def file_mtime(filenames: str) -> int | None: ...
-
-
-@typing.overload
-def file_mtime(filenames: list[str]) -> list[int | None]: ...
-
-
-def file_mtime(filenames: str | list[str]) -> int | None | list[int | None]:
-    """
-    Get the last modification timestamp of the provided file.
-
-    Parameters
-    ----------
-    filenames:
-        Names of the files
-
-    Returns
-    -------
-    timestamps:
-        Last modification timestamp or None for each provided file, depending on whether the file exists or not.
-    """
-    if isinstance(filenames, list):
-        return [file_mtime(f) for f in filenames]
-
-    try:
-        return Path(filenames).stat().st_mtime_ns
-    except FileNotFoundError:
-        return None
-
-
-@typing.overload
-def absolute_path(filenames: str) -> str: ...
-
-
-@typing.overload
-def absolute_path(filenames: list[str]) -> list[str]: ...
-
-
-def absolute_path(filenames: str | list[str]) -> str | list[str]:
-    """
-    Get the absolute path of the provided file.
-
-    Parameters
-    ----------
-    filenames:
-        Names of the files.
-
-    Returns
-    -------
-    absolute_paths:
-        Absolute paths of the provided files.
-    """
-    if isinstance(filenames, list):
-        return [absolute_path(f) for f in filenames]
-
-    return str(Path(filenames).resolve())
 
 
 def get_stacktrace(error: BaseException) -> list[StacktraceEntry]:
@@ -432,3 +281,90 @@ def _get_placeholder_type(value: Any) -> str:
                     return object_name
         case _:  # pragma: no cover
             return "Any"  # pragma: no cover
+
+
+        # @sio.event
+        # async def placeholder_query(_sid: str, payload: Any) -> None:
+        #     try:
+        #         placeholder_query_message = QueryMessage(**payload)
+        #     except (TypeError, ValidationError):
+        #         logging.exception("Invalid message data specified in: %s", payload)
+        #         return
+        #
+        #     placeholder_type, placeholder_value = self._pipeline_manager.get_placeholder(
+        #         placeholder_query_message.id,
+        #         placeholder_query_message.data.name,
+        #     )
+        #
+        #     if placeholder_type is None:
+        #         # Send back empty type / value, to communicate that no placeholder exists (yet)
+        #         # Use name from query to allow linking a response to a request on the peer
+        #         data = json.dumps(create_placeholder_value(placeholder_query_message.data, "", ""))
+        #         await sio.emit(message_type_placeholder_value, data, to=placeholder_query_message.id)
+        #         return
+        #
+        #     try:
+        #         data = json.dumps(
+        #             create_placeholder_value(
+        #                 placeholder_query_message.data,
+        #                 placeholder_type,
+        #                 placeholder_value,
+        #             ),
+        #             cls=SafeDsEncoder,
+        #         )
+        #     except TypeError:
+        #         # if the value can't be encoded send back that the value exists but is not displayable
+        #         data = json.dumps(
+        #             create_placeholder_value(
+        #                 placeholder_query_message.data,
+        #                 placeholder_type,
+        #                 "<Not displayable>",
+        #             ),
+        #         )
+        #
+        #     await sio.emit(message_type_placeholder_value, data, to=placeholder_query_message.id)
+
+
+
+    # TODO: move into process that creates placeholder value messages
+# def create_placeholder_value(placeholder_query: QueryMessageData, type_: str, value: Any) -> dict[str, Any]:
+#     """
+#     Create the message data of a placeholder value message containing name, type and the actual value.
+#
+#     If the query only requests a subset of the data and the placeholder type supports this,
+#     the response will contain only a subset and the information about the subset.
+#
+#     Parameters
+#     ----------
+#     placeholder_query:
+#         Query of the placeholder.
+#     type_:
+#         Type of the placeholder.
+#     value:
+#         Value of the placeholder.
+#
+#     Returns
+#     -------
+#     message_data:
+#         Message data of "placeholder_value" messages.
+#     """
+#     import safeds.data.tabular.containers
+#
+#     message: dict[str, Any] = {"name": placeholder_query.name, "type": type_}
+#     # Start Index >= 0
+#     start_index = max(placeholder_query.window.begin if placeholder_query.window.begin is not None else 0, 0)
+#     # End Index >= Start Index
+#     end_index = (
+#         (start_index + max(placeholder_query.window.size, 0)) if placeholder_query.window.size is not None else None
+#     )
+#     if isinstance(value, safeds.data.tabular.containers.Table) and (
+#         placeholder_query.window.begin is not None or placeholder_query.window.size is not None
+#     ):
+#         max_index = value.number_of_rows
+#         # End Index <= Number Of Rows
+#         end_index = min(end_index, value.number_of_rows) if end_index is not None else None
+#         value = value.slice_rows(start=start_index, end=end_index)
+#         window_information: dict[str, int] = {"begin": start_index, "size": value.number_of_rows, "max": max_index}
+#         message["window"] = window_information
+#     message["value"] = value
+#     return message
