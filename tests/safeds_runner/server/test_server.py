@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import itertools
 import json
 import multiprocessing
 import threading
@@ -14,8 +15,10 @@ from safeds_runner.server.messages._from_server import (
     MessageFromServer,
     RuntimeErrorMessagePayload,
     RuntimeWarningMessagePayload,
+    create_done_message,
+    create_progress_message,
     create_runtime_error_message,
-    create_runtime_warning_message, create_done_message, create_progress_message,
+    create_runtime_warning_message,
 )
 from safeds_runner.server.messages._to_server import (
     MessageToServer,
@@ -49,7 +52,7 @@ async def _server() -> None:
 
 
 @pytest.fixture()
-async def client() -> socketio.AsyncSimpleClient:
+async def client_1() -> socketio.AsyncSimpleClient:
     async with socketio.AsyncSimpleClient() as sio:
         await sio.connect(URL, transports=["websocket"])
         yield sio
@@ -65,46 +68,53 @@ async def client_2() -> socketio.AsyncSimpleClient:
 # Normal flow ----------------------------------------------------------------------------------------------------------
 
 @pytest.mark.parametrize(
-    argnames="correspondence",
+    argnames=("correspondence_client_1", "correspondence_client_2"),
     argvalues=[
-        [  # simple_done
-            create_run_message(
-                run_id="simple_done",
-                code=[
-                    VirtualModule(
-                        absolute_module_name="main",
-                        code=(
-                            "if __name__ == '__main__':\n"
-                            "    print('Hello, World!')\n"
+        (  # simple_done
+            [
+                create_run_message(
+                    run_id="simple_done",
+                    code=[
+                        VirtualModule(
+                            absolute_module_name="main",
+                            code=(
+                                "if __name__ == '__main__':\n"
+                                "    print('Hello, World!')\n"
+                            ),
                         ),
-                    ),
-                ],
-                main_absolute_module_name="main",
-            ),
-            create_done_message(run_id="simple_done"),
-        ],
-        [  # simple_progress
-            create_run_message(
-                run_id="simple_progress",
-                code=[
-                    VirtualModule(
-                        absolute_module_name="main",
-                        code=(
-                            "import safeds_runner\n"
-                            "if __name__ == '__main__':\n"
-                            "    safeds_runner.report_placeholder_computed('test')\n"
+                    ],
+                    main_absolute_module_name="main",
+                ),
+                create_done_message(run_id="simple_done"),
+            ],
+            [],
+        ),
+
+        (  # simple_progress
+            [
+                create_run_message(
+                    run_id="simple_progress",
+                    code=[
+                        VirtualModule(
+                            absolute_module_name="main",
+                            code=(
+                                "import safeds_runner\n"
+                                "if __name__ == '__main__':\n"
+                                "    safeds_runner.report_placeholder_computed('test')\n"
+                            ),
                         ),
-                    ),
-                ],
-                main_absolute_module_name="main",
-            ),
-            create_progress_message(
-                run_id="simple_progress",
-                placeholder_name="test",
-                percentage=100,
-            ),
-            create_done_message(run_id="simple_progress"),
-        ],
+                    ],
+                    main_absolute_module_name="main",
+                ),
+                create_progress_message(
+                    run_id="simple_progress",
+                    placeholder_name="test",
+                    percentage=100,
+                ),
+                create_done_message(run_id="simple_progress"),
+            ],
+            [],
+        ),
     ],
     ids=[
         "simple_done",
@@ -113,20 +123,28 @@ async def client_2() -> socketio.AsyncSimpleClient:
 )
 @pytest.mark.usefixtures("_server")
 async def test_normal_flow(
-    client: socketio.AsyncSimpleClient,
-    correspondence: MessageToServer,
+    client_1: socketio.AsyncSimpleClient,
+    client_2: socketio.AsyncSimpleClient,
+    correspondence_client_1: list[MessageToServer | MessageFromServer],
+    correspondence_client_2: list[MessageToServer | MessageFromServer],
 ) -> None:
-    for message in correspondence:
-        if isinstance(message, MessageToServer):
-            await client.emit(message.event, message.payload.model_dump_json())
-        elif isinstance(message, MessageFromServer):
-            [actual_event, actual_payload] = await client.receive(timeout=BASE_TIMEOUT)
+    # Send and receive messages with both clients
+    for message_1, message_2 in itertools.zip_longest(correspondence_client_1, correspondence_client_2):
+        await _send_or_receive(message_1, client_1)
+        await _send_or_receive(message_2, client_2)
 
-            # Event should be correct
-            assert actual_event == message.event
 
-            # Payload should be correct
-            assert actual_payload == message.payload.model_dump_json()
+async def _send_or_receive(message: MessageToServer | MessageFromServer | None, client: socketio.AsyncSimpleClient):
+    if isinstance(message, MessageToServer):
+        await client.emit(message.event, message.payload.model_dump_json())
+    elif isinstance(message, MessageFromServer):
+        [actual_event, actual_payload] = await client.receive(timeout=BASE_TIMEOUT)
+
+        # Event should be correct
+        assert actual_event == message.event
+
+        # Payload should be correct
+        assert actual_payload == message.payload.model_dump_json()
 
 
 # Test runtime warning -------------------------------------------------------------------------------------------------
@@ -160,12 +178,12 @@ async def test_normal_flow(
 )
 @pytest.mark.usefixtures("_server")
 async def test_runtime_warning(
-    client: socketio.AsyncSimpleClient,
+    client_1: socketio.AsyncSimpleClient,
     request_: MessageToServer,
     expected_response: MessageFromServer,
 ) -> None:
-    await client.emit(request_.event, request_.payload.model_dump_json())
-    [actual_event, actual_payload] = await client.receive(timeout=BASE_TIMEOUT)
+    await client_1.emit(request_.event, request_.payload.model_dump_json())
+    [actual_event, actual_payload] = await client_1.receive(timeout=BASE_TIMEOUT)
 
     # Event should be correct
     assert actual_event == expected_response.event
@@ -214,12 +232,12 @@ async def test_runtime_warning(
 )
 @pytest.mark.usefixtures("_server")
 async def test_runtime_error(
-    client: socketio.AsyncSimpleClient,
+    client_1: socketio.AsyncSimpleClient,
     request_: MessageToServer,
     expected_response: MessageFromServer,
 ) -> None:
-    await client.emit(request_.event, request_.payload.model_dump_json())
-    [actual_event, actual_payload] = await client.receive(timeout=BASE_TIMEOUT)
+    await client_1.emit(request_.event, request_.payload.model_dump_json())
+    [actual_event, actual_payload] = await client_1.receive(timeout=BASE_TIMEOUT)
 
     # Event should be correct
     assert actual_event == expected_response.event
