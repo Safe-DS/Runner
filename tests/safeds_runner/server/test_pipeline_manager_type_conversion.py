@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from safeds.data.labeled.containers import TabularDataset
 from safeds_runner.server._pipeline_manager import _get_placeholder_type
 
 
@@ -26,6 +27,7 @@ from safeds_runner.server._pipeline_manager import _get_placeholder_type
         (object(), "object"),
         (None, "Null"),
         (lambda x: x + 1, "Callable"),
+        (TabularDataset({"a": [1], "b": [2]}, "a"), "Table"),
     ],
     ids=[
         "boolean_true",
@@ -45,6 +47,7 @@ from safeds_runner.server._pipeline_manager import _get_placeholder_type
         "object",
         "null",
         "callable",
+        "tabular_dataset",
     ],
 )
 def test_should_placeholder_type_match_safeds_dsl_placeholder(value: Any, type_: str) -> None:

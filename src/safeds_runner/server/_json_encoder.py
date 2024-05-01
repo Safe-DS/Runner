@@ -31,7 +31,11 @@ class SafeDsEncoder(json.JSONEncoder):
         """
         # Moving these imports to the top drastically increases startup time
         from safeds.data.image.containers import Image
+        from safeds.data.labeled.containers import TabularDataset
         from safeds.data.tabular.containers import Table
+
+        if isinstance(o, TabularDataset):
+            o = o.to_table()
 
         if isinstance(o, Table):
             dict_with_nan_infinity = o.to_dict()
@@ -43,7 +47,8 @@ class SafeDsEncoder(json.JSONEncoder):
                 ]
                 for key in dict_with_nan_infinity
             }
-        if isinstance(o, Image):
+        elif isinstance(o, Image):
             # Send images together with their format, by default images are encoded only as PNG
             return {"format": "png", "bytes": str(base64.encodebytes(o._repr_png_()), "utf-8")}
-        return json.JSONEncoder.default(self, o)
+        else:
+            return json.JSONEncoder.default(self, o)
