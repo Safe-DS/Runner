@@ -434,7 +434,7 @@ def get_backtrace_info(error: BaseException) -> list[dict[str, Any]]:
     """
     backtrace_list = []
     for frame in traceback.extract_tb(error.__traceback__):
-        backtrace_list.append({"file": frame.filename, "line": int(frame.lineno)})
+        backtrace_list.append({"file": frame.filename, "line": frame.lineno})
     return backtrace_list
 
 
