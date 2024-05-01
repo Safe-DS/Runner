@@ -9,6 +9,7 @@ from typing import Any
 import numpy as np
 import pytest
 from safeds.data.image.containers import Image
+from safeds.data.labeled.containers import TabularDataset
 from safeds.data.tabular.containers import Table
 from safeds_runner.memoization._memoization_utils import (
     ExplicitIdentityWrapper,
@@ -52,6 +53,7 @@ def test_is_not_primitive(value: Any, primitive: bool) -> None:
         (None, False),
         ("ab", False),
         (object(), False),
+        (TabularDataset({"a": [1], "b": [2]}, "a"), True),
         (Table(), True),
         (
             Image.from_bytes(
@@ -69,6 +71,7 @@ def test_is_not_primitive(value: Any, primitive: bool) -> None:
         "value_none",
         "value_string",
         "value_object",
+        "value_tabular_dataset",
         "value_table",
         "value_image",
     ],
@@ -80,6 +83,7 @@ def test_is_deterministically_hashable(value: Any, deterministically_hashable: b
 @pytest.mark.parametrize(
     argnames="value",
     argvalues=[
+        TabularDataset({"a": [1], "b": [2]}, "a"),
         Table(),
         Image.from_bytes(
             base64.b64decode(
@@ -87,7 +91,11 @@ def test_is_deterministically_hashable(value: Any, deterministically_hashable: b
             ),
         ),
     ],
-    ids=["value_table_plain", "value_image_plain"],
+    ids=[
+        "value_tabular_dataset_plain",
+        "value_table_plain",
+        "value_image_plain"
+    ],
 )
 def test_has_explicit_identity(value: Any) -> None:
     assert not _has_explicit_identity(value)
@@ -98,6 +106,7 @@ def test_has_explicit_identity(value: Any) -> None:
 @pytest.mark.parametrize(
     argnames="value",
     argvalues=[
+        TabularDataset({"a": [1], "b": [2]}, "a"),
         Table(),
         Image.from_bytes(
             base64.b64decode(
@@ -105,7 +114,11 @@ def test_has_explicit_identity(value: Any) -> None:
             ),
         ),
     ],
-    ids=["value_table_plain", "value_image_plain"],
+    ids=[
+        "value_tabular_dataset_plain",
+        "value_table_plain",
+        "value_image_plain"
+    ],
 )
 def test_explicit_identity_deterministic_hash(value: Any) -> None:
     assert not _has_explicit_identity(value)
@@ -117,6 +130,7 @@ def test_explicit_identity_deterministic_hash(value: Any) -> None:
 @pytest.mark.parametrize(
     argnames="value",
     argvalues=[
+        TabularDataset({"a": [1], "b": [2]}, "a"),
         Table(),
         Image.from_bytes(
             base64.b64decode(
@@ -124,7 +138,11 @@ def test_explicit_identity_deterministic_hash(value: Any) -> None:
             ),
         ),
     ],
-    ids=["value_table_plain", "value_image_plain"],
+    ids=[
+        "value_tabular_dataset_plain",
+        "value_table_plain",
+        "value_image_plain"
+    ],
 )
 def test_explicit_identity_shared_memory(value: Any) -> None:
     _shared_memory_serialize_and_assign(value)
@@ -134,6 +152,7 @@ def test_explicit_identity_shared_memory(value: Any) -> None:
 @pytest.mark.parametrize(
     argnames="value,hashable,exception",
     argvalues=[
+        (TabularDataset({"a": [1], "b": [2]}, "a"), True, None),
         (Table(), True, None),
         (
             Image.from_bytes(
@@ -149,6 +168,7 @@ def test_explicit_identity_shared_memory(value: Any) -> None:
         (lambda a, b: a + b, False, pickle.PicklingError),
     ],
     ids=[
+        "value_tabular_dataset_hashable",
         "value_table_hashable",
         "value_image_hashable",
         "value_dict_unhashable",
@@ -175,6 +195,7 @@ def test_make_hashable_non_wrapper(value: Any, hashable: bool, exception: type[B
 @pytest.mark.parametrize(
     argnames="value,wrapper",
     argvalues=[
+        (TabularDataset({"a": [1], "b": [2]}, "a"), True),
         (Table(), True),
         (
             Image.from_bytes(
@@ -186,6 +207,7 @@ def test_make_hashable_non_wrapper(value: Any, hashable: bool, exception: type[B
         ),
     ],
     ids=[
+        "value_tabular_dataset",
         "value_table",
         "value_image",
     ],
@@ -238,13 +260,24 @@ def test_memory_usage(value: Any, expected_size: int) -> None:
         1,
         [1, 2, 3],
         (1, 2, 3),
+        TabularDataset({"a": [1], "b": [2]}, "a"),
         Table(),
         (Table(), Table()),
         {"a": Table()},
         {"a", "b", Table()},
         frozenset({"a", "b", Table()}),
     ],
-    ids=["int", "list", "tuple", "table", "tuple_table", "dict", "set", "frozenset"],
+    ids=[
+        "int",
+        "list",
+        "tuple",
+        "tabular_dataset",
+        "table",
+        "tuple_table",
+        "dict",
+        "set",
+        "frozenset"
+    ],
 )
 def test_wrap_value_to_shared_memory(value: Any) -> None:
     def _delete_unpackvalue_field(wrapped_object: Any) -> None:
@@ -307,6 +340,7 @@ def test_wrap_value_to_shared_memory_non_deterministic(value: Any) -> None:
         1,
         [1, 2, 3],
         (1, 2, 3),
+        TabularDataset({"a": [1], "b": [2]}, "a"),
         Table(),
         (Table(), Table()),
         {"a": Table()},
@@ -319,6 +353,7 @@ def test_wrap_value_to_shared_memory_non_deterministic(value: Any) -> None:
         "int",
         "list",
         "tuple",
+        "tabular_dataset",
         "table",
         "tuple_table",
         "dict",
@@ -355,6 +390,7 @@ def test_serialize_value_to_shared_memory_non_lazy(value: Any) -> None:
 @pytest.mark.parametrize(
     argnames="value",
     argvalues=[
+        TabularDataset({"a": [1], "b": [2]}, "a"),
         Table(),
         Image.from_bytes(
             base64.b64decode(
@@ -363,6 +399,7 @@ def test_serialize_value_to_shared_memory_non_lazy(value: Any) -> None:
         ),
     ],
     ids=[
+        "value_tabular_dataset",
         "value_table",
         "value_image",
     ],
@@ -387,6 +424,10 @@ def test_compare_wrapper_to_lazy(value: Any) -> None:
 @pytest.mark.parametrize(
     argnames="value1,value2",
     argvalues=[
+        (
+            TabularDataset({"a": [1], "b": [2]}, "a"),
+            TabularDataset({"a": [1], "b": [2]}, "a"),
+        ),
         (Table(), Table()),
         (
             Image.from_bytes(
@@ -402,6 +443,7 @@ def test_compare_wrapper_to_lazy(value: Any) -> None:
         ),
     ],
     ids=[
+        "value_tabular_dataset",
         "value_table",
         "value_image",
     ],
@@ -449,6 +491,10 @@ def test_compare_wrapper_to_lazy_multi(value1: Any, value2: Any) -> None:
 @pytest.mark.parametrize(
     argnames="value1,value2",
     argvalues=[
+        (
+            TabularDataset({"a": [1], "b": [2]}, "a"),
+            TabularDataset({"a": [1], "b": [2]}, "a"),
+        ),
         (Table(), Table()),
         (
             Image.from_bytes(
@@ -464,6 +510,7 @@ def test_compare_wrapper_to_lazy_multi(value1: Any, value2: Any) -> None:
         ),
     ],
     ids=[
+        "value_tabular_dataset",
         "value_table",
         "value_image",
     ],
@@ -481,6 +528,7 @@ def test_wrapper_hash(value1: Any, value2: Any) -> None:
 @pytest.mark.parametrize(
     argnames="value",
     argvalues=[
+        TabularDataset({"a": [1], "b": [2]}, "a"),
         Table(),
         Image.from_bytes(
             base64.b64decode(
@@ -489,6 +537,7 @@ def test_wrapper_hash(value1: Any, value2: Any) -> None:
         ),
     ],
     ids=[
+        "value_tabular_dataset",
         "value_table",
         "value_image",
     ],
