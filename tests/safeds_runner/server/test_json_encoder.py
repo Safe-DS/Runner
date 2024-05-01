@@ -6,6 +6,7 @@ import math
 from typing import Any
 
 import pytest
+from safeds.data.labeled.containers import TabularDataset
 from safeds.data.image.containers import Image
 from safeds.data.tabular.containers import Table
 from safeds_runner.server._json_encoder import SafeDsEncoder
@@ -15,7 +16,14 @@ from safeds_runner.server._json_encoder import SafeDsEncoder
     argnames="data,expected_string",
     argvalues=[
         (
-            Table.from_dict({"a": [1, 2], "b": [3.2, 4.0], "c": [math.nan, 5.6], "d": [5, -6]}),
+            TabularDataset(
+                {"a": [1, 2], "b": [3.2, 4.0], "c": [math.nan, 5.6], "d": [5, -6]},
+                target_name="d",
+            ),
+            '{"a": [1, 2], "b": [3.2, 4.0], "c": [null, 5.6], "d": [5, -6]}',
+        ),
+        (
+            Table({"a": [1, 2], "b": [3.2, 4.0], "c": [math.nan, 5.6], "d": [5, -6]}),
             '{"a": [1, 2], "b": [3.2, 4.0], "c": [null, 5.6], "d": [5, -6]}',
         ),
         (
