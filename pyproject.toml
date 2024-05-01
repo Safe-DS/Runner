@@ -22,6 +22,7 @@ hypercorn = "^0.16.0"
 psutil = "^5.9.8"
 pydantic = "^2.7.0"
 quart = "^0.19.4"
+stack-data = "^0.6.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8.1.1"
