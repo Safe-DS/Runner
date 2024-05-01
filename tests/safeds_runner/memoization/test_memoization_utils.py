@@ -91,11 +91,7 @@ def test_is_deterministically_hashable(value: Any, deterministically_hashable: b
             ),
         ),
     ],
-    ids=[
-        "value_tabular_dataset_plain",
-        "value_table_plain",
-        "value_image_plain"
-    ],
+    ids=["value_tabular_dataset_plain", "value_table_plain", "value_image_plain"],
 )
 def test_has_explicit_identity(value: Any) -> None:
     assert not _has_explicit_identity(value)
@@ -114,11 +110,7 @@ def test_has_explicit_identity(value: Any) -> None:
             ),
         ),
     ],
-    ids=[
-        "value_tabular_dataset_plain",
-        "value_table_plain",
-        "value_image_plain"
-    ],
+    ids=["value_tabular_dataset_plain", "value_table_plain", "value_image_plain"],
 )
 def test_explicit_identity_deterministic_hash(value: Any) -> None:
     assert not _has_explicit_identity(value)
@@ -138,11 +130,7 @@ def test_explicit_identity_deterministic_hash(value: Any) -> None:
             ),
         ),
     ],
-    ids=[
-        "value_tabular_dataset_plain",
-        "value_table_plain",
-        "value_image_plain"
-    ],
+    ids=["value_tabular_dataset_plain", "value_table_plain", "value_image_plain"],
 )
 def test_explicit_identity_shared_memory(value: Any) -> None:
     _shared_memory_serialize_and_assign(value)
@@ -267,17 +255,7 @@ def test_memory_usage(value: Any, expected_size: int) -> None:
         {"a", "b", Table()},
         frozenset({"a", "b", Table()}),
     ],
-    ids=[
-        "int",
-        "list",
-        "tuple",
-        "tabular_dataset",
-        "table",
-        "tuple_table",
-        "dict",
-        "set",
-        "frozenset"
-    ],
+    ids=["int", "list", "tuple", "tabular_dataset", "table", "tuple_table", "dict", "set", "frozenset"],
 )
 def test_wrap_value_to_shared_memory(value: Any) -> None:
     def _delete_unpackvalue_field(wrapped_object: Any) -> None:

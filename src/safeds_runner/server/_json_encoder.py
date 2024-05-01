@@ -30,8 +30,8 @@ class SafeDsEncoder(json.JSONEncoder):
             The passed object represented in a way that is serializable to JSON.
         """
         # Moving these imports to the top drastically increases startup time
-        from safeds.data.labeled.containers import TabularDataset
         from safeds.data.image.containers import Image
+        from safeds.data.labeled.containers import TabularDataset
         from safeds.data.tabular.containers import Table
 
         if isinstance(o, TabularDataset):

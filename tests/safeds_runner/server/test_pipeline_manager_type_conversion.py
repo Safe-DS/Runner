@@ -4,7 +4,6 @@ from typing import Any
 
 import pytest
 from safeds.data.labeled.containers import TabularDataset
-
 from safeds_runner.server._pipeline_manager import _get_placeholder_type
 
 
