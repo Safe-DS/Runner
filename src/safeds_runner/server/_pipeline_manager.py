@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import stack_data
+from safeds.data.labeled.containers import TabularDataset
 
 from safeds_runner.memoization._memoization_map import MemoizationMap
 from safeds_runner.memoization._memoization_utils import (
@@ -460,6 +461,8 @@ def _get_placeholder_type(value: Any) -> str:
             return "Int"
         case str():
             return "String"
+        case TabularDataset():
+            return "Table"
         case object():
             object_name = type(value).__name__
             match object_name:
