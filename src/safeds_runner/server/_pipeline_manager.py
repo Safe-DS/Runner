@@ -6,12 +6,12 @@ import linecache
 import logging
 import os
 import runpy
+import traceback
 import typing
 from functools import cached_property
 from pathlib import Path
 from typing import Any
 
-import stack_data
 from safeds.data.labeled.containers import TabularDataset
 
 from safeds_runner.memoization._memoization_map import MemoizationMap
@@ -433,7 +433,7 @@ def get_backtrace_info(error: BaseException) -> list[dict[str, Any]]:
         List containing file and line information for each stack frame.
     """
     backtrace_list = []
-    for frame in stack_data.core.FrameInfo.stack_data(error.__traceback__):
+    for frame in traceback.extract_tb(error.__traceback__):
         backtrace_list.append({"file": frame.filename, "line": int(frame.lineno)})
     return backtrace_list
 
