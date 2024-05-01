@@ -228,6 +228,7 @@ def create_placeholder_value(placeholder_query: QueryMessageData, type_: str, va
     message_data:
         Message data of "placeholder_value" messages.
     """
+    import safeds.data.labeled.containers
     import safeds.data.tabular.containers
 
     message: dict[str, Any] = {"name": placeholder_query.name, "type": type_}
@@ -237,6 +238,9 @@ def create_placeholder_value(placeholder_query: QueryMessageData, type_: str, va
     end_index = (
         (start_index + max(placeholder_query.window.size, 0)) if placeholder_query.window.size is not None else None
     )
+    if isinstance(value, safeds.data.labeled.containers.TabularDataset):
+        value = value.to_table()
+
     if isinstance(value, safeds.data.tabular.containers.Table) and (
         placeholder_query.window.begin is not None or placeholder_query.window.size is not None
     ):
