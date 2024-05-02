@@ -20,6 +20,8 @@ class SafeDsServer:
     def __init__(self) -> None:
         self._sio = socketio.AsyncServer(logger=True, async_mode="asgi")
         self._app = socketio.ASGIApp(self._sio)
+        self._server: uvicorn.Server | None = None
+
         self._process_manager = ProcessManager()
         self._pipeline_manager = PipelineManager(self._process_manager)
         self._lock = Lock()
@@ -35,13 +37,17 @@ class SafeDsServer:
 
         logging.info("Starting Safe-DS Runner on port %s...", str(port))
         config = uvicorn.config.Config(self._app, host="127.0.0.1", port=port)
-        server = uvicorn.server.Server(config)
-        await server.serve()
+        self._server = uvicorn.Server(config)
+        await self._server.serve()
 
     async def shutdown(self) -> None:
         """Shutdown the server."""
         self._process_manager.shutdown()
         await self._sio.shutdown()
+
+    def is_started(self) -> bool:
+        """Check whether the server is started."""
+        return self._server is not None and self._server.started
 
     def _interrupt_handler(self, _signal: Any, _frame: Any) -> None:
         """Handle the interrupt signal."""

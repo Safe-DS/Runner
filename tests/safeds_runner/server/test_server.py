@@ -44,6 +44,12 @@ async def _server() -> None:
     thread = threading.Thread(target=run_server, daemon=True)
     thread.start()
 
+    # Wait until the server is ready to accept connections
+    for _ in range(10 * BASE_TIMEOUT):
+        if server.is_started():
+            break
+        await asyncio.sleep(0.1)
+
     # Run the actual test
     yield
 
