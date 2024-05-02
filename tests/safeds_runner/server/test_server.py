@@ -4,6 +4,7 @@ import asyncio
 import itertools
 import json
 import multiprocessing
+import sys
 import threading
 
 import psutil
@@ -439,8 +440,17 @@ SHUTDOWN_URL = f"http://localhost:{SHUTDOWN_PORT}"
 
 async def test_shutdown() -> None:
     # Start the server that should be shut down
-    process = multiprocessing.Process(target=run_server_to_shutdown)
+    stdout_r, stdout_w = multiprocessing.Pipe()
+    process = multiprocessing.Process(target=run_server_to_shutdown, args=[stdout_w])
     process.start()
+
+    # Wait until the server is ready to accept connections
+    for _ in range(10 * BASE_TIMEOUT):
+        if not stdout_r.poll(0.1):
+            continue
+
+        if "Started server process" in str(stdout_r.recv()).strip():
+            break
 
     try:
         # Send a shutdown message
@@ -466,7 +476,10 @@ async def test_shutdown() -> None:
     assert process.exitcode == 0
 
 
-def run_server_to_shutdown():
+def run_server_to_shutdown(pipe: multiprocessing.connection.Connection):
+    sys.stdout.write = lambda value: pipe.send(value)  # type: ignore[method-assign, assignment]
+    sys.stderr.write = lambda value: pipe.send(value)  # type: ignore[method-assign, assignment]
+
     server = SafeDsServer()
     server._sio.eio.start_service_task = False
     asyncio.run(server.startup(SHUTDOWN_PORT))
