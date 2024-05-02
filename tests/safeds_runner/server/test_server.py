@@ -54,14 +54,14 @@ async def _server() -> None:
 @pytest.fixture()
 async def client_1() -> socketio.AsyncSimpleClient:
     async with socketio.AsyncSimpleClient() as sio:
-        await sio.connect(URL, transports=["websocket"])
+        await sio.connect(URL, wait_timeout=BASE_TIMEOUT)
         yield sio
 
 
 @pytest.fixture()
 async def client_2() -> socketio.AsyncSimpleClient:
     async with socketio.AsyncSimpleClient() as sio:
-        await sio.connect(URL, transports=["websocket"])
+        await sio.connect(URL, wait_timeout=BASE_TIMEOUT)
         yield sio
 
 
@@ -436,23 +436,25 @@ async def test_shutdown() -> None:
     process = multiprocessing.Process(target=run_server_to_shutdown)
     process.start()
 
-    # Send a shutdown message
-    async with socketio.AsyncSimpleClient() as client_:
-        await client_.connect(SHUTDOWN_URL, transports=["websocket"])
-        await client_.emit(create_shutdown_message().event)
+    try:
+        # Send a shutdown message
+        async with socketio.AsyncSimpleClient() as client_:
+            await client_.connect(SHUTDOWN_URL, wait_timeout=BASE_TIMEOUT)
+            await client_.emit(create_shutdown_message().event)
 
-        # Joining on the process can lead to a loss of the shutdown message
-        for _ in range(10 * BASE_TIMEOUT):
-            if not process.is_alive():
-                break
-            await asyncio.sleep(0.1)
-
-    # Kill the process and all child processes if it did not shut down in time
-    if process.is_alive():
-        parent = psutil.Process(process.pid)
-        for child in parent.children(recursive=True):
-            child.kill()
-        pytest.fail("Server did not shut down in time.")
+            # Joining on the process can lead to a loss of the shutdown message
+            for _ in range(10 * BASE_TIMEOUT):
+                if not process.is_alive():
+                    break
+                await asyncio.sleep(0.1)
+    finally:
+        # Kill the process and all child processes if it did not shut down in time
+        if process.is_alive():
+            parent = psutil.Process(process.pid)
+            for child in parent.children(recursive=True):
+                child.kill()
+            parent.kill()
+            pytest.fail("Server did not shut down in time.")
 
     # Check the exit code
     assert process.exitcode == 0
