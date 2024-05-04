@@ -17,23 +17,40 @@ safe-ds-runner = "safeds_runner.main:main"
 
 [tool.poetry.dependencies]
 python = "^3.11,<3.13"
+safe-ds = ">=0.22.1,<0.23"
+hypercorn = "^0.16.0"
 psutil = "^5.9.8"
 pydantic = "^2.7.0"
-python-socketio = "^5.11.2"
-safe-ds = ">=0.22.1,<0.23"
-uvicorn = "^0.29.0"
+quart = "^0.19.4"
 
-[tool.poetry.group.dev.dependencies]
+[tool.poetry.dev-dependencies]
 pytest = "^8.2.0"
-pytest-asyncio = "^0.23.6"
 pytest-cov = "^5.0.0"
 pytest-timeout = "^2.3.1"
-python-socketio = {extras = ["asyncio-client"], version = "^5.11.2"}
+pytest-asyncio = "^0.23.6"
+simple-websocket = "^1.0.0"
+torch = [
+    # Install the CUDA version on Windows. Projects that depend on us always get their dependencies from PyPI, so
+    # there's no point moving this to the main dependencies section.
+    { version = "^2.3.0", markers="sys_platform == 'win32'", source = "torch_cuda" },
+    { version = "^2.3.0", markers="sys_platform != 'win32'", source = "pypi" },
+]
+torchvision = [
+    # Install the CUDA version on Windows. Projects that depend on us always get their dependencies from PyPI, so
+    # there's no point moving this to the main dependencies section.
+    { version = "^0.18.0", markers="sys_platform == 'win32'", source = "torch_cuda" },
+    { version = "^0.18.0", markers="sys_platform != 'win32'", source = "pypi" },
+]
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "^1.4.3"
 mkdocs-glightbox = "^0.3.4"
 mkdocs-material = "^9.1.17"
+
+[[tool.poetry.source]]
+name = "torch_cuda"
+url = "https://download.pytorch.org/whl/cu121"
+priority = "explicit"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -41,6 +58,3 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 120
-
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
