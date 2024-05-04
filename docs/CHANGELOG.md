@@ -1,3 +1,17 @@
+## [0.14.1](https://github.com/Safe-DS/Runner/compare/v0.14.0...v0.14.1) (2024-05-02)
+
+
+### Bug Fixes
+
+* require `safe-ds` version 0.22.1 ([#105](https://github.com/Safe-DS/Runner/issues/105)) ([f3eeabe](https://github.com/Safe-DS/Runner/commit/f3eeabeb5497740cea7a9cd1d001957bc3e76c9b))
+
+## [0.14.0](https://github.com/Safe-DS/Runner/compare/v0.13.1...v0.14.0) (2024-05-02)
+
+
+### Features
+
+* require `safe-ds` version 0.22.0 ([#98](https://github.com/Safe-DS/Runner/issues/98)) ([6f7c934](https://github.com/Safe-DS/Runner/commit/6f7c934ae200d8dd41f6e135f24469302c8490c8))
+
 ## [0.13.1](https://github.com/Safe-DS/Runner/compare/v0.13.0...v0.13.1) (2024-04-24)
 
 
