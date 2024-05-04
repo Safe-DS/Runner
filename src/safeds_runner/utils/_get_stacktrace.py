@@ -20,7 +20,7 @@ def get_stacktrace_for_error(error: BaseException) -> list[StacktraceEntry]:
     """
     frames = traceback.extract_tb(error.__traceback__)
     return [
-        StacktraceEntry(file=frame.filename, line=int(frame.lineno))
+        StacktraceEntry(file=frame.filename, line=frame.lineno)
         for frame in reversed(list(frames))
     ]
 

@@ -139,7 +139,7 @@ class StacktraceEntry(BaseModel):
     """
 
     file: str
-    line: int
+    line: int | None = None
 
     model_config = ConfigDict(extra="forbid")
 
