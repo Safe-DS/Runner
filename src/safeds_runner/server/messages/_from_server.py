@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
@@ -49,7 +50,7 @@ class PlaceholderValueMessagePayload(MessageFromServerPayload):
     type:
         Python type of the placeholder at runtime.
     value:
-        Value of the placeholder.
+        Value of the placeholder. Must be JSON-serializable.
     window:
         Window of the full value included as value in the message.
     """
@@ -57,7 +58,7 @@ class PlaceholderValueMessagePayload(MessageFromServerPayload):
     run_id: str
     placeholder_name: str
     type: str
-    value: str
+    value: Any
     window: Window | None = None
 
     model_config = ConfigDict(extra="forbid")
@@ -187,7 +188,7 @@ def create_placeholder_value_message(
     run_id: str,
     placeholder_name: str,
     type_: str,
-    value: str,
+    value: Any,
     window: Window | None = None,
 ) -> MessageFromServer:
     """Create a 'placeholder_value' message."""
