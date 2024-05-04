@@ -209,39 +209,3 @@ def get_stacktrace(error: BaseException) -> list[StacktraceEntry]:
     """
     frames = stack_data.core.FrameInfo.stack_data(error.__traceback__)
     return [StacktraceEntry(file=frame.filename, line=int(frame.lineno)) for frame in reversed(list(frames))]
-
-
-def _get_placeholder_type(value: Any) -> str:
-    """
-    Convert a python object to a Safe-DS type.
-
-    Parameters
-    ----------
-    value:
-        A python object.
-
-    Returns
-    -------
-    placeholder_type:
-        Safe-DS name corresponding to the given python object instance.
-    """
-    match value:
-        case bool():
-            return "Boolean"
-        case float():
-            return "Float"
-        case int():
-            return "Int"
-        case str():
-            return "String"
-        case object():
-            object_name = type(value).__name__
-            match object_name:
-                case "function":
-                    return "Callable"
-                case "NoneType":
-                    return "Null"
-                case _:
-                    return object_name
-        case _:  # pragma: no cover
-            return "Any"  # pragma: no cover
