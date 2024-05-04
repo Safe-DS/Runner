@@ -7,7 +7,6 @@ import multiprocessing
 import sys
 import threading
 
-import psutil
 import pytest
 import socketio
 from pydantic import ValidationError
@@ -27,6 +26,7 @@ from safeds_runner.server.messages._to_server import (
     create_run_message,
     create_shutdown_message,
 )
+from safeds_runner.utils._tree_kill import tree_kill
 
 BASE_TIMEOUT = 10
 PORT = 17394
@@ -466,10 +466,7 @@ async def test_shutdown() -> None:
     finally:
         # Kill the process and all child processes if it did not shut down in time
         if process.is_alive():
-            parent = psutil.Process(process.pid)
-            for child in parent.children(recursive=True):
-                child.kill()
-            parent.kill()
+            tree_kill(process.pid)
             pytest.fail("Server did not shut down in time.")
 
     # Check the exit code
