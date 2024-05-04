@@ -6,19 +6,15 @@ import linecache
 import logging
 import os
 import runpy
-import traceback
 import typing
 import warnings
 from functools import cached_property
-from typing import Any
-
-from safeds.data.labeled.containers import TabularDataset
 
 from safeds_runner.memoization._memoization_map import MemoizationMap
+from safeds_runner.utils._get_stacktrace import get_stacktrace_for_error, get_stacktrace_for_warning
 
 from ._module_manager import InMemoryFinder
 from .messages._from_server import (
-    StacktraceEntry,
     create_done_message,
     create_runtime_error_message,
     create_runtime_warning_message,
@@ -164,7 +160,7 @@ class PipelineProcess:
                 create_runtime_warning_message(
                     run_id=self._payload.run_id,
                     message=str(warning.message),
-                    stacktrace=[StacktraceEntry(file=warning.filename, line=warning.lineno)],
+                    stacktrace=get_stacktrace_for_warning(warning),
                 ),
             )
 
@@ -173,7 +169,7 @@ class PipelineProcess:
             create_runtime_error_message(
                 run_id=self._payload.run_id,
                 message=exception.__str__(),
-                stacktrace=get_stacktrace(exception),
+                stacktrace=get_stacktrace_for_error(exception),
             ),
         )
 
@@ -192,59 +188,3 @@ def get_current_pipeline_process() -> PipelineProcess | None:
         Current pipeline process.
     """
     return _current_pipeline_process
-
-
-def get_stacktrace(error: BaseException) -> list[StacktraceEntry]:
-    """
-    Create a simplified stacktrace from an exception.
-
-    Parameters
-    ----------
-    error:
-        Caught exception.
-
-    Returns
-    -------
-    backtrace_info:
-        List containing file and line information for each stack frame.
-    """
-    frames = traceback.extract_tb(error.__traceback__)
-    return [StacktraceEntry(file=frame.filename, line=int(frame.lineno)) for frame in reversed(list(frames))]
-
-
-def _get_placeholder_type(value: Any) -> str:
-    """
-    Convert a python object to a Safe-DS type.
-
-    Parameters
-    ----------
-    value:
-        A python object.
-
-    Returns
-    -------
-    placeholder_type:
-        Safe-DS name corresponding to the given python object instance.
-    """
-    match value:
-        case bool():
-            return "Boolean"
-        case float():
-            return "Float"
-        case int():
-            return "Int"
-        case str():
-            return "String"
-        case TabularDataset():
-            return "Table"
-        case object():
-            object_name = type(value).__name__
-            match object_name:
-                case "function":
-                    return "Callable"
-                case "NoneType":
-                    return "Null"
-                case _:
-                    return object_name
-        case _:  # pragma: no cover
-            return "Any"  # pragma: no cover
