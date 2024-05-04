@@ -47,7 +47,7 @@ class PlaceholderValueMessagePayload(MessageFromServerPayload):
     placeholder_name:
         Name of the placeholder.
     type:
-        Type of the placeholder.
+        Python type of the placeholder at runtime.
     value:
         Value of the placeholder.
     window:
