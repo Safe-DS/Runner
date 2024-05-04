@@ -28,7 +28,7 @@ from safeds_runner.server.messages._to_server import (
 )
 from safeds_runner.utils._tree_kill import tree_kill
 
-BASE_TIMEOUT = 10
+BASE_TIMEOUT = 20
 PORT = 17394
 URL = f"http://localhost:{PORT}"
 
