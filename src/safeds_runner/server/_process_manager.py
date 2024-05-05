@@ -4,29 +4,27 @@ import asyncio
 import logging
 import multiprocessing
 import os
-import threading
+from asyncio import CancelledError, Task
 from collections.abc import Callable
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from functools import cached_property
-from threading import Lock
 from typing import TYPE_CHECKING, Any, Literal, ParamSpec, TypeAlias, TypeVar
 
 if TYPE_CHECKING:
+    import queue
     from collections.abc import Coroutine
     from concurrent.futures import Future
     from multiprocessing.managers import DictProxy, SyncManager
-    from queue import Queue
 
-    from safeds_runner.server._messages import Message
+    from safeds_runner.server.messages._from_server import MessageFromServer
 
 
 class ProcessManager:
     """Service for managing processes and communicating between them."""
 
     def __init__(self) -> None:
-        self._lock = Lock()
         self._state: _State = "initial"
-        self._on_message_callbacks: set[Callable[[Message], Coroutine[Any, Any, None]]] = set()
+        self._on_message_callbacks: set[Callable[[MessageFromServer], Coroutine[Any, Any, None]]] = set()
 
     @cached_property
     def _manager(self) -> SyncManager:
@@ -35,36 +33,34 @@ class ProcessManager:
         return multiprocessing.Manager()
 
     @cached_property
-    def _message_queue(self) -> Queue[Message]:
+    def _message_queue(self) -> queue.Queue[MessageFromServer]:
         return self._manager.Queue()
 
     @cached_property
-    def _message_queue_thread(self) -> threading.Thread:
-        return threading.Thread(daemon=True, target=self._consume_queue_messages, args=[asyncio.get_event_loop()])
+    def _message_queue_consumer(self) -> Task:
+        async def _consume() -> None:
+            """Consume messages from the message queue and call all registered callbacks."""
+            executor = ThreadPoolExecutor(max_workers=1)
+            loop = asyncio.get_running_loop()
+
+            try:
+                while self._state != "shutdown":
+                    message = await loop.run_in_executor(executor, self._message_queue.get)
+                    for callback in self._on_message_callbacks:
+                        asyncio.run_coroutine_threadsafe(callback(message), loop)
+            except CancelledError as error:  # pragma: no cover
+                logging.info("Message queue terminated: %s", error.__repr__())  # pragma: no cover
+            finally:
+                executor.shutdown(wait=True, cancel_futures=True)
+
+        return asyncio.create_task(_consume())
 
     @cached_property
-    def _process_pool(self) -> ProcessPoolExecutor:
+    def _worker_process_pool(self) -> ProcessPoolExecutor:
         return ProcessPoolExecutor(
             max_workers=4,
             mp_context=multiprocessing.get_context("spawn"),
         )
-
-    def _consume_queue_messages(self, event_loop: asyncio.AbstractEventLoop) -> None:
-        """
-        Consume messages from the message queue and call all registered callbacks.
-
-        Parameters
-        ----------
-        event_loop:
-            Event Loop that handles websocket connections.
-        """
-        try:
-            while self._state != "shutdown":
-                message = self._message_queue.get()
-                for callback in self._on_message_callbacks:
-                    asyncio.run_coroutine_threadsafe(callback(message), event_loop)
-        except BaseException as error:  # noqa: BLE001  # pragma: no cover
-            logging.warning("Message queue terminated: %s", error.__repr__())  # pragma: no cover
 
     def startup(self) -> None:
         """
@@ -75,19 +71,20 @@ class ProcessManager:
         if self._state == "started":
             return
 
-        self._lock.acquire()
         if self._state == "initial":
+            # Initialize all cached properties
             _manager = self._manager
             _message_queue = self._message_queue
-            _process_pool = self._process_pool
-            self._message_queue_thread.start()
+            _message_queue_consumer = self._message_queue_consumer
+            _worker_process_pool = self._worker_process_pool
 
+            # Set state to started before warm up to prevent endless recursion
             self._state = "started"
-            self.submit(_warmup_worker)  # Warm up one worker process
+
+            # Warm up one worker process
+            self.submit(_warmup_worker)
         elif self._state == "shutdown":
-            self._lock.release()
             raise RuntimeError("ProcessManager has already been shutdown.")
-        self._lock.release()
 
     def shutdown(self) -> None:
         """
@@ -96,19 +93,17 @@ class ProcessManager:
         This method should be called before the program exits. After calling this method, the process manager can no
         longer be used.
         """
-        self._lock.acquire()
         if self._state == "started":
+            self._worker_process_pool.shutdown(wait=True, cancel_futures=True)
+            self._message_queue_consumer.cancel()
             self._manager.shutdown()
-            self._process_pool.shutdown(wait=True, cancel_futures=True)
         self._state = "shutdown"
-        self._lock.release()
 
     def create_shared_dict(self) -> DictProxy:
         """Create a dictionary that can be accessed by multiple processes."""
-        self.startup()
         return self._manager.dict()
 
-    def on_message(self, callback: Callable[[Message], Coroutine[Any, Any, None]]) -> Unregister:
+    def on_message(self, callback: Callable[[MessageFromServer], Coroutine[Any, Any, None]]) -> Unregister:
         """
         Get notified when a message is received from another process.
 
@@ -125,9 +120,8 @@ class ProcessManager:
         self._on_message_callbacks.add(callback)
         return lambda: self._on_message_callbacks.remove(callback)
 
-    def get_queue(self) -> Queue[Message]:
+    def get_queue(self) -> queue.Queue[MessageFromServer]:
         """Get the message queue that is used to communicate between processes."""
-        self.startup()
         return self._message_queue
 
     _P = ParamSpec("_P")
@@ -135,8 +129,7 @@ class ProcessManager:
 
     def submit(self, func: Callable[_P, _T], /, *args: _P.args, **kwargs: _P.kwargs) -> Future[_T]:
         """Submit a function to be executed by a worker process."""
-        self.startup()
-        return self._process_pool.submit(func, *args, **kwargs)
+        return self._worker_process_pool.submit(func, *args, **kwargs)
 
 
 def _warmup_worker() -> None:

@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import sys
-import tempfile
 import time
 import typing
-from datetime import UTC, datetime
-from pathlib import Path
 from queue import Queue
 from typing import Any
 
 import pytest
+from safeds_runner import (
+    memoized_dynamic_call,
+    memoized_static_call,
+)
 from safeds_runner.memoization._memoization_map import (
     MemoizationMap,
     MemoizationStats,
@@ -24,19 +25,28 @@ from safeds_runner.memoization._memoization_strategies import (
 )
 from safeds_runner.memoization._memoization_utils import _make_hashable
 from safeds_runner.server import _pipeline_manager
-from safeds_runner.server._messages import ProgramMessageData, ProgramMessageMainInformation
-from safeds_runner.server._pipeline_manager import (
-    PipelineProcess,
-    absolute_path,
-    file_mtime,
-    memoized_dynamic_call,
-    memoized_static_call,
-)
+from safeds_runner.server._pipeline_manager import PipelineProcess
+from safeds_runner.server.messages._to_server import RunMessagePayload
 
 
 class UnhashableClass:
     def __hash__(self) -> int:
         raise TypeError("unhashable type")
+
+
+@pytest.fixture()
+def current_pipeline_process() -> PipelineProcess:
+    _pipeline_manager._current_pipeline_process = PipelineProcess(
+        RunMessagePayload(
+            run_id="",
+            code=[],
+            main_absolute_module_name="",
+        ),
+        Queue(),
+        MemoizationMap({}, {}),
+    )
+
+    return _pipeline_manager._current_pipeline_process
 
 
 @pytest.mark.parametrize(
@@ -54,27 +64,21 @@ class UnhashableClass:
     ids=["function_pure", "function_impure_readfile"],
 )
 def test_memoization_static_already_present_values(
+    current_pipeline_process: PipelineProcess,
     fully_qualified_function_name: str,
     positional_arguments: list,
     keyword_arguments: dict,
     hidden_arguments: list,
     expected_result: Any,
 ) -> None:
-    _pipeline_manager.current_pipeline = PipelineProcess(
-        ProgramMessageData(code={}, main=ProgramMessageMainInformation(modulepath="", module="", pipeline="")),
-        "",
-        Queue(),
-        {},
-        MemoizationMap({}, {}),
-    )
-    _pipeline_manager.current_pipeline.get_memoization_map()._map_values[
+    current_pipeline_process.get_memoization_map()._map_values[
         (
             fully_qualified_function_name,
             _make_hashable(positional_arguments),
             _make_hashable(hidden_arguments),
         )
     ] = expected_result
-    _pipeline_manager.current_pipeline.get_memoization_map()._map_stats[fully_qualified_function_name] = (
+    current_pipeline_process.get_memoization_map()._map_stats[fully_qualified_function_name] = (
         MemoizationStats(
             [time.perf_counter_ns()],
             [],
@@ -82,7 +86,7 @@ def test_memoization_static_already_present_values(
             [sys.getsizeof(expected_result)],
         )
     )
-    result = _pipeline_manager.memoized_static_call(
+    result = memoized_static_call(
         fully_qualified_function_name,
         lambda *_: None,
         positional_arguments,
@@ -109,6 +113,7 @@ def test_memoization_static_already_present_values(
     ],
     ids=["function_pure", "function_impure_readfile", "function_dict", "function_lambda"],
 )
+@pytest.mark.usefixtures("current_pipeline_process")
 def test_memoization_static_not_present_values(
     fully_qualified_function_name: str,
     callable_: typing.Callable,
@@ -117,13 +122,7 @@ def test_memoization_static_not_present_values(
     hidden_arguments: list,
     expected_result: Any,
 ) -> None:
-    _pipeline_manager.current_pipeline = PipelineProcess(
-        ProgramMessageData(code={}, main=ProgramMessageMainInformation(modulepath="", module="", pipeline="")),
-        "",
-        Queue(),
-        {},
-        MemoizationMap({}, {}),
-    )
+
     # Save value in map
     result = memoized_static_call(
         fully_qualified_function_name,
@@ -187,6 +186,7 @@ class ChildClass(BaseClass):
         "member_call_keyword_only_argument",
     ],
 )
+@pytest.mark.usefixtures("current_pipeline_process")
 def test_memoization_dynamic(
     receiver: Any,
     function_name: str,
@@ -195,13 +195,6 @@ def test_memoization_dynamic(
     hidden_arguments: list,
     expected_result: Any,
 ) -> None:
-    _pipeline_manager.current_pipeline = PipelineProcess(
-        ProgramMessageData(code={}, main=ProgramMessageMainInformation(modulepath="", module="", pipeline="")),
-        "",
-        Queue(),
-        {},
-        MemoizationMap({}, {}),
-    )
 
     # Save value in map
     result = memoized_dynamic_call(
@@ -242,6 +235,7 @@ def test_memoization_dynamic(
         "member_call_child",
     ],
 )
+@pytest.mark.usefixtures("current_pipeline_process")
 def test_memoization_dynamic_contains_correct_fully_qualified_name(
     receiver: Any,
     function_name: str,
@@ -250,13 +244,7 @@ def test_memoization_dynamic_contains_correct_fully_qualified_name(
     hidden_arguments: list,
     fully_qualified_function_name: Any,
 ) -> None:
-    _pipeline_manager.current_pipeline = PipelineProcess(
-        ProgramMessageData(code={}, main=ProgramMessageMainInformation(modulepath="", module="", pipeline="")),
-        "",
-        Queue(),
-        {},
-        MemoizationMap({}, {}),
-    )
+
     # Save value in map
     result = memoized_dynamic_call(
         receiver,
@@ -294,6 +282,7 @@ def test_memoization_dynamic_contains_correct_fully_qualified_name(
         "member_call_child",
     ],
 )
+@pytest.mark.usefixtures("current_pipeline_process")
 def test_memoization_dynamic_not_base_name(
     receiver: Any,
     function_name: str,
@@ -302,13 +291,6 @@ def test_memoization_dynamic_not_base_name(
     hidden_arguments: list,
     fully_qualified_function_name: Any,
 ) -> None:
-    _pipeline_manager.current_pipeline = PipelineProcess(
-        ProgramMessageData(code={}, main=ProgramMessageMainInformation(modulepath="", module="", pipeline="")),
-        "",
-        Queue(),
-        {},
-        MemoizationMap({}, {}),
-    )
 
     # Save value in map
     result = memoized_dynamic_call(
@@ -351,6 +333,7 @@ def test_memoization_dynamic_not_base_name(
         "unhashable_hidden_arguments",
     ],
 )
+@pytest.mark.usefixtures("current_pipeline_process")
 def test_memoization_static_unhashable_values(
     fully_qualified_function_name: str,
     callable_: typing.Callable,
@@ -359,13 +342,7 @@ def test_memoization_static_unhashable_values(
     hidden_arguments: list,
     expected_result: Any,
 ) -> None:
-    _pipeline_manager.current_pipeline = PipelineProcess(
-        ProgramMessageData(code={}, main=ProgramMessageMainInformation(modulepath="", module="", pipeline="")),
-        "",
-        Queue(),
-        {},
-        MemoizationMap({}, {}),
-    )
+
     result = memoized_static_call(
         fully_qualified_function_name,
         callable_,
@@ -374,34 +351,6 @@ def test_memoization_static_unhashable_values(
         hidden_arguments,
     )
     assert result == expected_result
-
-
-def test_file_mtime_exists() -> None:
-    with tempfile.NamedTemporaryFile() as file:
-        mtime = file_mtime(file.name)
-        assert mtime is not None
-
-
-def test_file_mtime_exists_list() -> None:
-    with tempfile.NamedTemporaryFile() as file:
-        mtime = file_mtime([file.name, file.name])
-        assert isinstance(mtime, list)
-        assert all(it is not None for it in mtime)
-
-
-def test_file_mtime_not_exists() -> None:
-    mtime = file_mtime(f"file_not_exists.{datetime.now(tz=UTC).timestamp()}")
-    assert mtime is None
-
-
-def test_absolute_path() -> None:
-    result = absolute_path("table.csv")
-    assert Path(result).is_absolute()
-
-
-def test_absolute_path_list() -> None:
-    result = absolute_path(["table.csv"])
-    assert all(Path(it).is_absolute() for it in result)
 
 
 @pytest.mark.parametrize(
@@ -579,11 +528,13 @@ def test_memoization_limited_static_not_present_values(
         {"a": MemoizationStats([10], [30], [40], [20]), "b": MemoizationStats([10], [30], [40], [20])},
     )
     memo_map.max_size = 45
-    _pipeline_manager.current_pipeline = PipelineProcess(
-        ProgramMessageData(code={}, main=ProgramMessageMainInformation(modulepath="", module="", pipeline="")),
-        "",
+    _pipeline_manager._current_pipeline_process = PipelineProcess(
+        RunMessagePayload(
+            run_id="",
+            code=[],
+            main_absolute_module_name="",
+        ),
         Queue(),
-        {},
         memo_map,
     )
     # Save value in map
