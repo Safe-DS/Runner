@@ -15,6 +15,13 @@ Get the latest version from [PyPI](https://pypi.org/project/safe-ds-runner):
 pip install safe-ds-runner
 ```
 
+On a Windows PC with an NVIDIA graphics card, you may also want to install the CUDA versions of `torch` and
+`torchvision`:
+
+```shell
+pip install --upgrade torch torchvision --index-url https://download.pytorch.org/whl/cu121
+```
+
 ## Usage
 
 Start the runner server:
