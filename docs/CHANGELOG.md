@@ -8,7 +8,7 @@
 
 ### Bug Fixes
 
-* **deps:** bump jinja2 from 3.1.3 to 3.1.4 ([#111](https://github.com/Safe-DS/Runner/issues/111)) ([2866863](https://github.com/Safe-DS/Runner/commit/2866863b3aa68cb224435afacd2e2d0ec11ad4cd)), closes [/jinja.palletsprojects.com/en/3.1.x/changes/#version-3-1-4](https://github.com/Safe-DS//jinja.palletsprojects.com/en/3.1.x/changes//issues/version-3-1-4) [/jinja.palletsprojects.com/en/3.1.x/changes/#version-3-1-4](https://github.com/Safe-DS//jinja.palletsprojects.com/en/3.1.x/changes//issues/version-3-1-4) [#1968](https://github.com/Safe-DS/Runner/issues/1968) [#5457](https://github.com/Safe-DS/Runner/issues/5457)
+* **deps:** bump jinja2 from 3.1.3 to 3.1.4 ([#111](https://github.com/Safe-DS/Runner/issues/111)) ([2866863](https://github.com/Safe-DS/Runner/commit/2866863b3aa68cb224435afacd2e2d0ec11ad4cd))
 
 ## [0.14.1](https://github.com/Safe-DS/Runner/compare/v0.14.0...v0.14.1) (2024-05-02)
 
