@@ -77,7 +77,12 @@ class ExplicitIdentityWrapper:
             return self.value.__ex_id__ == other.value.__ex_id__ or self.value == other.value
         if _has_explicit_identity(other) and self.value.__ex_id__ == other.__ex_id__:  # type: ignore[attr-defined]
             return True
-        return self.value == other
+
+        if hasattr(self.value, "_equals"):
+            # The `==` of cells is vectorized. We need to use the `_equals` method to compare them.
+            return self.value._equals(other)
+        else:
+            return self.value == other
 
     def __sizeof__(self) -> int:
         return self.memory.size
@@ -155,7 +160,12 @@ class ExplicitIdentityWrapperLazy:
             return True
         if isinstance(other, ExplicitIdentityWrapper | ExplicitIdentityWrapperLazy):
             return self.value == other.value
-        return self.value == other
+
+        if hasattr(self.value, "_equals"):
+            # The `==` of cells is vectorized. We need to use the `_equals` method to compare them.
+            return self.value._equals(other)
+        else:
+            return self.value == other
 
     def __hash__(self) -> int:
         return self.hash
