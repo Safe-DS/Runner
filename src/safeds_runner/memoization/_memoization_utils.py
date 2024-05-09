@@ -69,15 +69,28 @@ class ExplicitIdentityWrapper:
         return hash(self.value)
 
     def __eq__(self, other: object) -> bool:
-        if isinstance(other, ExplicitIdentityWrapperLazy):
-            if self.value.__ex_id__ == other.id:
-                return True
-            return self.value == other.value
-        if isinstance(other, ExplicitIdentityWrapper):
-            return self.value.__ex_id__ == other.value.__ex_id__ or self.value == other.value
-        if _has_explicit_identity(other) and self.value.__ex_id__ == other.__ex_id__:  # type: ignore[attr-defined]
+        # Compare IDs
+        if (
+            isinstance(other, ExplicitIdentityWrapperLazy)
+            and self.value.__ex_id__ == other.id
+            or isinstance(other, ExplicitIdentityWrapper)
+            and self.value.__ex_id__ == other.value.__ex_id__
+            or _has_explicit_identity(other)
+            and self.value.__ex_id__ == other.__ex_id__  # type: ignore[attr-defined]
+        ):
             return True
-        return self.value == other
+
+        # Compare values
+        if isinstance(other, ExplicitIdentityWrapper | ExplicitIdentityWrapperLazy):
+            other_value = other.value
+        else:
+            other_value = other
+
+        if hasattr(self.value, "_equals"):
+            # The `==` of cells is vectorized. We need to use the `_equals` method to compare them.
+            return self.value._equals(other_value)
+        else:
+            return self.value == other_value
 
     def __sizeof__(self) -> int:
         return self.memory.size
@@ -144,6 +157,7 @@ class ExplicitIdentityWrapperLazy:
         return cls(value, value.__ex_id_mem__, value.__ex_id__, value.__ex_hash__)
 
     def __eq__(self, other: object) -> bool:
+        # Compare IDs
         if (
             isinstance(other, ExplicitIdentityWrapperLazy)
             and self.id == other.id
@@ -153,9 +167,18 @@ class ExplicitIdentityWrapperLazy:
             and self.id == other.__ex_id__  # type: ignore[attr-defined]
         ):
             return True
+
+        # Compare values
         if isinstance(other, ExplicitIdentityWrapper | ExplicitIdentityWrapperLazy):
-            return self.value == other.value
-        return self.value == other
+            other_value = other.value
+        else:
+            other_value = other
+
+        if hasattr(self.value, "_equals"):
+            # The `==` of cells is vectorized. We need to use the `_equals` method to compare them.
+            return self.value._equals(other_value)
+        else:
+            return self.value == other_value
 
     def __hash__(self) -> int:
         return self.hash

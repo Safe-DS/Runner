@@ -526,3 +526,24 @@ def test_wrapper_size(value: Any) -> None:
     wrapper1 = ExplicitIdentityWrapper.shared(value)
     assert sys.getsizeof(wrapper0) > sys.getsizeof(object())
     assert sys.getsizeof(wrapper1) > sys.getsizeof(object())
+
+
+class SpecialEquals:
+    def __eq__(self, other: object) -> bool:
+        return False
+
+    def __hash__(self) -> int:
+        return 0
+
+    def _equals(self, _other: object) -> bool:
+        return True
+
+
+def test_explicit_identity_wrapper_eq() -> None:
+    assert ExplicitIdentityWrapper.shared(SpecialEquals()) == SpecialEquals()
+
+
+def test_explicit_identity_wrapper_lazy_eq() -> None:
+    value = SpecialEquals()
+    _set_new_explicit_identity_deterministic_hash(value)
+    assert ExplicitIdentityWrapperLazy.shared(value) == SpecialEquals()

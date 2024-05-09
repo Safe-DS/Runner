@@ -167,9 +167,7 @@ class PipelineProcess:
         from safeds.data.image.containers import Image
 
         if isinstance(value, Image):
-            import torch
-
-            value = Image(value._image_tensor, torch.device("cpu"))
+            value = Image(value._image_tensor.cpu())
         placeholder_type = _get_placeholder_type(value)
         if _is_deterministically_hashable(value) and _has_explicit_identity_memory(value):
             value = ExplicitIdentityWrapperLazy.existing(value)
