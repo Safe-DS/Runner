@@ -235,9 +235,7 @@ def create_placeholder_value(placeholder_query: QueryMessageData, type_: str, va
     # Start Index >= 0
     start_index = max(placeholder_query.window.begin if placeholder_query.window.begin is not None else 0, 0)
     # Length >= 0
-    length = (
-        max(placeholder_query.window.size, 0) if placeholder_query.window.size is not None else None
-    )
+    length = max(placeholder_query.window.size, 0) if placeholder_query.window.size is not None else None
     if isinstance(value, safeds.data.labeled.containers.TabularDataset):
         value = value.to_table()
 
