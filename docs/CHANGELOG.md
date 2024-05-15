@@ -1,3 +1,10 @@
+## [0.16.0](https://github.com/Safe-DS/Runner/compare/v0.15.0...v0.16.0) (2024-05-15)
+
+
+### Features
+
+* require `safe-ds` version 0.25.0 ([#114](https://github.com/Safe-DS/Runner/issues/114)) ([69680de](https://github.com/Safe-DS/Runner/commit/69680de2c310dfba177d581926d70619925fcf00))
+
 ## [0.15.0](https://github.com/Safe-DS/Runner/compare/v0.14.1...v0.15.0) (2024-05-09)
 
 
