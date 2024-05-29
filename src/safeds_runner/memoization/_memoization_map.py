@@ -181,7 +181,18 @@ class MemoizationMap:
         memoizable_value = _wrap_value_to_shared_memory(computed_value)
         if self.max_size is not None:
             self.ensure_capacity(_get_size_of_value(memoized_value))
-        self._map_values[key] = memoizable_value
+
+        try:
+            self._map_values[key] = memoizable_value
+        # Pickling may raise AttributeError in combination with multiprocessing
+        except AttributeError as exception:
+            # Fallback to returning computed value, but inform user about this failure
+            logging.exception(
+                "Could not store value for function %s.",
+                fully_qualified_function_name,
+                exc_info=exception,
+            )
+            return computed_value
 
         self._update_stats_on_miss(
             fully_qualified_function_name,

@@ -49,6 +49,9 @@ class SafeDsEncoder(json.JSONEncoder):
             }
         elif isinstance(o, Image):
             # Send images together with their format, by default images are encoded only as PNG
-            return {"format": "png", "bytes": str(base64.encodebytes(o._repr_png_()), "utf-8")}
+            return {
+                "format": "png",
+                "bytes": str(base64.encodebytes(o._repr_png_()), "utf-8"),
+            }
         else:
             return json.JSONEncoder.default(self, o)

@@ -151,7 +151,10 @@ class PipelineProcess:
 
     def _send_exception(self, exception: BaseException) -> None:
         backtrace = get_backtrace_info(exception)
-        self._send_message(message_type_runtime_error, create_runtime_error_description(exception.__str__(), backtrace))
+        self._send_message(
+            message_type_runtime_error,
+            create_runtime_error_description(exception.__str__(), backtrace),
+        )
 
     def save_placeholder(self, placeholder_name: str, value: Any) -> None:
         """
@@ -177,7 +180,19 @@ class PipelineProcess:
             and _has_explicit_identity_memory(value)
         ):
             value = ExplicitIdentityWrapper.existing(value)
-        self._placeholder_map[placeholder_name] = value
+
+        try:
+            self._placeholder_map[placeholder_name] = value
+        # Pickling may raise AttributeError in combination with multiprocessing
+        except AttributeError as exception:  # pragma: no cover
+            # Don't crash, but inform user about this failure
+            logging.exception(
+                "Could not store value for placeholder %s.",
+                placeholder_name,
+                exc_info=exception,
+            )
+            return
+
         self._send_message(
             message_type_placeholder_type,
             create_placeholder_description(placeholder_name, placeholder_type),

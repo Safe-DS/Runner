@@ -42,6 +42,8 @@ def _get_args() -> argparse.Namespace:  # pragma: no cover
     return parser.parse_args()
 
 
-def _add_start_subparser(subparsers: argparse._SubParsersAction) -> None:  # pragma: no cover
+def _add_start_subparser(
+    subparsers: argparse._SubParsersAction,
+) -> None:  # pragma: no cover
     parser = subparsers.add_parser(Commands.START, help="start the Safe-DS Runner server")
     parser.add_argument("-p", "--port", type=int, default=5000, help="the port to use")

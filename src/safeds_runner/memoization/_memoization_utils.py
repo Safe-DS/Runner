@@ -424,7 +424,11 @@ def _create_memoization_key(
         A memoization key, which contains the lists converted to tuples
     """
     arguments = [*positional_arguments, *keyword_arguments.values()]
-    return fully_qualified_function_name, _make_hashable(arguments), _make_hashable(hidden_arguments)
+    return (
+        fully_qualified_function_name,
+        _make_hashable(arguments),
+        _make_hashable(hidden_arguments),
+    )
 
 
 def _wrap_value_to_shared_memory(

@@ -40,7 +40,11 @@ class ProcessManager:
 
     @cached_property
     def _message_queue_thread(self) -> threading.Thread:
-        return threading.Thread(daemon=True, target=self._consume_queue_messages, args=[asyncio.get_event_loop()])
+        return threading.Thread(
+            daemon=True,
+            target=self._consume_queue_messages,
+            args=[asyncio.get_event_loop()],
+        )
 
     @cached_property
     def _process_pool(self) -> ProcessPoolExecutor:
@@ -147,7 +151,7 @@ def _warmup_worker() -> None:
 
     from safeds.data.tabular.containers import Table  # pragma: no cover
 
-    Table({"a": [1]}).get_column("a").plot_histogram()  # pragma: no cover
+    Table({"a": [1]}).get_column("a").plot.histogram()  # pragma: no cover
 
 
 _State: TypeAlias = Literal["initial", "started", "shutdown"]
