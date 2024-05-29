@@ -153,7 +153,9 @@ class SafeDsServer:
         output_queue: asyncio.Queue = asyncio.Queue()
         connect(output_queue)
         foreground_handler = asyncio.create_task(
-            SafeDsServer._ws_main_foreground(ws, disconnect, process_manager, pipeline_manager, output_queue),
+            SafeDsServer._ws_main_foreground(
+                ws, disconnect, process_manager, pipeline_manager, output_queue
+            ),
         )
         background_handler = asyncio.create_task(
             SafeDsServer._ws_main_background(ws, output_queue),
@@ -172,7 +174,9 @@ class SafeDsServer:
             # This would be a JSON message
             received_message: str = await ws.receive()
             logging.debug("Received Message: %s", received_message)
-            received_object, error_detail, error_short = parse_validate_message(received_message)
+            received_object, error_detail, error_short = parse_validate_message(
+                received_message
+            )
             if received_object is None:
                 logging.error(error_detail)
                 await output_queue.put(None)
@@ -188,7 +192,9 @@ class SafeDsServer:
                     try:
                         program_data = ProgramMessageData(**received_object.data)
                     except ValidationError as validation_error:
-                        logging.exception("Invalid message data specified in: %s", received_message)
+                        logging.exception(
+                            "Invalid message data specified in: %s", received_message
+                        )
                         await output_queue.put(None)
                         disconnect(output_queue)
                         await ws.close(code=1000, reason=str(validation_error))
@@ -200,17 +206,23 @@ class SafeDsServer:
                     # For this query, a response can be directly sent to the requesting connection
 
                     try:
-                        placeholder_query_data = QueryMessageData(**received_object.data)
+                        placeholder_query_data = QueryMessageData(
+                            **received_object.data
+                        )
                     except ValidationError as validation_error:
-                        logging.exception("Invalid message data specified in: %s", received_message)
+                        logging.exception(
+                            "Invalid message data specified in: %s", received_message
+                        )
                         await output_queue.put(None)
                         disconnect(output_queue)
                         await ws.close(code=1000, reason=str(validation_error))
                         return
 
-                    placeholder_type, placeholder_value = pipeline_manager.get_placeholder(
-                        received_object.id,
-                        placeholder_query_data.name,
+                    placeholder_type, placeholder_value = (
+                        pipeline_manager.get_placeholder(
+                            received_object.id,
+                            placeholder_query_data.name,
+                        )
                     )
                     # send back a value message
                     if placeholder_type is not None:
@@ -249,15 +261,21 @@ class SafeDsServer:
                             Message(
                                 message_type_placeholder_value,
                                 received_object.id,
-                                create_placeholder_value(placeholder_query_data, "", ""),
+                                create_placeholder_value(
+                                    placeholder_query_data, "", ""
+                                ),
                             ),
                         )
                 case _:
                     if received_object.type not in message_types:
-                        logging.warning("Invalid message type: %s", received_object.type)
+                        logging.warning(
+                            "Invalid message type: %s", received_object.type
+                        )
 
     @staticmethod
-    async def _ws_main_background(ws: quart.Websocket, output_queue: asyncio.Queue) -> None:
+    async def _ws_main_background(
+        ws: quart.Websocket, output_queue: asyncio.Queue
+    ) -> None:
         while True:
             encoded_message = await output_queue.get()
             if encoded_message is None:

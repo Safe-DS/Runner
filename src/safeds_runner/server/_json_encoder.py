@@ -42,13 +42,18 @@ class SafeDsEncoder(json.JSONEncoder):
             # Convert NaN / Infinity to None, as the JSON encoder generates invalid JSON otherwise
             return {
                 key: [
-                    value if not isinstance(value, float) or math.isfinite(value) else None
+                    value
+                    if not isinstance(value, float) or math.isfinite(value)
+                    else None
                     for value in dict_with_nan_infinity[key]
                 ]
                 for key in dict_with_nan_infinity
             }
         elif isinstance(o, Image):
             # Send images together with their format, by default images are encoded only as PNG
-            return {"format": "png", "bytes": str(base64.encodebytes(o._repr_png_()), "utf-8")}
+            return {
+                "format": "png",
+                "bytes": str(base64.encodebytes(o._repr_png_()), "utf-8"),
+            }
         else:
             return json.JSONEncoder.default(self, o)

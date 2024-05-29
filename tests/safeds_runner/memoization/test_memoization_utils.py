@@ -38,7 +38,14 @@ from safeds_runner.memoization._memoization_utils import (
         ("ab", True),
         (object(), False),
     ],
-    ids=["value_int", "value_float", "value_boolean", "value_none", "value_string", "value_object"],
+    ids=[
+        "value_int",
+        "value_float",
+        "value_boolean",
+        "value_none",
+        "value_string",
+        "value_object",
+    ],
 )
 def test_is_not_primitive(value: Any, primitive: bool) -> None:
     assert _is_not_primitive(value) != primitive
@@ -76,7 +83,9 @@ def test_is_not_primitive(value: Any, primitive: bool) -> None:
         "value_image",
     ],
 )
-def test_is_deterministically_hashable(value: Any, deterministically_hashable: bool) -> None:
+def test_is_deterministically_hashable(
+    value: Any, deterministically_hashable: bool
+) -> None:
     assert _is_deterministically_hashable(value) == deterministically_hashable
 
 
@@ -164,7 +173,9 @@ def test_explicit_identity_shared_memory(value: Any) -> None:
         "value_lambda_unhashable",
     ],
 )
-def test_make_hashable_non_wrapper(value: Any, hashable: bool, exception: type[BaseException]) -> None:
+def test_make_hashable_non_wrapper(
+    value: Any, hashable: bool, exception: type[BaseException]
+) -> None:
     if not hashable:
         if exception == TypeError:
             with pytest.raises(exception):
@@ -205,7 +216,9 @@ def test_make_hashable_wrapper(value: Any, wrapper: bool) -> None:
     ExplicitIdentityWrapperLazy.shared(value)
     hashable_value = _make_hashable(value)
     if wrapper:
-        assert isinstance(hashable_value, ExplicitIdentityWrapperLazy | ExplicitIdentityWrapper)
+        assert isinstance(
+            hashable_value, ExplicitIdentityWrapperLazy | ExplicitIdentityWrapper
+        )
     assert hashable_value == value
 
 
@@ -255,7 +268,17 @@ def test_memory_usage(value: Any, expected_size: int) -> None:
         {"a", "b", Table()},
         frozenset({"a", "b", Table()}),
     ],
-    ids=["int", "list", "tuple", "tabular_dataset", "table", "tuple_table", "dict", "set", "frozenset"],
+    ids=[
+        "int",
+        "list",
+        "tuple",
+        "tabular_dataset",
+        "table",
+        "tuple_table",
+        "dict",
+        "set",
+        "frozenset",
+    ],
 )
 def test_wrap_value_to_shared_memory(value: Any) -> None:
     def _delete_unpackvalue_field(wrapped_object: Any) -> None:
@@ -295,7 +318,9 @@ def test_make_hashable_wrapper_nonlazy(value: Any, wrapper: bool) -> None:
     ExplicitIdentityWrapper.shared(value)
     hashable_value = _make_hashable(value)
     if wrapper:
-        assert isinstance(hashable_value, ExplicitIdentityWrapperLazy | ExplicitIdentityWrapper)
+        assert isinstance(
+            hashable_value, ExplicitIdentityWrapperLazy | ExplicitIdentityWrapper
+        )
     assert hashable_value == value
 
 

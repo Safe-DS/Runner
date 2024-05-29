@@ -48,8 +48,20 @@ if TYPE_CHECKING:
         json.dumps({"type": "program", "id": "1234", "data": "a"}),
         json.dumps({"type": "placeholder_query", "id": "123", "data": "abc"}),
         json.dumps({"type": "placeholder_query", "id": "123", "data": {"a": "v"}}),
-        json.dumps({"type": "placeholder_query", "id": "123", "data": {"name": "v", "window": {"begin": "a"}}}),
-        json.dumps({"type": "placeholder_query", "id": "123", "data": {"name": "v", "window": {"size": "a"}}}),
+        json.dumps(
+            {
+                "type": "placeholder_query",
+                "id": "123",
+                "data": {"name": "v", "window": {"begin": "a"}},
+            }
+        ),
+        json.dumps(
+            {
+                "type": "placeholder_query",
+                "id": "123",
+                "data": {"name": "v", "window": {"size": "a"}},
+            }
+        ),
         json.dumps(
             {
                 "type": "program",
@@ -57,27 +69,8 @@ if TYPE_CHECKING:
                 "data": {"main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
             },
         ),
-        json.dumps({"type": "program", "id": "1234", "data": {"code": {"": {"entry": ""}}}}),
         json.dumps(
-            {
-                "type": "program",
-                "id": "1234",
-                "data": {"code": {"": {"entry": ""}}, "main": {"modulepath": "1", "module": "2"}},
-            },
-        ),
-        json.dumps(
-            {
-                "type": "program",
-                "id": "1234",
-                "data": {"code": {"": {"entry": ""}}, "main": {"modulepath": "1", "pipeline": "3"}},
-            },
-        ),
-        json.dumps(
-            {
-                "type": "program",
-                "id": "1234",
-                "data": {"code": {"": {"entry": ""}}, "main": {"module": "2", "pipeline": "3"}},
-            },
+            {"type": "program", "id": "1234", "data": {"code": {"": {"entry": ""}}}}
         ),
         json.dumps(
             {
@@ -85,7 +78,7 @@ if TYPE_CHECKING:
                 "id": "1234",
                 "data": {
                     "code": {"": {"entry": ""}},
-                    "main": {"modulepath": "1", "module": "2", "pipeline": "3", "other": "4"},
+                    "main": {"modulepath": "1", "module": "2"},
                 },
             },
         ),
@@ -95,7 +88,7 @@ if TYPE_CHECKING:
                 "id": "1234",
                 "data": {
                     "code": {"": {"entry": ""}},
-                    "main": {"modulepath": "1", "module": "2", "pipeline": "3", "other": {"4": "a"}},
+                    "main": {"modulepath": "1", "pipeline": "3"},
                 },
             },
         ),
@@ -103,21 +96,70 @@ if TYPE_CHECKING:
             {
                 "type": "program",
                 "id": "1234",
-                "data": {"code": "a", "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
+                "data": {
+                    "code": {"": {"entry": ""}},
+                    "main": {"module": "2", "pipeline": "3"},
+                },
             },
         ),
         json.dumps(
             {
                 "type": "program",
                 "id": "1234",
-                "data": {"code": {"": "a"}, "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
+                "data": {
+                    "code": {"": {"entry": ""}},
+                    "main": {
+                        "modulepath": "1",
+                        "module": "2",
+                        "pipeline": "3",
+                        "other": "4",
+                    },
+                },
             },
         ),
         json.dumps(
             {
                 "type": "program",
                 "id": "1234",
-                "data": {"code": {"": {"a": {"b": "c"}}}, "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
+                "data": {
+                    "code": {"": {"entry": ""}},
+                    "main": {
+                        "modulepath": "1",
+                        "module": "2",
+                        "pipeline": "3",
+                        "other": {"4": "a"},
+                    },
+                },
+            },
+        ),
+        json.dumps(
+            {
+                "type": "program",
+                "id": "1234",
+                "data": {
+                    "code": "a",
+                    "main": {"modulepath": "1", "module": "2", "pipeline": "3"},
+                },
+            },
+        ),
+        json.dumps(
+            {
+                "type": "program",
+                "id": "1234",
+                "data": {
+                    "code": {"": "a"},
+                    "main": {"modulepath": "1", "module": "2", "pipeline": "3"},
+                },
+            },
+        ),
+        json.dumps(
+            {
+                "type": "program",
+                "id": "1234",
+                "data": {
+                    "code": {"": {"a": {"b": "c"}}},
+                    "main": {"modulepath": "1", "module": "2", "pipeline": "3"},
+                },
             },
         ),
     ],
@@ -167,8 +209,14 @@ async def test_should_fail_message_validation_ws(websocket_message: str) -> None
         (json.dumps({"id": "a", "data": "b"}), "Invalid Message: no type"),
         (json.dumps({"type": "a", "data": "b"}), "Invalid Message: no id"),
         (json.dumps({"type": "b", "id": "123"}), "Invalid Message: no data"),
-        (json.dumps({"type": {"program": "2"}, "id": "123", "data": "a"}), "Invalid Message: invalid type"),
-        (json.dumps({"type": "c", "id": {"": "1233"}, "data": "a"}), "Invalid Message: invalid id"),
+        (
+            json.dumps({"type": {"program": "2"}, "id": "123", "data": "a"}),
+            "Invalid Message: invalid type",
+        ),
+        (
+            json.dumps({"type": "c", "id": {"": "1233"}, "data": "a"}),
+            "Invalid Message: invalid id",
+        ),
     ],
     ids=[
         "no_json",
@@ -179,8 +227,12 @@ async def test_should_fail_message_validation_ws(websocket_message: str) -> None
         "any_invalid_id",
     ],
 )
-def test_should_fail_message_validation_reason_general(websocket_message: str, exception_message: str) -> None:
-    received_object, error_detail, error_short = parse_validate_message(websocket_message)
+def test_should_fail_message_validation_reason_general(
+    websocket_message: str, exception_message: str
+) -> None:
+    received_object, error_detail, error_short = parse_validate_message(
+        websocket_message
+    )
     assert error_short == exception_message
 
 
@@ -210,7 +262,12 @@ def test_should_fail_message_validation_reason_general(websocket_message: str, e
         (
             {
                 "code": {"": {"entry": ""}},
-                "main": {"modulepath": "1", "module": "2", "pipeline": "3", "other": "4"},
+                "main": {
+                    "modulepath": "1",
+                    "module": "2",
+                    "pipeline": "3",
+                    "other": "4",
+                },
             },
             re.compile(r"main.other[\s\S]*extra_forbidden"),
         ),
@@ -219,7 +276,10 @@ def test_should_fail_message_validation_reason_general(websocket_message: str, e
             re.compile(r"code[\s\S]*dict_type"),
         ),
         (
-            {"code": {"a": "n"}, "main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
+            {
+                "code": {"a": "n"},
+                "main": {"modulepath": "1", "module": "2", "pipeline": "3"},
+            },
             re.compile(r"code\.a[\s\S]*dict_type"),
         ),
         (
@@ -251,7 +311,9 @@ def test_should_fail_message_validation_reason_general(websocket_message: str, e
         "program_invalid_cwd",
     ],
 )
-def test_should_fail_message_validation_reason_program(data: dict[str, Any], exception_regex: str) -> None:
+def test_should_fail_message_validation_reason_program(
+    data: dict[str, Any], exception_regex: str
+) -> None:
     with pytest.raises(ValidationError, match=exception_regex):
         ProgramMessageData(**data)
 
@@ -301,11 +363,17 @@ def test_should_fail_message_validation_reason_placeholder_query(
                                 "gen_test_a_pipe": "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()",
                             },
                         },
-                        "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
+                        "main": {
+                            "modulepath": "",
+                            "module": "test_a",
+                            "pipeline": "pipe",
+                        },
                     },
                 },
             ),
-            Message(message_type_runtime_error, "abcdefgh", {"message": "Test Exception"}),
+            Message(
+                message_type_runtime_error, "abcdefgh", {"message": "Test Exception"}
+            ),
         ),
     ],
     ids=["raise_exception"],
@@ -324,7 +392,10 @@ async def test_should_execute_pipeline_return_exception(
         assert exception_message.type == expected_response_runtime_error.type
         assert exception_message.id == expected_response_runtime_error.id
         assert isinstance(exception_message.data, dict)
-        assert exception_message.data["message"] == expected_response_runtime_error.data["message"]
+        assert (
+            exception_message.data["message"]
+            == expected_response_runtime_error.data["message"]
+        )
         assert isinstance(exception_message.data["backtrace"], list)
         assert len(exception_message.data["backtrace"]) > 0
         for frame in exception_message.data["backtrace"]:
@@ -371,7 +442,11 @@ async def test_should_execute_pipeline_return_exception(
                                     ),
                                 },
                             },
-                            "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
+                            "main": {
+                                "modulepath": "",
+                                "module": "test_a",
+                                "pipeline": "pipe",
+                            },
                         },
                     },
                 ),
@@ -379,30 +454,84 @@ async def test_should_execute_pipeline_return_exception(
             6,
             [
                 # Query Placeholder
-                json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": {"name": "value1", "window": {}}}),
+                json.dumps(
+                    {
+                        "type": "placeholder_query",
+                        "id": "abcdefg",
+                        "data": {"name": "value1", "window": {}},
+                    }
+                ),
                 # Query Placeholder (memoized type)
-                json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": {"name": "table", "window": {}}}),
+                json.dumps(
+                    {
+                        "type": "placeholder_query",
+                        "id": "abcdefg",
+                        "data": {"name": "table", "window": {}},
+                    }
+                ),
                 # Query Placeholder (memoized type)
-                json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": {"name": "dataset", "window": {}}}),
+                json.dumps(
+                    {
+                        "type": "placeholder_query",
+                        "id": "abcdefg",
+                        "data": {"name": "dataset", "window": {}},
+                    }
+                ),
                 # Query not displayable Placeholder
-                json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": {"name": "obj", "window": {}}}),
+                json.dumps(
+                    {
+                        "type": "placeholder_query",
+                        "id": "abcdefg",
+                        "data": {"name": "obj", "window": {}},
+                    }
+                ),
                 # Query invalid placeholder
-                json.dumps({"type": "placeholder_query", "id": "abcdefg", "data": {"name": "value2", "window": {}}}),
+                json.dumps(
+                    {
+                        "type": "placeholder_query",
+                        "id": "abcdefg",
+                        "data": {"name": "value2", "window": {}},
+                    }
+                ),
             ],
             [
                 # Validate Placeholder Information
-                Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("value1", "Int")),
-                Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("obj", "object")),
-                Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("image", "Image")),
-                Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("table", "Table")),
-                Message(message_type_placeholder_type, "abcdefg", create_placeholder_description("dataset", "Table")),
+                Message(
+                    message_type_placeholder_type,
+                    "abcdefg",
+                    create_placeholder_description("value1", "Int"),
+                ),
+                Message(
+                    message_type_placeholder_type,
+                    "abcdefg",
+                    create_placeholder_description("obj", "object"),
+                ),
+                Message(
+                    message_type_placeholder_type,
+                    "abcdefg",
+                    create_placeholder_description("image", "Image"),
+                ),
+                Message(
+                    message_type_placeholder_type,
+                    "abcdefg",
+                    create_placeholder_description("table", "Table"),
+                ),
+                Message(
+                    message_type_placeholder_type,
+                    "abcdefg",
+                    create_placeholder_description("dataset", "Table"),
+                ),
                 Message(
                     message_type_placeholder_type,
                     "abcdefg",
                     create_placeholder_description("object_mem", "SafeDsEncoder"),
                 ),
                 # Validate Progress Information
-                Message(message_type_runtime_progress, "abcdefg", create_runtime_progress_done()),
+                Message(
+                    message_type_runtime_progress,
+                    "abcdefg",
+                    create_runtime_progress_done(),
+                ),
                 # Query Result Valid
                 Message(
                     message_type_placeholder_value,
@@ -413,19 +542,29 @@ async def test_should_execute_pipeline_return_exception(
                 Message(
                     message_type_placeholder_value,
                     "abcdefg",
-                    create_placeholder_value(QueryMessageData(name="table"), "Table", {"a": [1, 2], "b": [3, 4]}),
+                    create_placeholder_value(
+                        QueryMessageData(name="table"),
+                        "Table",
+                        {"a": [1, 2], "b": [3, 4]},
+                    ),
                 ),
                 # Query Result Valid
                 Message(
                     message_type_placeholder_value,
                     "abcdefg",
-                    create_placeholder_value(QueryMessageData(name="dataset"), "Table", {"a": [1, 2], "b": [3, 4]}),
+                    create_placeholder_value(
+                        QueryMessageData(name="dataset"),
+                        "Table",
+                        {"a": [1, 2], "b": [3, 4]},
+                    ),
                 ),
                 # Query Result not displayable
                 Message(
                     message_type_placeholder_value,
                     "abcdefg",
-                    create_placeholder_value(QueryMessageData(name="obj"), "object", "<Not displayable>"),
+                    create_placeholder_value(
+                        QueryMessageData(name="obj"), "object", "<Not displayable>"
+                    ),
                 ),
                 # Query Result Invalid
                 Message(
@@ -503,12 +642,22 @@ async def test_should_execute_pipeline_return_valid_placeholder(
                     },
                 ),
             ],
-            Message(message_type_runtime_progress, "123456789", create_runtime_progress_done()),
+            Message(
+                message_type_runtime_progress,
+                "123456789",
+                create_runtime_progress_done(),
+            ),
         ),
         (
             # Query Result Invalid (no pipeline exists)
             [
-                json.dumps({"type": "invalid_message_type", "id": "unknown-code-id-never-generated", "data": ""}),
+                json.dumps(
+                    {
+                        "type": "invalid_message_type",
+                        "id": "unknown-code-id-never-generated",
+                        "data": "",
+                    }
+                ),
                 json.dumps(
                     {
                         "type": "placeholder_query",
@@ -527,7 +676,9 @@ async def test_should_execute_pipeline_return_valid_placeholder(
     ids=["progress_message_done", "invalid_message_invalid_placeholder_query"],
 )
 @pytest.mark.asyncio()
-async def test_should_successfully_execute_simple_flow(messages: list[str], expected_response: Message) -> None:
+async def test_should_successfully_execute_simple_flow(
+    messages: list[str], expected_response: Message
+) -> None:
     sds_server = SafeDsServer()
     test_client = sds_server._app.test_client()
     async with test_client.websocket("/WSMain") as test_websocket:
@@ -549,17 +700,23 @@ async def test_should_successfully_execute_simple_flow(messages: list[str], expe
     ids=["shutdown_message"],
 )
 def test_should_shut_itself_down(messages: list[str]) -> None:
-    process = multiprocessing.Process(target=helper_should_shut_itself_down_run_in_subprocess, args=(messages,))
+    process = multiprocessing.Process(
+        target=helper_should_shut_itself_down_run_in_subprocess, args=(messages,)
+    )
     process.start()
     process.join(30)
     assert process.exitcode == 0
 
 
 def helper_should_shut_itself_down_run_in_subprocess(sub_messages: list[str]) -> None:
-    asyncio.get_event_loop().run_until_complete(helper_should_shut_itself_down_run_in_subprocess_async(sub_messages))
+    asyncio.get_event_loop().run_until_complete(
+        helper_should_shut_itself_down_run_in_subprocess_async(sub_messages)
+    )
 
 
-async def helper_should_shut_itself_down_run_in_subprocess_async(sub_messages: list[str]) -> None:
+async def helper_should_shut_itself_down_run_in_subprocess_async(
+    sub_messages: list[str],
+) -> None:
     sds_server = SafeDsServer()
     test_client = sds_server._app.test_client()
     async with test_client.websocket("/WSMain") as test_websocket:
@@ -659,7 +816,9 @@ def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
             ),
         ),
         (
-            QueryMessageData(name="name", window=QueryMessageWindow(begin=4, size=None)),
+            QueryMessageData(
+                name="name", window=QueryMessageWindow(begin=4, size=None)
+            ),
             "Table",
             Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
             (
@@ -677,7 +836,9 @@ def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
             ),
         ),
         (
-            QueryMessageData(name="name", window=QueryMessageWindow(begin=-5, size=None)),
+            QueryMessageData(
+                name="name", window=QueryMessageWindow(begin=-5, size=None)
+            ),
             "Table",
             Table.from_dict({"a": [1, 2, 1, 2, 3, 2, 1], "b": [3, 4, 6, 2, 1, 2, 3]}),
             (
@@ -697,7 +858,9 @@ def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
         "query_windowed_negative_offset",
     ],
 )
-def test_windowed_placeholder(query: QueryMessageData, type_: str, value: Any, result: str) -> None:
+def test_windowed_placeholder(
+    query: QueryMessageData, type_: str, value: Any, result: str
+) -> None:
     message = create_placeholder_value(query, type_, value)
     assert json.dumps(message, cls=SafeDsEncoder) == result
 
@@ -717,7 +880,11 @@ def test_windowed_placeholder(query: QueryMessageData, type_: str, value: Any, r
                                 "gen_test_a_pipe": "from gen_test_a import pipe\n\nif __name__ == '__main__':\n\tpipe()",
                             },
                         },
-                        "main": {"modulepath": "", "module": "test_a", "pipeline": "pipe"},
+                        "main": {
+                            "modulepath": "",
+                            "module": "test_a",
+                            "pipeline": "pipe",
+                        },
                     },
                 },
             ),

@@ -59,7 +59,10 @@ class MemoizationMap:
         """
         return functools.reduce(
             operator.add,
-            [functools.reduce(operator.add, stats.memory_sizes, 0) for stats in self._map_stats.values()],
+            [
+                functools.reduce(operator.add, stats.memory_sizes, 0)
+                for stats in self._map_stats.values()
+            ],
             0,
         )
 
@@ -169,7 +172,9 @@ class MemoizationMap:
 
         # Hit
         if memoized_value is not None:
-            self._update_stats_on_hit(fully_qualified_function_name, access_timestamp, lookup_time)
+            self._update_stats_on_hit(
+                fully_qualified_function_name, access_timestamp, lookup_time
+            )
             return memoized_value
 
         # Miss
@@ -230,7 +235,9 @@ class MemoizationMap:
         looked_up_value = self._map_values.get(key)
         return _unwrap_value_from_shared_memory(looked_up_value)
 
-    def _update_stats_on_hit(self, function_name: str, access_timestamp: int, lookup_time: int) -> None:
+    def _update_stats_on_hit(
+        self, function_name: str, access_timestamp: int, lookup_time: int
+    ) -> None:
         """
         Update the memoization stats on a cache hit.
 
@@ -278,5 +285,7 @@ class MemoizationMap:
         if stats is None:
             stats = MemoizationStats()
 
-        stats.update_on_miss(access_timestamp, lookup_time, computation_time, memory_size)
+        stats.update_on_miss(
+            access_timestamp, lookup_time, computation_time, memory_size
+        )
         self._map_stats[function_name] = stats

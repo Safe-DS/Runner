@@ -77,7 +77,9 @@ class PipelineManager:
             Unique ID to identify this execution.
         """
         if execution_id not in self._placeholder_map:
-            self._placeholder_map[execution_id] = self._process_manager.create_shared_dict()
+            self._placeholder_map[execution_id] = (
+                self._process_manager.create_shared_dict()
+            )
         process = PipelineProcess(
             pipeline,
             execution_id,
@@ -87,7 +89,9 @@ class PipelineManager:
         )
         process.execute(self._process_manager)
 
-    def get_placeholder(self, execution_id: str, placeholder_name: str) -> tuple[str | None, Any]:
+    def get_placeholder(
+        self, execution_id: str, placeholder_name: str
+    ) -> tuple[str | None, Any]:
         """
         Get a placeholder type and value for an execution id and placeholder name.
 
@@ -151,7 +155,10 @@ class PipelineProcess:
 
     def _send_exception(self, exception: BaseException) -> None:
         backtrace = get_backtrace_info(exception)
-        self._send_message(message_type_runtime_error, create_runtime_error_description(exception.__str__(), backtrace))
+        self._send_message(
+            message_type_runtime_error,
+            create_runtime_error_description(exception.__str__(), backtrace),
+        )
 
     def save_placeholder(self, placeholder_name: str, value: Any) -> None:
         """
@@ -169,7 +176,9 @@ class PipelineProcess:
         if isinstance(value, Image):
             value = Image(value._image_tensor.cpu())
         placeholder_type = _get_placeholder_type(value)
-        if _is_deterministically_hashable(value) and _has_explicit_identity_memory(value):
+        if _is_deterministically_hashable(value) and _has_explicit_identity_memory(
+            value
+        ):
             value = ExplicitIdentityWrapperLazy.existing(value)
         elif (
             not _is_deterministically_hashable(value)
@@ -232,7 +241,9 @@ class PipelineProcess:
                 run_name="__main__",
                 alter_sys=True,
             )
-            self._send_message(message_type_runtime_progress, create_runtime_progress_done())
+            self._send_message(
+                message_type_runtime_progress, create_runtime_progress_done()
+            )
         except BaseException as error:  # noqa: BLE001
             self._send_exception(error)
         finally:
@@ -241,7 +252,9 @@ class PipelineProcess:
 
     def _catch_subprocess_error(self, error: BaseException) -> None:
         # This is a callback to log an unexpected failure, executing this is never expected
-        logging.exception("Pipeline process unexpectedly failed", exc_info=error)  # pragma: no cover
+        logging.exception(
+            "Pipeline process unexpectedly failed", exc_info=error
+        )  # pragma: no cover
 
     def execute(self, process_manager: ProcessManager) -> None:
         """
@@ -353,7 +366,11 @@ def memoized_dynamic_call(
         return None  # pragma: no cover
 
     fully_qualified_function_name = (
-        receiver.__class__.__module__ + "." + receiver.__class__.__qualname__ + "." + function_name
+        receiver.__class__.__module__
+        + "."
+        + receiver.__class__.__qualname__
+        + "."
+        + function_name
     )
 
     member = getattr(receiver, function_name)

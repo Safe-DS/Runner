@@ -207,7 +207,9 @@ def create_placeholder_description(name: str, type_: str) -> dict[str, str]:
     return {"name": name, "type": type_}
 
 
-def create_placeholder_value(placeholder_query: QueryMessageData, type_: str, value: Any) -> dict[str, Any]:
+def create_placeholder_value(
+    placeholder_query: QueryMessageData, type_: str, value: Any
+) -> dict[str, Any]:
     """
     Create the message data of a placeholder value message containing name, type and the actual value.
 
@@ -233,24 +235,40 @@ def create_placeholder_value(placeholder_query: QueryMessageData, type_: str, va
 
     message: dict[str, Any] = {"name": placeholder_query.name, "type": type_}
     # Start Index >= 0
-    start_index = max(placeholder_query.window.begin if placeholder_query.window.begin is not None else 0, 0)
+    start_index = max(
+        placeholder_query.window.begin
+        if placeholder_query.window.begin is not None
+        else 0,
+        0,
+    )
     # Length >= 0
-    length = max(placeholder_query.window.size, 0) if placeholder_query.window.size is not None else None
+    length = (
+        max(placeholder_query.window.size, 0)
+        if placeholder_query.window.size is not None
+        else None
+    )
     if isinstance(value, safeds.data.labeled.containers.TabularDataset):
         value = value.to_table()
 
     if isinstance(value, safeds.data.tabular.containers.Table) and (
-        placeholder_query.window.begin is not None or placeholder_query.window.size is not None
+        placeholder_query.window.begin is not None
+        or placeholder_query.window.size is not None
     ):
         max_index = value.number_of_rows
         value = value.slice_rows(start=start_index, length=length)
-        window_information: dict[str, int] = {"begin": start_index, "size": value.number_of_rows, "max": max_index}
+        window_information: dict[str, int] = {
+            "begin": start_index,
+            "size": value.number_of_rows,
+            "max": max_index,
+        }
         message["window"] = window_information
     message["value"] = value
     return message
 
 
-def create_runtime_error_description(message: str, backtrace: list[dict[str, Any]]) -> dict[str, Any]:
+def create_runtime_error_description(
+    message: str, backtrace: list[dict[str, Any]]
+) -> dict[str, Any]:
     """
     Create the message data of a runtime error message containing error information and a backtrace.
 
@@ -281,7 +299,9 @@ def create_runtime_progress_done() -> str:
     return "done"
 
 
-def parse_validate_message(message: str) -> tuple[Message | None, str | None, str | None]:
+def parse_validate_message(
+    message: str,
+) -> tuple[Message | None, str | None, str | None]:
     """
     Validate the basic structure of a received message string and return a parsed message object.
 
@@ -300,14 +320,30 @@ def parse_validate_message(message: str) -> tuple[Message | None, str | None, st
     except json.JSONDecodeError:
         return None, f"Invalid message received: {message}", "Invalid Message: not JSON"
     if "type" not in message_dict:
-        return None, f"No message type specified in: {message}", "Invalid Message: no type"
+        return (
+            None,
+            f"No message type specified in: {message}",
+            "Invalid Message: no type",
+        )
     elif "id" not in message_dict:
         return None, f"No message id specified in: {message}", "Invalid Message: no id"
     elif "data" not in message_dict:
-        return None, f"No message data specified in: {message}", "Invalid Message: no data"
+        return (
+            None,
+            f"No message data specified in: {message}",
+            "Invalid Message: no data",
+        )
     elif not isinstance(message_dict["type"], str):
-        return None, f"Message type is not a string: {message}", "Invalid Message: invalid type"
+        return (
+            None,
+            f"Message type is not a string: {message}",
+            "Invalid Message: invalid type",
+        )
     elif not isinstance(message_dict["id"], str):
-        return None, f"Message id is not a string: {message}", "Invalid Message: invalid id"
+        return (
+            None,
+            f"Message id is not a string: {message}",
+            "Invalid Message: invalid id",
+        )
     else:
         return Message(**message_dict), None, None

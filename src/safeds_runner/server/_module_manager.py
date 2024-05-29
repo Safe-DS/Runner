@@ -129,12 +129,17 @@ class InMemoryFinder(importlib.abc.MetaPathFinder):
             self.imports_to_remove.add(fullname)
             return importlib.util.spec_from_loader(
                 fullname,
-                loader=InMemoryLoader(self.code[""][fullname].encode("utf-8"), fullname.replace(".", "/")),
+                loader=InMemoryLoader(
+                    self.code[""][fullname].encode("utf-8"), fullname.replace(".", "/")
+                ),
                 origin="",
             )
         parent_package_path = ".".join(module_path[:-1])
         submodule_name = module_path[-1]
-        if parent_package_path in self.code and submodule_name in self.code[parent_package_path]:
+        if (
+            parent_package_path in self.code
+            and submodule_name in self.code[parent_package_path]
+        ):
             self.imports_to_remove.add(fullname)
             return importlib.util.spec_from_loader(
                 fullname,

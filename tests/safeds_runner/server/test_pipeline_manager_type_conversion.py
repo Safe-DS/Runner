@@ -50,5 +50,7 @@ from safeds_runner.server._pipeline_manager import _get_placeholder_type
         "tabular_dataset",
     ],
 )
-def test_should_placeholder_type_match_safeds_dsl_placeholder(value: Any, type_: str) -> None:
+def test_should_placeholder_type_match_safeds_dsl_placeholder(
+    value: Any, type_: str
+) -> None:
     assert _get_placeholder_type(value=value) == type_

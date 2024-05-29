@@ -40,7 +40,13 @@ class MemoizationStats:
         self.access_timestamps.append(access_timestamp)
         self.lookup_times.append(lookup_time)
 
-    def update_on_miss(self, access_timestamp: int, lookup_time: int, computation_time: int, memory_size: int) -> None:
+    def update_on_miss(
+        self,
+        access_timestamp: int,
+        lookup_time: int,
+        computation_time: int,
+        memory_size: int,
+    ) -> None:
         """
         Update the memoization stats on a cache miss.
 
