@@ -1,3 +1,15 @@
+## [0.17.0](https://github.com/Safe-DS/Runner/compare/v0.16.0...v0.17.0) (2024-05-29)
+
+
+### Features
+
+* require `safe-ds` version 0.26.0  ([#119](https://github.com/Safe-DS/Runner/issues/119)) ([1360d9a](https://github.com/Safe-DS/Runner/commit/1360d9a6647fc9e342be5c427a5181114f087467))
+
+
+### Bug Fixes
+
+* catch possible pickling errors ([#118](https://github.com/Safe-DS/Runner/issues/118)) ([6333b64](https://github.com/Safe-DS/Runner/commit/6333b643490909703f53025698f0045912dd8c38))
+
 ## [0.16.0](https://github.com/Safe-DS/Runner/compare/v0.15.0...v0.16.0) (2024-05-15)
 
 
