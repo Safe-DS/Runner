@@ -18,9 +18,7 @@ def test_should_runner_start_successfully() -> None:
         stderr=subprocess.PIPE,
     )
     while process.poll() is None:
-        process_line = str(
-            typing.cast(IO[bytes], process.stderr).readline(), "utf-8"
-        ).strip()
+        process_line = str(typing.cast(IO[bytes], process.stderr).readline(), "utf-8").strip()
         # Wait for first line of log
         if process_line.startswith("INFO:root:Starting Safe-DS Runner"):
             parent = psutil.Process(process.pid)

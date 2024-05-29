@@ -245,11 +245,7 @@ def _is_deterministically_hashable(value: Any) -> bool:
     result:
         True, if the object can be deterministically hashed.
     """
-    return (
-        _is_not_primitive(value)
-        and hasattr(value, "__class__")
-        and value.__class__.__hash__ != object.__hash__
-    )
+    return _is_not_primitive(value) and hasattr(value, "__class__") and value.__class__.__hash__ != object.__hash__
 
 
 def _has_explicit_identity(value: Any) -> bool:
@@ -362,15 +358,11 @@ def _make_hashable(value: Any) -> Any:
     if _is_deterministically_hashable(value) and _has_explicit_identity_memory(value):
         return ExplicitIdentityWrapperLazy.existing(value)
     elif (
-        not _is_deterministically_hashable(value)
-        and _is_not_primitive(value)
-        and _has_explicit_identity_memory(value)
+        not _is_deterministically_hashable(value) and _is_not_primitive(value) and _has_explicit_identity_memory(value)
     ):
         return ExplicitIdentityWrapper.existing(value)
     elif isinstance(value, dict):
-        return tuple(
-            (_make_hashable(key), _make_hashable(value)) for key, value in value.items()
-        )
+        return tuple((_make_hashable(key), _make_hashable(value)) for key, value in value.items())
     elif isinstance(value, list):
         return tuple(_make_hashable(element) for element in value)
     elif callable(value):
@@ -398,9 +390,7 @@ def _get_size_of_value(value: Any) -> int:
     size_immediate = sys.getsizeof(value)
     if isinstance(value, dict):
         return (
-            sum(map(_get_size_of_value, value.keys()))
-            + sum(map(_get_size_of_value, value.values()))
-            + size_immediate
+            sum(map(_get_size_of_value, value.keys())) + sum(map(_get_size_of_value, value.values())) + size_immediate
         )
     elif isinstance(value, frozenset | list | set | tuple):
         return sum(map(_get_size_of_value, value)) + size_immediate
@@ -462,10 +452,7 @@ def _wrap_value_to_shared_memory(
     if isinstance(result, list):
         return [_wrap_value_to_shared_memory(entry) for entry in result]
     if isinstance(result, dict):
-        return {
-            _wrap_value_to_shared_memory(key): _wrap_value_to_shared_memory(value)
-            for key, value in result.items()
-        }
+        return {_wrap_value_to_shared_memory(key): _wrap_value_to_shared_memory(value) for key, value in result.items()}
     if isinstance(result, set):
         return {_wrap_value_to_shared_memory(entry) for entry in result}
     if isinstance(result, frozenset):
@@ -507,9 +494,7 @@ def _unwrap_value_from_shared_memory(
         return [_unwrap_value_from_shared_memory(entry) for entry in result]
     if isinstance(result, dict):
         return {
-            _unwrap_value_from_shared_memory(key): _unwrap_value_from_shared_memory(
-                value
-            )
+            _unwrap_value_from_shared_memory(key): _unwrap_value_from_shared_memory(value)
             for key, value in result.items()
         }
     if isinstance(result, set):

@@ -42,9 +42,7 @@ class SafeDsEncoder(json.JSONEncoder):
             # Convert NaN / Infinity to None, as the JSON encoder generates invalid JSON otherwise
             return {
                 key: [
-                    value
-                    if not isinstance(value, float) or math.isfinite(value)
-                    else None
+                    value if not isinstance(value, float) or math.isfinite(value) else None
                     for value in dict_with_nan_infinity[key]
                 ]
                 for key in dict_with_nan_infinity

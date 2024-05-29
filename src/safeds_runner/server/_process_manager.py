@@ -26,9 +26,7 @@ class ProcessManager:
     def __init__(self) -> None:
         self._lock = Lock()
         self._state: _State = "initial"
-        self._on_message_callbacks: set[
-            Callable[[Message], Coroutine[Any, Any, None]]
-        ] = set()
+        self._on_message_callbacks: set[Callable[[Message], Coroutine[Any, Any, None]]] = set()
 
     @cached_property
     def _manager(self) -> SyncManager:
@@ -70,9 +68,7 @@ class ProcessManager:
                 for callback in self._on_message_callbacks:
                     asyncio.run_coroutine_threadsafe(callback(message), event_loop)
         except BaseException as error:  # noqa: BLE001  # pragma: no cover
-            logging.warning(
-                "Message queue terminated: %s", error.__repr__()
-            )  # pragma: no cover
+            logging.warning("Message queue terminated: %s", error.__repr__())  # pragma: no cover
 
     def startup(self) -> None:
         """
@@ -116,9 +112,7 @@ class ProcessManager:
         self.startup()
         return self._manager.dict()
 
-    def on_message(
-        self, callback: Callable[[Message], Coroutine[Any, Any, None]]
-    ) -> Unregister:
+    def on_message(self, callback: Callable[[Message], Coroutine[Any, Any, None]]) -> Unregister:
         """
         Get notified when a message is received from another process.
 
@@ -143,9 +137,7 @@ class ProcessManager:
     _P = ParamSpec("_P")
     _T = TypeVar("_T")
 
-    def submit(
-        self, func: Callable[_P, _T], /, *args: _P.args, **kwargs: _P.kwargs
-    ) -> Future[_T]:
+    def submit(self, func: Callable[_P, _T], /, *args: _P.args, **kwargs: _P.kwargs) -> Future[_T]:
         """Submit a function to be executed by a worker process."""
         self.startup()
         return self._process_pool.submit(func, *args, **kwargs)

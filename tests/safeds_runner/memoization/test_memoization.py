@@ -80,13 +80,13 @@ def test_memoization_static_already_present_values(
             _make_hashable(hidden_arguments),
         )
     ] = expected_result
-    _pipeline_manager.current_pipeline.get_memoization_map()._map_stats[
-        fully_qualified_function_name
-    ] = MemoizationStats(
-        [time.perf_counter_ns()],
-        [],
-        [],
-        [sys.getsizeof(expected_result)],
+    _pipeline_manager.current_pipeline.get_memoization_map()._map_stats[fully_qualified_function_name] = (
+        MemoizationStats(
+            [time.perf_counter_ns()],
+            [],
+            [],
+            [sys.getsizeof(expected_result)],
+        )
     )
     result = _pipeline_manager.memoized_static_call(
         fully_qualified_function_name,
@@ -518,9 +518,7 @@ def test_absolute_path_list() -> None:
     ],
     ids=["cache_empty", "cache_not_empty"],
 )
-def test_memoization_map_cache_size(
-    cache: MemoizationMap, greater_than_zero: bool
-) -> None:
+def test_memoization_map_cache_size(cache: MemoizationMap, greater_than_zero: bool) -> None:
     assert (cache.get_cache_size() > 0) == greater_than_zero
 
 
@@ -538,9 +536,7 @@ def test_memoization_map_cache_size(
     ],
     ids=["cache_not_empty"],
 )
-def test_memoization_map_ensure_capacity(
-    cache: MemoizationMap, max_size: int, needed_capacity: int
-) -> None:
+def test_memoization_map_ensure_capacity(cache: MemoizationMap, max_size: int, needed_capacity: int) -> None:
     cache.max_size = max_size
     cache.ensure_capacity(needed_capacity)
     assert cache.max_size - cache.get_cache_size() >= needed_capacity
@@ -559,9 +555,7 @@ def test_memoization_map_ensure_capacity(
     ],
     ids=["cache_not_empty"],
 )
-def test_memoization_map_ensure_capacity_unlimited(
-    cache: MemoizationMap, needed_capacity: int
-) -> None:
+def test_memoization_map_ensure_capacity_unlimited(cache: MemoizationMap, needed_capacity: int) -> None:
     cache.max_size = None
     size_before_potential_shrink = cache.get_cache_size()
     cache.ensure_capacity(needed_capacity)

@@ -207,9 +207,7 @@ def create_placeholder_description(name: str, type_: str) -> dict[str, str]:
     return {"name": name, "type": type_}
 
 
-def create_placeholder_value(
-    placeholder_query: QueryMessageData, type_: str, value: Any
-) -> dict[str, Any]:
+def create_placeholder_value(placeholder_query: QueryMessageData, type_: str, value: Any) -> dict[str, Any]:
     """
     Create the message data of a placeholder value message containing name, type and the actual value.
 
@@ -236,23 +234,16 @@ def create_placeholder_value(
     message: dict[str, Any] = {"name": placeholder_query.name, "type": type_}
     # Start Index >= 0
     start_index = max(
-        placeholder_query.window.begin
-        if placeholder_query.window.begin is not None
-        else 0,
+        placeholder_query.window.begin if placeholder_query.window.begin is not None else 0,
         0,
     )
     # Length >= 0
-    length = (
-        max(placeholder_query.window.size, 0)
-        if placeholder_query.window.size is not None
-        else None
-    )
+    length = max(placeholder_query.window.size, 0) if placeholder_query.window.size is not None else None
     if isinstance(value, safeds.data.labeled.containers.TabularDataset):
         value = value.to_table()
 
     if isinstance(value, safeds.data.tabular.containers.Table) and (
-        placeholder_query.window.begin is not None
-        or placeholder_query.window.size is not None
+        placeholder_query.window.begin is not None or placeholder_query.window.size is not None
     ):
         max_index = value.number_of_rows
         value = value.slice_rows(start=start_index, length=length)
@@ -266,9 +257,7 @@ def create_placeholder_value(
     return message
 
 
-def create_runtime_error_description(
-    message: str, backtrace: list[dict[str, Any]]
-) -> dict[str, Any]:
+def create_runtime_error_description(message: str, backtrace: list[dict[str, Any]]) -> dict[str, Any]:
     """
     Create the message data of a runtime error message containing error information and a backtrace.
 
