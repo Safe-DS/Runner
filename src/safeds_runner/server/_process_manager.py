@@ -147,7 +147,7 @@ def _warmup_worker() -> None:
 
     from safeds.data.tabular.containers import Table  # pragma: no cover
 
-    Table({"a": [1]}).get_column("a").plot_histogram()  # pragma: no cover
+    Table({"a": [1]}).get_column("a").plot.histogram()  # pragma: no cover
 
 
 _State: TypeAlias = Literal["initial", "started", "shutdown"]
