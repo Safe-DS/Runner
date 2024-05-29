@@ -376,6 +376,40 @@ def test_memoization_static_unhashable_values(
     assert result == expected_result
 
 
+class _UnpickleableClass:
+    def __init__(self):
+        self._internal = _create_internal()
+
+    def __hash__(self):
+        return hash(self.__class__.__name__)
+
+
+def _create_internal():
+    class UnpickleableClassInternal:
+        pass
+
+    return UnpickleableClassInternal()
+
+
+def test_memoization_static_unpickleable_values() -> None:
+    import multiprocessing
+
+    _pipeline_manager.current_pipeline = PipelineProcess(
+        ProgramMessageData(code={}, main=ProgramMessageMainInformation(modulepath="", module="", pipeline="")),
+        "",
+        Queue(),
+        {},
+        MemoizationMap(multiprocessing.Manager().dict(), {}),
+    )
+    result = memoized_static_call(
+        "unpickleable_class",
+        lambda: _UnpickleableClass(),
+        [],
+        {},
+        [],
+    )
+    assert result is not None
+
 def test_file_mtime_exists() -> None:
     with tempfile.NamedTemporaryFile() as file:
         mtime = file_mtime(file.name)
