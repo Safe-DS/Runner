@@ -245,11 +245,11 @@ def create_placeholder_value(placeholder_query: QueryMessageData, type_: str, va
     if isinstance(value, safeds.data.tabular.containers.Table) and (
         placeholder_query.window.begin is not None or placeholder_query.window.size is not None
     ):
-        max_index = value.number_of_rows
+        max_index = value.row_count
         value = value.slice_rows(start=start_index, length=length)
         window_information: dict[str, int] = {
             "begin": start_index,
-            "size": value.number_of_rows,
+            "size": value.row_count,
             "max": max_index,
         }
         message["window"] = window_information
