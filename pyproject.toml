@@ -19,7 +19,7 @@ safe-ds-runner = "safeds_runner.main:main"
 python = "^3.11,<3.13"
 safe-ds = ">=0.26.0,<0.27.0"
 hypercorn = ">=0.16,<0.18"
-psutil = "^5.9.8"
+psutil = ">=5.9.8,<7.0.0"
 pydantic = "^2.7.0"
 quart = "^0.19.4"
 
