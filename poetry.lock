@@ -2109,22 +2109,22 @@ use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
 name = "safe-ds"
-version = "0.26.0"
+version = "0.27.0"
 description = "A user-friendly library for Data Science in Python."
 optional = false
 python-versions = "<3.13,>=3.11"
 files = [
-    {file = "safe_ds-0.26.0-py3-none-any.whl", hash = "sha256:d931612711e29f759537b7305e7037e0bd0900a1f0547cc6093d41a6083d11d7"},
-    {file = "safe_ds-0.26.0.tar.gz", hash = "sha256:2a954a838a36d8fb75036d8f07452f780009aeac19187a8db9d24259fb3d67f9"},
+    {file = "safe_ds-0.27.0-py3-none-any.whl", hash = "sha256:c5e5adae16c7f10b9b465ce1cebd9928986ffbc90d9e1f19fa34da95a4bcf5dd"},
+    {file = "safe_ds-0.27.0.tar.gz", hash = "sha256:90b67d21ee5a7bafd70d392fcd5647d3d5901ad54167cf2455530e3046a742b5"},
 ]
 
 [package.dependencies]
 apipkg = ">=3.0.2,<4.0.0"
 matplotlib = ">=3.6.3,<4.0.0"
+numpy = "<2.0.0"
 pillow = ">=9.5,<11.0"
 polars = {version = ">=0.20.25,<0.21.0", extras = ["numpy", "pyarrow"]}
 scikit-learn = ">=1.2.0,<2.0.0"
-seaborn = ">=0.13.0,<0.14.0"
 statsmodels = ">=0.14.1,<0.15.0"
 torch = ">=2.3.0,<3.0.0"
 torchvision = ">=0.18.0,<0.19.0"
@@ -2339,27 +2339,6 @@ numpy = ">=1.22.4,<2.3"
 dev = ["cython-lint (>=0.12.2)", "doit (>=0.36.0)", "mypy", "pycodestyle", "pydevtool", "rich-click", "ruff", "types-psutil", "typing_extensions"]
 doc = ["jupyterlite-pyodide-kernel", "jupyterlite-sphinx (>=0.12.0)", "jupytext", "matplotlib (>=3.5)", "myst-nb", "numpydoc", "pooch", "pydata-sphinx-theme (>=0.15.2)", "sphinx (>=5.0.0)", "sphinx-design (>=0.4.0)"]
 test = ["array-api-strict", "asv", "gmpy2", "hypothesis (>=6.30)", "mpmath", "pooch", "pytest", "pytest-cov", "pytest-timeout", "pytest-xdist", "scikit-umfpack", "threadpoolctl"]
-
-[[package]]
-name = "seaborn"
-version = "0.13.2"
-description = "Statistical data visualization"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "seaborn-0.13.2-py3-none-any.whl", hash = "sha256:636f8336facf092165e27924f223d3c62ca560b1f2bb5dff7ab7fad265361987"},
-    {file = "seaborn-0.13.2.tar.gz", hash = "sha256:93e60a40988f4d65e9f4885df477e2fdaff6b73a9ded434c1ab356dd57eefff7"},
-]
-
-[package.dependencies]
-matplotlib = ">=3.4,<3.6.1 || >3.6.1"
-numpy = ">=1.20,<1.24.0 || >1.24.0"
-pandas = ">=1.2"
-
-[package.extras]
-dev = ["flake8", "flit", "mypy", "pandas-stubs", "pre-commit", "pytest", "pytest-cov", "pytest-xdist"]
-docs = ["ipykernel", "nbconvert", "numpydoc", "pydata_sphinx_theme (==0.10.0rc2)", "pyyaml", "sphinx (<6.0.0)", "sphinx-copybutton", "sphinx-design", "sphinx-issues"]
-stats = ["scipy (>=1.7)", "statsmodels (>=0.12)"]
 
 [[package]]
 name = "simple-websocket"
@@ -3101,4 +3080,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11,<3.13"
-content-hash = "461ff3f289e6d2a5fbca115e4be74eda2e31cacdd1a9259e9828e182d76f611b"
+content-hash = "a0f75c225c3da5bb2941571ac04013779ca65a4c2424ab5859852b0cb2244686"
