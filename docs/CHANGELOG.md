@@ -6,8 +6,8 @@
 
 ### Bug Fixes
 
-* **deps:** bump scikit-learn from 1.4.2 to 1.5.0 ([#129](https://github.com/Safe-DS/Runner/issues/129)) ([6ab276f](https://github.com/Safe-DS/Runner/commit/6ab276ff8bb77db155c5a620b47eedd571fc5b67)), closes [#29039](https://github.com/Safe-DS/Runner/issues/29039) [#29007](https://github.com/Safe-DS/Runner/issues/29007) [#27108](https://github.com/Safe-DS/Runner/issues/27108) [#28592](https://github.com/Safe-DS/Runner/issues/28592) [#28951](https://github.com/Safe-DS/Runner/issues/28951) [#29029](https://github.com/Safe-DS/Runner/issues/29029)
-* **deps:** bump urllib3 from 2.2.1 to 2.2.2 ([#128](https://github.com/Safe-DS/Runner/issues/128)) ([acda9f1](https://github.com/Safe-DS/Runner/commit/acda9f19b435ff5440fc6a0d0789a6a6d683c540)), closes [#3122](https://github.com/Safe-DS/Runner/issues/3122) [#3363](https://github.com/Safe-DS/Runner/issues/3363) [#3122](https://github.com/Safe-DS/Runner/issues/3122) [#3363](https://github.com/Safe-DS/Runner/issues/3363) [#3406](https://github.com/Safe-DS/Runner/issues/3406) [#3398](https://github.com/Safe-DS/Runner/issues/3398) [#3399](https://github.com/Safe-DS/Runner/issues/3399) [#3396](https://github.com/Safe-DS/Runner/issues/3396) [#3394](https://github.com/Safe-DS/Runner/issues/3394) [#3391](https://github.com/Safe-DS/Runner/issues/3391) [#3316](https://github.com/Safe-DS/Runner/issues/3316) [#3387](https://github.com/Safe-DS/Runner/issues/3387) [#3386](https://github.com/Safe-DS/Runner/issues/3386)
+* **deps:** bump scikit-learn from 1.4.2 to 1.5.0 ([#129](https://github.com/Safe-DS/Runner/issues/129)) ([6ab276f](https://github.com/Safe-DS/Runner/commit/6ab276ff8bb77db155c5a620b47eedd571fc5b67))
+* **deps:** bump urllib3 from 2.2.1 to 2.2.2 ([#128](https://github.com/Safe-DS/Runner/issues/128)) ([acda9f1](https://github.com/Safe-DS/Runner/commit/acda9f19b435ff5440fc6a0d0789a6a6d683c540))
 
 ## [0.17.0](https://github.com/Safe-DS/Runner/compare/v0.16.0...v0.17.0) (2024-05-29)
 
