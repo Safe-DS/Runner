@@ -2204,13 +2204,13 @@ use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
 name = "safe-ds"
-version = "0.28.0"
+version = "0.28.1"
 description = "A user-friendly library for Data Science in Python."
 optional = false
 python-versions = "<3.13,>=3.11"
 files = [
-    {file = "safe_ds-0.28.0-py3-none-any.whl", hash = "sha256:5ac7855fd28923c9cbedec6d4f49469318ad995de9325c848d3b92eb904cc8a2"},
-    {file = "safe_ds-0.28.0.tar.gz", hash = "sha256:6d02955a2d36118e877abad316889781d256a1f8f0758ad2097ae25c3b7f2986"},
+    {file = "safe_ds-0.28.1-py3-none-any.whl", hash = "sha256:4c772747553694470f5389b3261547a9e2272777fb9899ddfccb54af791fe527"},
+    {file = "safe_ds-0.28.1.tar.gz", hash = "sha256:df691b782c87ae5298fa4118deb5334dd6678bfa9fd2b7eba7c42e41f63a9147"},
 ]
 
 [package.dependencies]
