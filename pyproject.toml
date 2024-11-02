@@ -25,7 +25,7 @@ quart = "^0.19.4"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8.3.3"
-pytest-cov = "^5.0.0"
+pytest-cov = "^6.0.0"
 pytest-timeout = "^2.3.1"
 pytest-asyncio = "^0.24.0"
 simple-websocket = "^1.0.0"
