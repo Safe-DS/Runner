@@ -2216,20 +2216,20 @@ use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
 name = "safe-ds"
-version = "0.28.1"
+version = "0.29.0"
 description = "A user-friendly library for Data Science in Python."
 optional = false
 python-versions = "<3.13,>=3.11"
 files = [
-    {file = "safe_ds-0.28.1-py3-none-any.whl", hash = "sha256:4c772747553694470f5389b3261547a9e2272777fb9899ddfccb54af791fe527"},
-    {file = "safe_ds-0.28.1.tar.gz", hash = "sha256:df691b782c87ae5298fa4118deb5334dd6678bfa9fd2b7eba7c42e41f63a9147"},
+    {file = "safe_ds-0.29.0-py3-none-any.whl", hash = "sha256:5cfc706851a83fd80ff9d91d3b60e6b8fb2fe2c5046030cc5da9650acd2ec8f2"},
+    {file = "safe_ds-0.29.0.tar.gz", hash = "sha256:03ecdf39afbe1638baa5332960630a3253093cb785bd5e0f8c76ca414b24a4fa"},
 ]
 
 [package.dependencies]
 apipkg = ">=3.0.2,<4.0.0"
 matplotlib = ">=3.6.3,<4.0.0"
 numpy = "<3.0.0"
-pillow = ">=9.5,<11.0"
+pillow = ">=9.5,<12.0"
 polars = {version = ">=1.7.1,<2.0.0", extras = ["numpy", "pyarrow"]}
 scikit-learn = ">=1.2.0,<2.0.0"
 statsmodels = ">=0.14.1,<0.15.0"
@@ -3245,4 +3245,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11,<3.13"
-content-hash = "2a454e1d45c0dabb6e38bce23e76d43f3e40439d386a05e589dd79df4d637a73"
+content-hash = "3a39ad3bd2eb55d041bac465e302c4dd55cc49ff2995e431be02a6061a5ff960"
