@@ -21,7 +21,7 @@ safe-ds = ">=0.28.0,<0.29.0"
 hypercorn = ">=0.16,<0.18"
 psutil = ">=5.9.8,<7.0.0"
 pydantic = "^2.9.2"
-quart = "^0.19.4"
+quart = ">=0.19.4,<0.21.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8.3.4"
