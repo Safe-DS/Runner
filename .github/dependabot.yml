@@ -50,3 +50,5 @@ updates:
         update-types:
           - patch
           - minor
+    ignore:
+      - dependency-name: 'safe-ds'
