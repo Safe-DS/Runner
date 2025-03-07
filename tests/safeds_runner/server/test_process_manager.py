@@ -1,4 +1,5 @@
 import pytest
+
 from safeds_runner.server._process_manager import ProcessManager
 
 

@@ -10,6 +10,7 @@ from queue import Queue
 from typing import Any
 
 import pytest
+
 from safeds_runner.memoization._memoization_map import (
     MemoizationMap,
     MemoizationStats,
@@ -189,14 +190,7 @@ class ChildClass(BaseClass):
 
 
 @pytest.mark.parametrize(
-    argnames=[
-        "receiver",
-        "function_name",
-        "positional_arguments",
-        "keyword_arguments",
-        "hidden_arguments",
-        "expected_result",
-    ],
+    argnames=("receiver", "function_name", "positional_arguments", "keyword_arguments", "hidden_arguments", "expected_result"),
     argvalues=[
         (BaseClass(), "method1", [], {}, [], 1),
         (ChildClass(), "method1", [], {}, [], 2),
@@ -511,7 +505,7 @@ def test_absolute_path_list() -> None:
 
 
 @pytest.mark.parametrize(
-    argnames="cache,greater_than_zero",
+    argnames=("cache", "greater_than_zero"),
     argvalues=[
         (MemoizationMap({}, {}), False),
         (MemoizationMap({}, {"a": MemoizationStats([], [], [], [20])}), True),
@@ -523,7 +517,7 @@ def test_memoization_map_cache_size(cache: MemoizationMap, greater_than_zero: bo
 
 
 @pytest.mark.parametrize(
-    argnames="cache,max_size,needed_capacity",
+    argnames=("cache", "max_size", "needed_capacity"),
     argvalues=[
         (
             MemoizationMap(
@@ -543,7 +537,7 @@ def test_memoization_map_ensure_capacity(cache: MemoizationMap, max_size: int, n
 
 
 @pytest.mark.parametrize(
-    argnames="cache,needed_capacity",
+    argnames=("cache", "needed_capacity"),
     argvalues=[
         (
             MemoizationMap(
@@ -563,7 +557,7 @@ def test_memoization_map_ensure_capacity_unlimited(cache: MemoizationMap, needed
 
 
 @pytest.mark.parametrize(
-    argnames="cache,max_size,needed_capacity",
+    argnames=("cache", "max_size", "needed_capacity"),
     argvalues=[
         (
             MemoizationMap(
@@ -588,7 +582,7 @@ def test_memoization_map_ensure_larger_than_capacity_no_eviction(
 
 
 @pytest.mark.parametrize(
-    argnames="cache,max_size,needed_capacity,freeing_strategy",
+    argnames=("cache", "max_size", "needed_capacity", "freeing_strategy"),
     argvalues=[
         (
             MemoizationMap(

@@ -71,12 +71,12 @@ class ExplicitIdentityWrapper:
     def __eq__(self, other: object) -> bool:
         # Compare IDs
         if (
-            isinstance(other, ExplicitIdentityWrapperLazy)
-            and self.value.__ex_id__ == other.id
-            or isinstance(other, ExplicitIdentityWrapper)
-            and self.value.__ex_id__ == other.value.__ex_id__
-            or _has_explicit_identity(other)
-            and self.value.__ex_id__ == other.__ex_id__  # type: ignore[attr-defined]
+            (isinstance(other, ExplicitIdentityWrapperLazy)
+            and self.value.__ex_id__ == other.id)
+            or (isinstance(other, ExplicitIdentityWrapper)
+            and self.value.__ex_id__ == other.value.__ex_id__)
+            or (_has_explicit_identity(other)
+            and self.value.__ex_id__ == other.__ex_id__)  # type: ignore[attr-defined]
         ):
             return True
 
@@ -159,12 +159,12 @@ class ExplicitIdentityWrapperLazy:
     def __eq__(self, other: object) -> bool:
         # Compare IDs
         if (
-            isinstance(other, ExplicitIdentityWrapperLazy)
-            and self.id == other.id
-            or isinstance(other, ExplicitIdentityWrapper)
-            and self.id == other.value.__ex_id__
-            or _has_explicit_identity(other)
-            and self.id == other.__ex_id__  # type: ignore[attr-defined]
+            (isinstance(other, ExplicitIdentityWrapperLazy)
+            and self.id == other.id)
+            or (isinstance(other, ExplicitIdentityWrapper)
+            and self.id == other.value.__ex_id__)
+            or (_has_explicit_identity(other)
+            and self.id == other.__ex_id__)  # type: ignore[attr-defined]
         ):
             return True
 

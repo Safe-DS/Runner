@@ -10,11 +10,12 @@ import time
 from typing import TYPE_CHECKING, Any
 
 import pytest
-import safeds_runner.server.main
 import simple_websocket
 from pydantic import ValidationError
 from quart.testing.connections import WebsocketDisconnectError
 from safeds.data.tabular.containers import Table
+
+import safeds_runner.server.main
 from safeds_runner.server._json_encoder import SafeDsEncoder
 from safeds_runner.server._messages import (
     Message,
@@ -185,7 +186,7 @@ if TYPE_CHECKING:
         "program_invalid_code3",
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_should_fail_message_validation_ws(websocket_message: str) -> None:
     sds_server = SafeDsServer()
     test_client = sds_server._app.test_client()
@@ -201,7 +202,7 @@ async def test_should_fail_message_validation_ws(websocket_message: str) -> None
 
 
 @pytest.mark.parametrize(
-    argnames="websocket_message,exception_message",
+    argnames=("websocket_message", "exception_message"),
     argvalues=[
         ("<invalid message>", "Invalid Message: not JSON"),
         (json.dumps({"id": "a", "data": "b"}), "Invalid Message: no type"),
@@ -231,7 +232,7 @@ def test_should_fail_message_validation_reason_general(websocket_message: str, e
 
 
 @pytest.mark.parametrize(
-    argnames=["data", "exception_regex"],
+    argnames=("data", "exception_regex"),
     argvalues=[
         (
             {"main": {"modulepath": "1", "module": "2", "pipeline": "3"}},
@@ -311,7 +312,7 @@ def test_should_fail_message_validation_reason_program(data: dict[str, Any], exc
 
 
 @pytest.mark.parametrize(
-    argnames=["data", "exception_regex"],
+    argnames=("data", "exception_regex"),
     argvalues=[
         (
             {"a": "v"},
@@ -341,7 +342,7 @@ def test_should_fail_message_validation_reason_placeholder_query(
 
 
 @pytest.mark.parametrize(
-    argnames="message,expected_response_runtime_error",
+    argnames=("message", "expected_response_runtime_error"),
     argvalues=[
         (
             json.dumps(
@@ -368,7 +369,7 @@ def test_should_fail_message_validation_reason_placeholder_query(
     ],
     ids=["raise_exception"],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_should_execute_pipeline_return_exception(
     message: str,
     expected_response_runtime_error: Message,
@@ -394,7 +395,7 @@ async def test_should_execute_pipeline_return_exception(
 
 
 @pytest.mark.parametrize(
-    argnames="initial_messages,initial_execution_message_wait,appended_messages,expected_responses",
+    argnames=("initial_messages", "initial_execution_message_wait", "appended_messages", "expected_responses"),
     argvalues=[
         (
             [
@@ -562,7 +563,7 @@ async def test_should_execute_pipeline_return_exception(
     ],
     ids=["query_valid_query_invalid"],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_should_execute_pipeline_return_valid_placeholder(
     initial_messages: list[str],
     initial_execution_message_wait: int,
@@ -592,7 +593,7 @@ async def test_should_execute_pipeline_return_valid_placeholder(
 
 
 @pytest.mark.parametrize(
-    argnames="messages,expected_response",
+    argnames=("messages", "expected_response"),
     argvalues=[
         (
             [
@@ -660,7 +661,7 @@ async def test_should_execute_pipeline_return_valid_placeholder(
     ],
     ids=["progress_message_done", "invalid_message_invalid_placeholder_query"],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_should_successfully_execute_simple_flow(messages: list[str], expected_response: Message) -> None:
     sds_server = SafeDsServer()
     test_client = sds_server._app.test_client()
@@ -744,13 +745,13 @@ def helper_should_accept_at_least_2_parallel_connections_in_subprocess_server(
     port: int,
     pipe: multiprocessing.connection.Connection,
 ) -> None:
-    sys.stderr.write = lambda value: pipe.send(value)  # type: ignore[method-assign, assignment]
-    sys.stdout.write = lambda value: pipe.send(value)  # type: ignore[method-assign, assignment]
+    sys.stderr.write = lambda value: pipe.send(value)  # type: ignore[method-assign, return-value]
+    sys.stdout.write = lambda value: pipe.send(value)  # type: ignore[method-assign, return-value]
     safeds_runner.server.main.start_server(port)
 
 
 @pytest.mark.parametrize(
-    argnames="query,type_,value,result",
+    argnames=("query", "type_", "value", "result"),
     argvalues=[
         (
             QueryMessageData(name="name"),
@@ -839,7 +840,7 @@ def test_windowed_placeholder(query: QueryMessageData, type_: str, value: Any, r
 
 
 @pytest.mark.parametrize(
-    argnames="query,expected_response",
+    argnames=("query", "expected_response"),
     argvalues=[
         (
             json.dumps(
@@ -908,6 +909,6 @@ def helper_should_accept_at_least_a_message_without_crashing_in_subprocess_serve
     port: int,
     pipe: multiprocessing.connection.Connection,
 ) -> None:
-    sys.stderr.write = lambda value: pipe.send(value)  # type: ignore[method-assign, assignment]
-    sys.stdout.write = lambda value: pipe.send(value)  # type: ignore[method-assign, assignment]
+    sys.stderr.write = lambda value: pipe.send(value)  # type: ignore[method-assign, return-value]
+    sys.stdout.write = lambda value: pipe.send(value)  # type: ignore[method-assign, return-value]
     safeds_runner.server.main.start_server(port)
