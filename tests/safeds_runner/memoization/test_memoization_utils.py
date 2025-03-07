@@ -61,7 +61,7 @@ def test_is_not_primitive(value: Any, primitive: bool) -> None:
         ("ab", False),
         (object(), False),
         (TabularDataset({"a": [1], "b": [2]}, "a"), True),
-        (Table(), True),
+        (Table({}), True),
         (
             Image.from_bytes(
                 base64.b64decode(
@@ -91,7 +91,7 @@ def test_is_deterministically_hashable(value: Any, deterministically_hashable: b
     argnames="value",
     argvalues=[
         TabularDataset({"a": [1], "b": [2]}, "a"),
-        Table(),
+        Table({}),
         Image.from_bytes(
             base64.b64decode(
                 "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
@@ -110,7 +110,7 @@ def test_has_explicit_identity(value: Any) -> None:
     argnames="value",
     argvalues=[
         TabularDataset({"a": [1], "b": [2]}, "a"),
-        Table(),
+        Table({}),
         Image.from_bytes(
             base64.b64decode(
                 "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
@@ -130,7 +130,7 @@ def test_explicit_identity_deterministic_hash(value: Any) -> None:
     argnames="value",
     argvalues=[
         TabularDataset({"a": [1], "b": [2]}, "a"),
-        Table(),
+        Table({}),
         Image.from_bytes(
             base64.b64decode(
                 "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
@@ -148,7 +148,7 @@ def test_explicit_identity_shared_memory(value: Any) -> None:
     argnames="value,hashable,exception",
     argvalues=[
         (TabularDataset({"a": [1], "b": [2]}, "a"), True, None),
-        (Table(), True, None),
+        (Table({}), True, None),
         (
             Image.from_bytes(
                 base64.b64decode(
@@ -191,7 +191,7 @@ def test_make_hashable_non_wrapper(value: Any, hashable: bool, exception: type[B
     argnames="value,wrapper",
     argvalues=[
         (TabularDataset({"a": [1], "b": [2]}, "a"), True),
-        (Table(), True),
+        (Table({}), True),
         (
             Image.from_bytes(
                 base64.b64decode(
@@ -256,11 +256,11 @@ def test_memory_usage(value: Any, expected_size: int) -> None:
         [1, 2, 3],
         (1, 2, 3),
         TabularDataset({"a": [1], "b": [2]}, "a"),
-        Table(),
-        (Table(), Table()),
-        {"a": Table()},
-        {"a", "b", Table()},
-        frozenset({"a", "b", Table()}),
+        Table({}),
+        (Table({}), Table({})),
+        {"a": Table({})},
+        {"a", "b", Table({})},
+        frozenset({"a", "b", Table({})}),
     ],
     ids=[
         "int",
@@ -336,11 +336,11 @@ def test_wrap_value_to_shared_memory_non_deterministic(value: Any) -> None:
         [1, 2, 3],
         (1, 2, 3),
         TabularDataset({"a": [1], "b": [2]}, "a"),
-        Table(),
-        (Table(), Table()),
-        {"a": Table()},
-        {"a", "b", Table()},
-        frozenset({"a", "b", Table()}),
+        Table({}),
+        (Table({}), Table({})),
+        {"a": Table({})},
+        {"a", "b", Table({})},
+        frozenset({"a", "b", Table({})}),
         np.int64(1),
         datetime.date(2021, 1, 1),
     ],
@@ -386,7 +386,7 @@ def test_serialize_value_to_shared_memory_non_lazy(value: Any) -> None:
     argnames="value",
     argvalues=[
         TabularDataset({"a": [1], "b": [2]}, "a"),
-        Table(),
+        Table({}),
         Image.from_bytes(
             base64.b64decode(
                 "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",
@@ -423,7 +423,7 @@ def test_compare_wrapper_to_lazy(value: Any) -> None:
             TabularDataset({"a": [1], "b": [2]}, "a"),
             TabularDataset({"a": [1], "b": [2]}, "a"),
         ),
-        (Table(), Table()),
+        (Table({}), Table({})),
         (
             Image.from_bytes(
                 base64.b64decode(
@@ -490,7 +490,7 @@ def test_compare_wrapper_to_lazy_multi(value1: Any, value2: Any) -> None:
             TabularDataset({"a": [1], "b": [2]}, "a"),
             TabularDataset({"a": [1], "b": [2]}, "a"),
         ),
-        (Table(), Table()),
+        (Table({}), Table({})),
         (
             Image.from_bytes(
                 base64.b64decode(
@@ -524,7 +524,7 @@ def test_wrapper_hash(value1: Any, value2: Any) -> None:
     argnames="value",
     argvalues=[
         TabularDataset({"a": [1], "b": [2]}, "a"),
-        Table(),
+        Table({}),
         Image.from_bytes(
             base64.b64decode(
                 "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC",

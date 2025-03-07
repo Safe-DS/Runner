@@ -18,7 +18,7 @@ from safeds_runner.server._json_encoder import SafeDsEncoder
         (
             TabularDataset(
                 {"a": [1, 2], "b": [3.2, 4.0], "c": [math.nan, 5.6], "d": [5, -6]},
-                target_name="d",
+                "d",
             ),
             '{"a": [1, 2], "b": [3.2, 4.0], "c": [null, 5.6], "d": [5, -6]}',
         ),
