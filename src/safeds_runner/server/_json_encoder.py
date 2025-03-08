@@ -54,4 +54,4 @@ class SafeDsEncoder(json.JSONEncoder):
                 "bytes": str(base64.encodebytes(o._repr_png_()), "utf-8"),
             }
         else:
-            return json.JSONEncoder.default(self, o)
+            return super().default(o)

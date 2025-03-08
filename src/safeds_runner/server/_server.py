@@ -237,7 +237,7 @@ class SafeDsServer:
                                     create_placeholder_value(
                                         placeholder_query_data,
                                         placeholder_type,
-                                        "<Not displayable>",
+                                        str(placeholder_value),
                                     ),
                                 ),
                             )
