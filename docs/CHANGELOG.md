@@ -1,3 +1,9 @@
+## [0.19.1](https://github.com/Safe-DS/Runner/compare/v0.19.0...v0.19.1) (2025-03-08)
+
+### Bug Fixes
+
+* show more useful value than "not displayable" ([#189](https://github.com/Safe-DS/Runner/issues/189)) ([ced2763](https://github.com/Safe-DS/Runner/commit/ced2763c3014fb605e2d3eeaa831eb14e5e849d6))
+
 ## [0.19.0](https://github.com/Safe-DS/Runner/compare/v0.18.0...v0.19.0) (2025-03-07)
 
 ### Features
