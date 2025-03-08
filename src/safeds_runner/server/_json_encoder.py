@@ -55,3 +55,9 @@ class SafeDsEncoder(json.JSONEncoder):
             }
         else:
             return super().default(o)
+
+    def encode(self, o: Any) -> str:
+        if isinstance(o, float) and not math.isfinite(o):
+            return f'"{o!s}"'
+        else:
+            return super().encode(o)
