@@ -38,8 +38,11 @@ from safeds_runner.server._json_encoder import SafeDsEncoder
                 '"iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAADElEQVR4nGNgoBwAAABEAAHX40j9\\nAAAAAElFTkSuQmCC\\n"}'
             ),
         ),
+        (math.nan, '"nan"'),
+        (math.inf, '"inf"'),
+        (-math.inf, '"-inf"'),
     ],
-    ids=["encode_tabular_dataset", "encode_table", "encode_image_png"],
+    ids=["encode_tabular_dataset", "encode_table", "encode_image_png", "nan", "inf", "-inf"],
 )
 def test_encoding_custom_types(data: Any, expected_string: str) -> None:
     assert json.dumps(data, cls=SafeDsEncoder) == expected_string

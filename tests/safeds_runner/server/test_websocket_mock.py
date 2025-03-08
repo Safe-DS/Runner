@@ -554,12 +554,12 @@ async def test_should_execute_pipeline_return_exception(
                     create_placeholder_value(
                         QueryMessageData(name="col"),
                         "Column",
-                        '+------+\n'
-                              '| a    |\n'
-                              '| ---  |\n'
-                              '| null |\n'
-                              '+======+\n'
-                              '+------+'
+                        "+------+\n"
+                              "| a    |\n"
+                              "| ---  |\n"
+                              "| null |\n"
+                              "+======+\n"
+                              "+------+",
                     ),
                 ),
                 # Query Result Invalid
