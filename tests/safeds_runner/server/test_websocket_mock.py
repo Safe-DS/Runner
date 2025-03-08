@@ -411,12 +411,13 @@ async def test_should_execute_pipeline_return_exception(
                                         "import base64\n"
                                         "from safeds.data.labeled.containers import TabularDataset\n"
                                         "from safeds.data.tabular.containers import Table\n"
+                                        "from safeds.data.tabular.containers import Column\n"
                                         "from safeds.data.image.containers import Image\n"
                                         "from safeds_runner.server._json_encoder import SafeDsEncoder\n\n"
                                         "def pipe():\n"
                                         "\tvalue1 = 1\n"
                                         "\tsafeds_runner.save_placeholder('value1', value1)\n"
-                                        "\tsafeds_runner.save_placeholder('obj', object())\n"
+                                        "\tsafeds_runner.save_placeholder('col', Column('a', []))\n"
                                         "\tsafeds_runner.save_placeholder('image', Image.from_bytes(base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAD0lEQVQIW2NkQAOMpAsAAADuAAVDMQ2mAAAAAElFTkSuQmCC')))\n"
                                         "\ttable = safeds_runner.memoized_static_call(\"safeds.data.tabular.containers.Table.from_dict\", Table.from_dict, [{'a': [1, 2], 'b': [3, 4]}], {}, [])\n"
                                         "\tsafeds_runner.save_placeholder('table', table)\n"
@@ -470,7 +471,7 @@ async def test_should_execute_pipeline_return_exception(
                     {
                         "type": "placeholder_query",
                         "id": "abcdefg",
-                        "data": {"name": "obj", "window": {}},
+                        "data": {"name": "col", "window": {}},
                     },
                 ),
                 # Query invalid placeholder
@@ -492,7 +493,7 @@ async def test_should_execute_pipeline_return_exception(
                 Message(
                     message_type_placeholder_type,
                     "abcdefg",
-                    create_placeholder_description("obj", "object"),
+                    create_placeholder_description("col", "Column"),
                 ),
                 Message(
                     message_type_placeholder_type,
@@ -550,7 +551,16 @@ async def test_should_execute_pipeline_return_exception(
                 Message(
                     message_type_placeholder_value,
                     "abcdefg",
-                    create_placeholder_value(QueryMessageData(name="obj"), "object", "<Not displayable>"),
+                    create_placeholder_value(
+                        QueryMessageData(name="col"),
+                        "Column",
+                        '+------+\n'
+                              '| a    |\n'
+                              '| ---  |\n'
+                              '| null |\n'
+                              '+======+\n'
+                              '+------+'
+                    ),
                 ),
                 # Query Result Invalid
                 Message(
