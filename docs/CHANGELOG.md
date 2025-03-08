@@ -1,3 +1,9 @@
+## [0.19.2](https://github.com/Safe-DS/Runner/compare/v0.19.1...v0.19.2) (2025-03-08)
+
+### Bug Fixes
+
+* encoding of non-finite floats ([#190](https://github.com/Safe-DS/Runner/issues/190)) ([4392d82](https://github.com/Safe-DS/Runner/commit/4392d8279371ebf381f9ea541b1147b5f5acf5c1))
+
 ## [0.19.1](https://github.com/Safe-DS/Runner/compare/v0.19.0...v0.19.1) (2025-03-08)
 
 ### Bug Fixes
