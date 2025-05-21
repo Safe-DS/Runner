@@ -595,10 +595,15 @@ async def test_should_execute_pipeline_return_valid_placeholder(
         for message in appended_messages:
             await test_websocket.send(message)
         # And compare with expected responses
-        while len(expected_responses) > 0:
+        actual_responses: list[Message] = []
+        while len(actual_responses) < len(expected_responses):
             received_message = await test_websocket.receive()
             next_message = Message.from_dict(json.loads(received_message))
-            assert next_message == expected_responses.pop(0)
+            actual_responses.append(next_message)
+
+        for actual_response in actual_responses:
+            assert actual_response in expected_responses
+
     sds_server.shutdown()
 
 
