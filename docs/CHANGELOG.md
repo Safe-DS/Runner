@@ -1,3 +1,9 @@
+## [0.20.0](https://github.com/Safe-DS/Runner/compare/v0.19.2...v0.20.0) (2025-05-29)
+
+### Features
+
+* disable Python 3.11, enable Python 3.13 ([#207](https://github.com/Safe-DS/Runner/issues/207)) ([e9f8026](https://github.com/Safe-DS/Runner/commit/e9f80260bb0db82f8c0dd12ce704fa06b6c9de18))
+
 ## [0.19.2](https://github.com/Safe-DS/Runner/compare/v0.19.1...v0.19.2) (2025-03-08)
 
 ### Bug Fixes
