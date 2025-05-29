@@ -16,8 +16,8 @@ packages = [
 safe-ds-runner = "safeds_runner.main:main"
 
 [tool.poetry.dependencies]
-python = "^3.11,<3.13"
-safe-ds = ">=0.30.0,<0.31.0"
+python = "^3.12,<3.14"
+safe-ds = ">=0.31.0,<0.32.0"
 hypercorn = ">=0.16,<0.18"
 psutil = ">=5.9.8,<8.0.0"
 pydantic = "^2.9.2"
@@ -32,14 +32,14 @@ simple-websocket = "^1.1.0"
 torch = [
     # Install the CUDA version on Windows. Projects that depend on us always get their dependencies from PyPI, so
     # there's no point moving this to the main dependencies section.
-    { version = "^2.5.1", markers="sys_platform == 'win32'", source = "torch_cuda" },
-    { version = "^2.5.1", markers="sys_platform != 'win32'", source = "pypi" },
+    { version = "^2.7.0", markers="sys_platform == 'win32'", source = "torch_cuda" },
+    { version = "^2.7.0", markers="sys_platform != 'win32'", source = "pypi" },
 ]
 torchvision = [
     # Install the CUDA version on Windows. Projects that depend on us always get their dependencies from PyPI, so
     # there's no point moving this to the main dependencies section.
-    { version = "^0.20.1", markers="sys_platform == 'win32'", source = "torch_cuda" },
-    { version = "^0.20.1", markers="sys_platform != 'win32'", source = "pypi" },
+    { version = "~0.22.0", markers="sys_platform == 'win32'", source = "torch_cuda" },
+    { version = "~0.22.0", markers="sys_platform != 'win32'", source = "pypi" },
 ]
 
 [tool.poetry.group.docs.dependencies]
@@ -49,7 +49,7 @@ mkdocs-material = "^9.1.17"
 
 [[tool.poetry.source]]
 name = "torch_cuda"
-url = "https://download.pytorch.org/whl/cu121"
+url = "https://download.pytorch.org/whl/cu128"
 priority = "explicit"
 
 [build-system]
