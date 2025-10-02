@@ -44,7 +44,7 @@ torchvision = [
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "^1.4.3"
-mkdocs-glightbox = ">=0.3.4,<0.5.0"
+mkdocs-glightbox = ">=0.3.4,<0.6.0"
 mkdocs-material = "^9.1.17"
 
 [[tool.poetry.source]]
