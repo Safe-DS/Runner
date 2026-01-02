@@ -18,7 +18,7 @@ safe-ds-runner = "safeds_runner.main:main"
 [tool.poetry.dependencies]
 python = "^3.12,<3.14"
 safe-ds = ">=0.31.0,<0.32.0"
-hypercorn = ">=0.16,<0.18"
+hypercorn = ">=0.16,<0.19"
 psutil = ">=5.9.8,<8.0.0"
 pydantic = "^2.9.2"
 quart = ">=0.19.4,<0.21.0"
