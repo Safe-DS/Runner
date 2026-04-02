@@ -1,9 +1,0 @@
-*                       @lars-reimann
-
-# Documentation
-/docs/                  @Safe-DS/DSL
-/mkdocs.yml             @Safe-DS/DSL
-
-# Code
-/src/                   @Safe-DS/DSL
-/tests/                 @Safe-DS/DSL
